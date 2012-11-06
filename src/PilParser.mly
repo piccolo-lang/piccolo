@@ -1,0 +1,136 @@
+/* header */
+%{
+  open Utils ;;
+
+  open Types ;;
+  open TypeRepr ;;
+  open Syntax ;;
+  open ASTRepr ;;
+
+  let current_module = ref "" ;;
+  let current_definition = ref "" ;;
+
+%}
+
+/* reserved keywords */
+%token MODULE DEF VTRUE VFALSE END NEW SPAWN TAU LET
+
+/* identifiers */
+%token <string> IDENT
+
+/* constants */
+%token <int> INT
+%token <bool> TRUE
+%token <bool> FALSE
+%token <string> STRING
+
+/* punctuation */
+%token LPAREN RPAREN LBRACKET RBRACKET LCURLY RCURLY INF SUP SLASH SHARP STAR EQ COLON
+
+/* operators */
+%token PLUS COMMA OUT IN
+
+%left PLUS
+%right COMMA
+%left OUT IN
+
+/* end of file */
+
+%token EOF
+
+/* types */
+
+%token TBOOL TINT TSTRING TCHAN
+
+%start moduleDef
+%type <Syntax.moduleDef> moduleDef
+%type <string> moduleID
+%type <definition> definition
+%type <process> process
+%type <action> action
+%type <value*valueType> value
+%type <(value*valueType) list> values
+
+/* grammar */
+%%
+moduleDef: MODULE moduleID definitions EOF { makeModule $2 $3 }
+
+moduleID: IDENT { $1}
+| IDENT SLASH moduleID { $1 ^ $3 }
+
+definitions: definition { [$1] }
+| definition definitions { $1::$2 }
+
+definition: DEF IDENT paramlist EQ process { makeDefinition $2 $3 $5 }
+
+paramlist: LPAREN RPAREN { [] }
+| LPAREN params RPAREN { $2 }
+
+params: param { [$1] }
+| param COMMA params { $1::$3 }
+
+param: IDENT COLON typeDef { ($1,$3) }
+| IDENT { ($1,TUnknown) }
+
+/* processes */
+
+process:
+END { makeTerm !current_module !current_definition }
+| call { $1 }
+| choiceProcess { makeChoice !current_module !current_definition $1 }
+
+call:
+moduleID COLON IDENT LPAREN RPAREN { makeCall !current_module !current_definition $1 $3 [] [] }
+| moduleID COLON IDENT LPAREN values RPAREN { makeCall !current_module !current_definition $1 $3 (List.map second $5) (List.map first $5) }
+| IDENT LPAREN RPAREN { makeCall !current_module !current_definition "" $1 [] [] }
+| IDENT LPAREN values RPAREN { makeCall !current_module !current_definition "" $1 (List.map second $3) (List.map first $3) }
+
+choiceProcess:
+branch { [$1] }
+| branch PLUS choiceProcess { $1::$3 }
+
+branch:
+| LBRACKET value RBRACKET action COMMA process { (first $2, second $2, $4, $6) }
+| action COMMA process { (makeVTrue (), TBool, $1, $3) }
+
+action: TAU { makeTau () }
+| IDENT OUT value { makeOutput $1 (first $3) (second $3) }
+| IDENT IN LPAREN IDENT RPAREN { makeInput $1 $4 TUnknown }
+| NEW LPAREN IDENT COLON typeDef RPAREN { makeNew $3 $5 }
+| SPAWN LCURLY call RCURLY { makeSpawnCall $3 }
+| SHARP moduleID COLON IDENT LPAREN RPAREN { makePrim $2 $4 [] [] }
+| SHARP moduleID COLON IDENT LPAREN values RPAREN { makePrim $2 $4 (List.map second $6) (List.map first $6) }
+| LET LPAREN IDENT COLON typeDef EQ value RPAREN { makeLet $3 $5 (first $7) (second $7) }
+
+/* types */
+
+typeDef: TBOOL { TBool }
+| TINT { TInt }
+| TSTRING { TString }
+| TCHAN INF typeDef SUP { TChan $3 }
+| types { makeTupleType $1 }
+
+types : typeDef { [$1] }
+| typeDef STAR types { $1::$3 }
+
+/* values */
+
+values : value { [$1] }
+| value COMMA values { $1::$3 }
+
+value : TRUE { (makeVTrue (),TBool) }
+| FALSE { (makeVFalse (), TBool) }
+| INT { (makeVInt $1, TInt) }
+| STRING { (makeVString (String.sub $1 1 ((String.length $1) - 2)), TString) }
+| LPAREN value RPAREN { $2 }
+| LPAREN values RPAREN { let ts = List.map second $2
+                         in (makeTuple ts (List.map first $2), makeTupleType ts)  }
+| IDENT { (makeVVar TUnknown $1, TUnknown) }
+| SHARP moduleID COLON IDENT LPAREN RPAREN { (makeVPrim $2 $4 [] TUnknown [], TUnknown) }
+| SHARP moduleID COLON IDENT LPAREN values RPAREN { (makeVPrim $2 $4 (List.map second $6) TUnknown (List.map first $6), TUnknown) }
+
+%%
+
+  
+
+
