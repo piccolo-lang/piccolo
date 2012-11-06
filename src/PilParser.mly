@@ -81,26 +81,26 @@ END { makeTerm !current_module !current_definition }
 
 call:
 moduleID COLON IDENT LPAREN RPAREN { makeCall !current_module !current_definition $1 $3 [] [] }
-| moduleID COLON IDENT LPAREN values RPAREN { makeCall !current_module !current_definition $1 $3 (List.map second $5) (List.map first $5) }
+| moduleID COLON IDENT LPAREN values RPAREN { makeCall !current_module !current_definition $1 $3 (List.map snd $5) (List.map fst $5) }
 | IDENT LPAREN RPAREN { makeCall !current_module !current_definition "" $1 [] [] }
-| IDENT LPAREN values RPAREN { makeCall !current_module !current_definition "" $1 (List.map second $3) (List.map first $3) }
+| IDENT LPAREN values RPAREN { makeCall !current_module !current_definition "" $1 (List.map snd $3) (List.map fst $3) }
 
 choiceProcess:
 branch { [$1] }
 | branch PLUS choiceProcess { $1::$3 }
 
 branch:
-| LBRACKET value RBRACKET action COMMA process { (first $2, second $2, $4, $6) }
+| LBRACKET value RBRACKET action COMMA process { (fst $2, snd $2, $4, $6) }
 | action COMMA process { (makeVTrue (), TBool, $1, $3) }
 
 action: TAU { makeTau () }
-| IDENT OUT value { makeOutput $1 (first $3) (second $3) }
+| IDENT OUT value { makeOutput $1 (fst $3) (snd $3) }
 | IDENT IN LPAREN IDENT RPAREN { makeInput $1 $4 TUnknown }
 | NEW LPAREN IDENT COLON typeDef RPAREN { makeNew $3 $5 }
 | SPAWN LCURLY call RCURLY { makeSpawnCall $3 }
 | SHARP moduleID COLON IDENT LPAREN RPAREN { makePrim $2 $4 [] [] }
-| SHARP moduleID COLON IDENT LPAREN values RPAREN { makePrim $2 $4 (List.map second $6) (List.map first $6) }
-| LET LPAREN IDENT COLON typeDef EQ value RPAREN { makeLet $3 $5 (first $7) (second $7) }
+| SHARP moduleID COLON IDENT LPAREN values RPAREN { makePrim $2 $4 (List.map snd $6) (List.map fst $6) }
+| LET LPAREN IDENT COLON typeDef EQ value RPAREN { makeLet $3 $5 (fst $7) (snd $7) }
 
 /* types */
 
@@ -123,11 +123,11 @@ value : TRUE { (makeVTrue (),TBool) }
 | INT { (makeVInt $1, TInt) }
 | STRING { (makeVString (String.sub $1 1 ((String.length $1) - 2)), TString) }
 | LPAREN value RPAREN { $2 }
-| LPAREN values RPAREN { let ts = List.map second $2
-                         in (makeTuple ts (List.map first $2), makeTupleType ts)  }
+| LPAREN values RPAREN { let ts = List.map snd $2
+                         in (makeTuple ts (List.map fst $2), makeTupleType ts)  }
 | IDENT { (makeVVar TUnknown $1, TUnknown) }
 | SHARP moduleID COLON IDENT LPAREN RPAREN { (makeVPrim $2 $4 [] TUnknown [], TUnknown) }
-| SHARP moduleID COLON IDENT LPAREN values RPAREN { (makeVPrim $2 $4 (List.map second $6) TUnknown (List.map first $6), TUnknown) }
+| SHARP moduleID COLON IDENT LPAREN values RPAREN { (makeVPrim $2 $4 (List.map snd $6) TUnknown (List.map fst $6), TUnknown) }
 
 %%
 

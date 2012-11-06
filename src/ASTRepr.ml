@@ -305,7 +305,7 @@ object
   inherit ast_repr
   val mutable _params = ps'
   val mutable _csize = -1
-  val mutable _env = List.map first ps
+  val mutable _env = List.map fst ps
   method name = n
   method params = List.map (fun p -> (p#name, p#ofType)) _params
   method arity = List.length ps'

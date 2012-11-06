@@ -199,28 +199,28 @@ class virtual  ['a,'b,'c,'d] merge_fold_node_repr (n1:('a,'b) fold_node) (n2:('c
  (* module *)
   method moduleDef_val m = (n1#moduleDef_val m , n2#moduleDef_val m)
   (* definition *)
-  method definition_val (v:('a*'c)) m d = (n1#definition_val (first v) m d , n2#definition_val (second v) m d)
+  method definition_val (v:('a*'c)) m d = (n1#definition_val (fst v) m d , n2#definition_val (snd v) m d)
   (* process *)
-  method choice_val v m d p = (n1#choice_val (first v) m d p , n2#choice_val (second v) m d p)
-  method branch_val v m d p index b = (n1#branch_val (first v) m d p index b , n2#branch_val (second v) m d p index b)
-  method call_val v m d p = (n1#call_val (first v) m d p , n2#call_val (second v) m d p)
-  method term_val v m d p = n1#term_val (first v) m d p ; n2#term_val (second v) m d p
+  method choice_val v m d p = (n1#choice_val (fst v) m d p , n2#choice_val (snd v) m d p)
+  method branch_val v m d p index b = (n1#branch_val (fst v) m d p index b , n2#branch_val (snd v) m d p index b)
+  method call_val v m d p = (n1#call_val (fst v) m d p , n2#call_val (snd v) m d p)
+  method term_val v m d p = n1#term_val (fst v) m d p ; n2#term_val (snd v) m d p
   (* action *)
-  method outAction_val v m d p a = (n1#outAction_val (first v) m d p a , n2#outAction_val (second v) m d p a)
-  method inAction_val v m d p a = n1#inAction_val (first v) m d p a ; n2#inAction_val (second v) m d p a
-  method tauAction_val v m d p a = n1#tauAction_val (first v) m d p a ; n2#tauAction_val (second v) m d p a
-  method newAction_val (v:('a*'c)) m d p a = n1#newAction_val (first v) m d p a ; n2#newAction_val (second v) m d p a
-  method spawnAction_val v m d p a = (n1#spawnAction_val (first v) m d p a , n2#spawnAction_val (second v) m d p a)
-  method primAction_val  v m d p a = (n1#primAction_val (first v) m d p a , n2#primAction_val (second v) m d p a)
-  method letAction_val v m d p a = (n1#letAction_val (first v) m d p a , n2#letAction_val (second v) m d p a)
+  method outAction_val v m d p a = (n1#outAction_val (fst v) m d p a , n2#outAction_val (snd v) m d p a)
+  method inAction_val v m d p a = n1#inAction_val (fst v) m d p a ; n2#inAction_val (snd v) m d p a
+  method tauAction_val v m d p a = n1#tauAction_val (fst v) m d p a ; n2#tauAction_val (snd v) m d p a
+  method newAction_val (v:('a*'c)) m d p a = n1#newAction_val (fst v) m d p a ; n2#newAction_val (snd v) m d p a
+  method spawnAction_val v m d p a = (n1#spawnAction_val (fst v) m d p a , n2#spawnAction_val (snd v) m d p a)
+  method primAction_val  v m d p a = (n1#primAction_val (fst v) m d p a , n2#primAction_val (snd v) m d p a)
+  method letAction_val v m d p a = (n1#letAction_val (fst v) m d p a , n2#letAction_val (snd v) m d p a)
   (* value *)  
-  method trueValue_val w m d p t v = n1#trueValue_val (first w) m d p t v ; n2#trueValue_val (second w) m d p t v
-  method falseValue_val w m d p t v = n1#falseValue_val (first w) m d p t v ; n2#falseValue_val (second w) m d p t v
-  method intValue_val w m d p t v = n1#intValue_val (first w) m d p t v ; n2#intValue_val (second w) m d p t v
-  method stringValue_val w m d p t v = n1#stringValue_val (first w) m d p t v ; n2#stringValue_val (second w) m d p t v
-  method tupleValue_val w m d p t v = (n1#tupleValue_val (first w) m d p t v , n2#tupleValue_val (second w) m d p t v)
-  method varValue_val w m d p t v = n1#varValue_val  (first w) m d p t v ; n2#varValue_val (second w) m d p t v
-  method primValue_val w m d p t v = (n1#primValue_val (first w) m d p t v , n2#primValue_val (second w) m d p t v)
+  method trueValue_val w m d p t v = n1#trueValue_val (fst w) m d p t v ; n2#trueValue_val (snd w) m d p t v
+  method falseValue_val w m d p t v = n1#falseValue_val (fst w) m d p t v ; n2#falseValue_val (snd w) m d p t v
+  method intValue_val w m d p t v = n1#intValue_val (fst w) m d p t v ; n2#intValue_val (snd w) m d p t v
+  method stringValue_val w m d p t v = n1#stringValue_val (fst w) m d p t v ; n2#stringValue_val (snd w) m d p t v
+  method tupleValue_val w m d p t v = (n1#tupleValue_val (fst w) m d p t v , n2#tupleValue_val (snd w) m d p t v)
+  method varValue_val w m d p t v = n1#varValue_val  (fst w) m d p t v ; n2#varValue_val (snd w) m d p t v
+  method primValue_val w m d p t v = (n1#primValue_val (fst w) m d p t v , n2#primValue_val (snd w) m d p t v)
 end
 
 class ['a,'b,'c,'d] compose_fold_node_repr (n1:('a,'b) fold_node) (n2:('c,'d) fold_node) : [('a*'c),('b * 'd)] fold_node = 
@@ -231,30 +231,30 @@ object(self)
   method echo vn str = if vn<=self#verbosity then print_string str
   method echoln vn str = if vn<=self#verbosity then print_endline str
   (* module *)
-  method moduleDef m rs = (n1#moduleDef m (List.map first rs), n2#moduleDef m (List.map second rs))
+  method moduleDef m rs = (n1#moduleDef m (List.map fst rs), n2#moduleDef m (List.map snd rs))
   (* definition *)
-  method definition v m d r = (n1#definition (first v) m d (first r), n2#definition (second v) m d (second r))
+  method definition v m d r = (n1#definition (fst v) m d (fst r), n2#definition (snd v) m d (snd r))
   (* process *)
-  method choice v m d p rs = (n1#choice (first v) m d p (List.map first rs), n2#choice (second v) m d p (List.map second rs))
-  method branch v m d p index b g a q = (n1#branch (first v) m d p index b (first g) (first a) (first q), n2#branch (second v) m d p index b (second g) (second a) (second q))
-  method call v m d p rs = (n1#call (first v) m d p (List.map first rs), n2#call (second v) m d p (List.map second rs))
-  method term v m d p = (n1#term (first v) m d p, n2#term (second v) m d p)
+  method choice v m d p rs = (n1#choice (fst v) m d p (List.map fst rs), n2#choice (snd v) m d p (List.map snd rs))
+  method branch v m d p index b g a q = (n1#branch (fst v) m d p index b (fst g) (fst a) (fst q), n2#branch (snd v) m d p index b (snd g) (snd a) (snd q))
+  method call v m d p rs = (n1#call (fst v) m d p (List.map fst rs), n2#call (snd v) m d p (List.map snd rs))
+  method term v m d p = (n1#term (fst v) m d p, n2#term (snd v) m d p)
   (* action *)
-  method outAction v m d p a r = (n1#outAction (first v) m d p a (first r), n2#outAction (second v) m d p a (second r))
-  method inAction v m d p a = (n1#inAction (first v) m d p a, n2#inAction (second v) m d p a)
-  method tauAction v m d p a = (n1#tauAction (first v) m d p a, n2#tauAction (second v) m d p a)
-  method newAction (v:('a*'c)) m d p a = (n1#newAction (first v) m d p a, n2#newAction (second v) m d p a)
-  method spawnAction v m d p a rs = (n1#spawnAction (first v) m d p a (List.map first rs), n2#spawnAction (second v) m d p a (List.map second rs))
-  method primAction v m d p a rs = (n1#primAction (first v) m d p a (List.map first rs), n2#primAction (second v) m d p a (List.map second rs))
-  method letAction v m d p a r = (n1#letAction (first v) m d p a (first r), n2#letAction (second v) m d p a (second r))
+  method outAction v m d p a r = (n1#outAction (fst v) m d p a (fst r), n2#outAction (snd v) m d p a (snd r))
+  method inAction v m d p a = (n1#inAction (fst v) m d p a, n2#inAction (snd v) m d p a)
+  method tauAction v m d p a = (n1#tauAction (fst v) m d p a, n2#tauAction (snd v) m d p a)
+  method newAction (v:('a*'c)) m d p a = (n1#newAction (fst v) m d p a, n2#newAction (snd v) m d p a)
+  method spawnAction v m d p a rs = (n1#spawnAction (fst v) m d p a (List.map fst rs), n2#spawnAction (snd v) m d p a (List.map snd rs))
+  method primAction v m d p a rs = (n1#primAction (fst v) m d p a (List.map fst rs), n2#primAction (snd v) m d p a (List.map snd rs))
+  method letAction v m d p a r = (n1#letAction (fst v) m d p a (fst r), n2#letAction (snd v) m d p a (snd r))
   (* value *)  
-  method trueValue w m d p t v = (n1#trueValue (first w) m d p t v, n2#trueValue (second w) m d p t v)
-  method falseValue w m d p t v = (n1#falseValue (first w) m d p t v, n2#falseValue (second w) m d p t v)
-  method intValue w m d p t v = (n1#intValue (first w) m d p t v, n2#intValue (second w) m d p t v)
-  method stringValue w m d p t v = (n1#stringValue (first w) m d p t v, n2#stringValue (second w) m d p t v)
-  method tupleValue w m d p t v rs = (n1#tupleValue (first w) m d p t v (List.map first rs), n2#tupleValue (second w) m d p t v (List.map second rs))
-  method varValue w m d p t v = (n1#varValue (first w) m d p t v, n2#varValue (second w) m d p t v)
-  method primValue w m d p t v rs = (n1#primValue (first w) m d p t v (List.map first rs), n2#primValue (second w) m d p t v (List.map second rs))
+  method trueValue w m d p t v = (n1#trueValue (fst w) m d p t v, n2#trueValue (snd w) m d p t v)
+  method falseValue w m d p t v = (n1#falseValue (fst w) m d p t v, n2#falseValue (snd w) m d p t v)
+  method intValue w m d p t v = (n1#intValue (fst w) m d p t v, n2#intValue (snd w) m d p t v)
+  method stringValue w m d p t v = (n1#stringValue (fst w) m d p t v, n2#stringValue (snd w) m d p t v)
+  method tupleValue w m d p t v rs = (n1#tupleValue (fst w) m d p t v (List.map fst rs), n2#tupleValue (snd w) m d p t v (List.map snd rs))
+  method varValue w m d p t v = (n1#varValue (fst w) m d p t v, n2#varValue (snd w) m d p t v)
+  method primValue w m d p t v rs = (n1#primValue (fst w) m d p t v (List.map fst rs), n2#primValue (snd w) m d p t v (List.map snd rs))
 end
 
 let fold_compose (n1:('a,'b) fold_node) (n2:('c,'d) fold_node) : (('a*'c),('b*'d)) fold_node = new compose_fold_node_repr n1 n2

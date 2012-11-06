@@ -1,6 +1,15 @@
+(*----------------------------------------------------------------------------    
+    Utils.ml  Copyright (C) 2012 Frederic Peschanski
+    This program comes with ABSOLUTELY NO WARRANTY; for details see `LICENSE'.
+    This is free software, and you are welcome to redistribute it
+    under certain conditions; see `LICENCE' for details.
+ ----------------------------------------------------------------------------*)
+
+(** This module defines various utility functions used in other parts of the compiler. *)
 
 (* printing functions *)
 
+(** Convert a collection to a string. *)
 let string_of_collection (op:string) (cl:string) (sep:string) (tostr: 'a -> string) (lst: 'a list) = 
   let rec str = function
     | [] -> ""
@@ -9,8 +18,10 @@ let string_of_collection (op:string) (cl:string) (sep:string) (tostr: 'a -> stri
   in
   op ^ (str lst) ^ cl
 
+(** Convert a list to a string. *)
 let string_of_list tostr lst = string_of_collection "[" "]" ";" tostr lst
 
+(** Convert a set (represented as a list) to a string. *)
 let string_of_set tostr lst = string_of_collection "{" "}" "," tostr lst
 
 (* list utilities *)
@@ -29,26 +40,22 @@ let empty_list = function
   | [] -> true
   | _ -> false
 
+(** Forget the argument. *)
 let forget e = ()
 
-type 'a option =
-  | None
-  | Some of 'a
-
+(** Either/Or sum type. *)
 type ('a,'b) either =
   | Left of 'a
   | Right of 'b
 
-let first (f,_) = f
-
-let second (_,s) = s
-
+(** Variant of iter passing the index of the current element in the list. *)
 let list_iter_n f es = 
   let rec aux n es = match es with
   | [] -> ()
   | e::es' -> (f n e) ; aux (n+1) es'
   in aux 0 es
 
+(** Variant of fold passing the index of the current element in the list. *)
 let list_fold_n (f:'a -> int -> 'b -> 'a) (e:'a) (es:'b list) =
   let rec aux index es rs = match es with
     | [] -> rs
@@ -56,6 +63,7 @@ let list_fold_n (f:'a -> int -> 'b -> 'a) (e:'a) (es:'b list) =
   in
   aux 0 es e
 
+(** Get the maximum integer of the specified list. *)
 let list_max ns = List.fold_left (fun m n -> if m>n then m else n) min_int ns
 
 
