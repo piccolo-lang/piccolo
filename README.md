@@ -1,4 +1,4 @@
 picc
 ====
 
-the pi concurrent compiler
+the (parallel) pi-calculus compiler
