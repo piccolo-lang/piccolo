@@ -1,7 +1,10 @@
 
-OCAMLPATH=/opt/local/bin
+OCAMLPATH=$(OCAMLDIR)
+
+DOC=../doc
 
 OCAMLC = $(OCAMLPATH)/ocamlc
+OCAMLDOC=$(OCAMLPATH)/ocamldoc
 OCFLAGS = -g
 
 YACC = $(OCAMLPATH)/ocamlyacc
@@ -19,6 +22,11 @@ PilParser: PilParser.cmo
 ParseUtils: ParseUtils.cmo
 Typing: Typing.cmo
 Middleend: Middleend.cmo
+
+FICHIERS=$(wildcard *.ml)
+
+doc:
+	$(OCAMLDOC) -html -d $(DOC) ${FICHIERS}
 
 Utils.cmo: Utils.ml
 	$(OCAMLC) -c $(OCFLAGS) Utils.ml -o Utils.cmo
