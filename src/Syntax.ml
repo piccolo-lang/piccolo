@@ -202,7 +202,9 @@ class type call_process_type = object
   method toString : string
 end
 
-(* 'a = process ? find another instanciation of 'a *)
+(* 'a = process ? find another instanciation of 'a 
+   [TOASK] why 'a if only one instanciation
+ *)
 class type ['a] prefix_process_type = object
   inherit process_type
   method guard : value
