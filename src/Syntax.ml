@@ -230,11 +230,8 @@ class type call_process_type = object
   method toString : string
 end
 
-<<<<<<< HEAD
-(** interface representing the type of a prefix process, extends process_type *)
-=======
-(* 'a = process ? find another instanciation of 'a *)
->>>>>>> 71873978b8b6f80813a76046f9bbde9653e49faf
+
+(** interface representing a prefix process, extends process_type *)
 class type ['a] prefix_process_type = object
   inherit process_type
   method guard : value
