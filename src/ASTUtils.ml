@@ -14,16 +14,20 @@ open Syntax ;;
 (* --------------------- *)
 
 class type ['a,'b] fold_node = object
+
   (* echo *)
   method verbosity: int
   method echo: int -> string -> unit
   method echoln: int -> string -> unit 
+    
   (* module *)
   method moduleDef_val: module_type -> 'a
   method moduleDef: module_type -> 'b list -> 'b
+  
   (* definition *)
   method definition_val: 'a -> module_type -> definition_type -> 'a
   method definition: 'a -> module_type -> definition_type -> 'b -> 'b
+  
   (* process *)
   method choice_val: 'a -> module_type -> definition_type -> process choice_process_type -> 'a
   method choice: 'a -> module_type -> definition_type -> process choice_process_type -> 'b list -> 'b
@@ -33,6 +37,7 @@ class type ['a,'b] fold_node = object
   method call: 'a -> module_type -> definition_type ->  call_process_type -> 'b list -> 'b
   method term_val: 'a -> module_type -> definition_type ->  term_process_type -> unit
   method term: 'a -> module_type -> definition_type ->  term_process_type -> 'b
+  
   (* action *)
   method outAction_val: 'a -> module_type -> definition_type -> process prefix_process_type ->  out_action_type -> 'a
   method outAction: 'a -> module_type -> definition_type -> process prefix_process_type ->  out_action_type -> 'b -> 'b
@@ -48,6 +53,7 @@ class type ['a,'b] fold_node = object
   method primAction: 'a -> module_type -> definition_type -> process prefix_process_type ->  prim_action_type -> 'b list -> 'b
   method letAction_val: 'a -> module_type -> definition_type -> process prefix_process_type ->  let_action_type -> 'a
   method letAction: 'a -> module_type -> definition_type -> process prefix_process_type ->  let_action_type -> 'b-> 'b
+  
   (* value *)
   method trueValue_val: 'a -> module_type -> definition_type -> process_type -> Types.valueType -> bool  const_value_type -> unit
   method trueValue: 'a -> module_type -> definition_type -> process_type -> Types.valueType -> bool  const_value_type -> 'b
@@ -67,15 +73,19 @@ end
 
 class type ['a] simple_fold_node = object 
   inherit [unit,'a] fold_node
+  
   (* module *)
   method moduleDef_fold: module_type -> 'a list -> 'a
+    
   (* definition *)
   method definition_fold: module_type -> definition_type -> 'a -> 'a
+    
   (* process *)
   method choice_fold: module_type -> definition_type -> process choice_process_type -> 'a list -> 'a
   method branch_fold: module_type -> definition_type -> process choice_process_type -> int -> process prefix_process_type -> 'a -> 'a -> 'a -> 'a
   method call_fold: module_type -> definition_type ->  call_process_type -> 'a list -> 'a
   method term_fold: module_type -> definition_type ->  term_process_type -> 'a
+    
   (* action *)
   method outAction_fold: module_type -> definition_type -> process prefix_process_type ->  out_action_type -> 'a -> 'a
   method inAction_fold: module_type -> definition_type -> process prefix_process_type ->  in_action_type -> 'a
@@ -84,6 +94,7 @@ class type ['a] simple_fold_node = object
   method spawnAction_fold: module_type -> definition_type -> process prefix_process_type ->  spawn_action_type -> 'a list -> 'a
   method primAction_fold: module_type -> definition_type -> process prefix_process_type ->  prim_action_type -> 'a list -> 'a
   method letAction_fold: module_type -> definition_type -> process prefix_process_type ->  let_action_type -> 'a-> 'a
+    
   (* value *)
   method trueValue_fold: module_type -> definition_type -> process_type -> Types.valueType -> bool  const_value_type -> 'a
   method falseValue_fold: module_type -> definition_type -> process_type -> Types.valueType -> bool  const_value_type -> 'a
@@ -96,15 +107,19 @@ class type ['a] simple_fold_node = object
 
 class type virtual ['a] simple_abstract_fold_node = object 
   inherit [unit,'a] fold_node
+  
   (* module *)
   method virtual moduleDef_fold: module_type -> 'a list -> 'a
+  
   (* definition *)
   method virtual definition_fold: module_type -> definition_type -> 'a -> 'a
+  
   (* process *)
   method virtual choice_fold: module_type -> definition_type -> process choice_process_type -> 'a list -> 'a
   method virtual branch_fold: module_type -> definition_type -> process choice_process_type -> int -> process prefix_process_type -> 'a -> 'a -> 'a -> 'a
   method virtual call_fold: module_type -> definition_type ->  call_process_type -> 'a list -> 'a
   method virtual term_fold: module_type -> definition_type ->  term_process_type -> 'a
+  
   (* action *)
   method virtual outAction_fold: module_type -> definition_type -> process prefix_process_type ->  out_action_type -> 'a -> 'a
   method virtual inAction_fold: module_type -> definition_type -> process prefix_process_type ->  in_action_type -> 'a
@@ -113,6 +128,7 @@ class type virtual ['a] simple_abstract_fold_node = object
   method virtual spawnAction_fold: module_type -> definition_type -> process prefix_process_type ->  spawn_action_type -> 'a list -> 'a
   method virtual primAction_fold: module_type -> definition_type -> process prefix_process_type ->  prim_action_type -> 'a list -> 'a
   method virtual letAction_fold: module_type -> definition_type -> process prefix_process_type ->  let_action_type -> 'a-> 'a
+  
   (* value *)
   method virtual trueValue_fold: module_type -> definition_type -> process_type -> Types.valueType -> bool  const_value_type -> 'a
   method virtual falseValue_fold: module_type -> definition_type -> process_type -> Types.valueType -> bool  const_value_type -> 'a
@@ -124,18 +140,22 @@ class type virtual ['a] simple_abstract_fold_node = object
 end
 
 class virtual ['a] simple_abstract_fold_node_repr (n:int) : ['a] simple_abstract_fold_node = object(self)
+  
   (* config *)
   method verbosity = n
   method echo vn str = if vn<=n then print_string str
   method echoln vn str = if vn<=n then print_endline str
+  
   (* module *)
   method moduleDef_val m = ()
   method moduleDef m rs = self#moduleDef_fold m rs 
   method virtual moduleDef_fold: module_type -> 'a list -> 'a
+  
   (* definition *)
   method definition_val v m d = ()
   method definition v m d r = self#definition_fold m d r
   method virtual definition_fold: module_type -> definition_type -> 'a -> 'a
+  
   (* process *)
   method choice_val v m d p = ()
   method choice v m d p rs = self#choice_fold m d p rs
@@ -149,6 +169,7 @@ class virtual ['a] simple_abstract_fold_node_repr (n:int) : ['a] simple_abstract
   method term_val v m d p = ()
   method term v m d p = self#term_fold m d p
   method virtual term_fold: module_type -> definition_type ->  term_process_type -> 'a
+  
   (* action *)
   method outAction_val v m d p a = ()
   method outAction v m d p a r = self#outAction_fold m d p a r
@@ -171,6 +192,7 @@ class virtual ['a] simple_abstract_fold_node_repr (n:int) : ['a] simple_abstract
   method letAction_val v m d p a = ()
   method letAction v m d p a r = self#letAction_fold m d p a r
   method virtual letAction_fold: module_type -> definition_type -> process prefix_process_type ->  let_action_type -> 'a-> 'a
+  
   (* value *)
   method trueValue_val w m d p t v = ()
   method trueValue w m d p t v = self#trueValue_fold m d p t v
@@ -196,15 +218,19 @@ class virtual ['a] simple_abstract_fold_node_repr (n:int) : ['a] simple_abstract
 end
 
 class virtual  ['a,'b,'c,'d] merge_fold_node_repr (n1:('a,'b) fold_node) (n2:('c,'d) fold_node) = object
- (* module *)
+  
+  (* module *)
   method moduleDef_val m = (n1#moduleDef_val m , n2#moduleDef_val m)
+  
   (* definition *)
   method definition_val (v:('a*'c)) m d = (n1#definition_val (fst v) m d , n2#definition_val (snd v) m d)
+  
   (* process *)
   method choice_val v m d p = (n1#choice_val (fst v) m d p , n2#choice_val (snd v) m d p)
   method branch_val v m d p index b = (n1#branch_val (fst v) m d p index b , n2#branch_val (snd v) m d p index b)
   method call_val v m d p = (n1#call_val (fst v) m d p , n2#call_val (snd v) m d p)
   method term_val v m d p = n1#term_val (fst v) m d p ; n2#term_val (snd v) m d p
+  
   (* action *)
   method outAction_val v m d p a = (n1#outAction_val (fst v) m d p a , n2#outAction_val (snd v) m d p a)
   method inAction_val v m d p a = n1#inAction_val (fst v) m d p a ; n2#inAction_val (snd v) m d p a
@@ -213,6 +239,7 @@ class virtual  ['a,'b,'c,'d] merge_fold_node_repr (n1:('a,'b) fold_node) (n2:('c
   method spawnAction_val v m d p a = (n1#spawnAction_val (fst v) m d p a , n2#spawnAction_val (snd v) m d p a)
   method primAction_val  v m d p a = (n1#primAction_val (fst v) m d p a , n2#primAction_val (snd v) m d p a)
   method letAction_val v m d p a = (n1#letAction_val (fst v) m d p a , n2#letAction_val (snd v) m d p a)
+  
   (* value *)  
   method trueValue_val w m d p t v = n1#trueValue_val (fst w) m d p t v ; n2#trueValue_val (snd w) m d p t v
   method falseValue_val w m d p t v = n1#falseValue_val (fst w) m d p t v ; n2#falseValue_val (snd w) m d p t v
@@ -226,19 +253,24 @@ end
 class ['a,'b,'c,'d] compose_fold_node_repr (n1:('a,'b) fold_node) (n2:('c,'d) fold_node) : [('a*'c),('b * 'd)] fold_node = 
 object(self)
   inherit ['a,'b,'c,'d] merge_fold_node_repr n1 n2
+  
   (* config *)
   method verbosity = max (n1#verbosity) (n2#verbosity)
   method echo vn str = if vn<=self#verbosity then print_string str
   method echoln vn str = if vn<=self#verbosity then print_endline str
+  
   (* module *)
   method moduleDef m rs = (n1#moduleDef m (List.map fst rs), n2#moduleDef m (List.map snd rs))
+  
   (* definition *)
   method definition v m d r = (n1#definition (fst v) m d (fst r), n2#definition (snd v) m d (snd r))
+  
   (* process *)
   method choice v m d p rs = (n1#choice (fst v) m d p (List.map fst rs), n2#choice (snd v) m d p (List.map snd rs))
   method branch v m d p index b g a q = (n1#branch (fst v) m d p index b (fst g) (fst a) (fst q), n2#branch (snd v) m d p index b (snd g) (snd a) (snd q))
   method call v m d p rs = (n1#call (fst v) m d p (List.map fst rs), n2#call (snd v) m d p (List.map snd rs))
   method term v m d p = (n1#term (fst v) m d p, n2#term (snd v) m d p)
+  
   (* action *)
   method outAction v m d p a r = (n1#outAction (fst v) m d p a (fst r), n2#outAction (snd v) m d p a (snd r))
   method inAction v m d p a = (n1#inAction (fst v) m d p a, n2#inAction (snd v) m d p a)
@@ -247,6 +279,7 @@ object(self)
   method spawnAction v m d p a rs = (n1#spawnAction (fst v) m d p a (List.map fst rs), n2#spawnAction (snd v) m d p a (List.map snd rs))
   method primAction v m d p a rs = (n1#primAction (fst v) m d p a (List.map fst rs), n2#primAction (snd v) m d p a (List.map snd rs))
   method letAction v m d p a r = (n1#letAction (fst v) m d p a (fst r), n2#letAction (snd v) m d p a (snd r))
+  
   (* value *)  
   method trueValue w m d p t v = (n1#trueValue (fst w) m d p t v, n2#trueValue (snd w) m d p t v)
   method falseValue w m d p t v = (n1#falseValue (fst w) m d p t v, n2#falseValue (snd w) m d p t v)
@@ -261,12 +294,15 @@ let fold_compose (n1:('a,'b) fold_node) (n2:('c,'d) fold_node) : (('a*'c),('b*'d
 
 class type iter_fold_node = object
   inherit [unit,unit] fold_node
+  
   (* module *)
   method moduleDef_pre: module_type -> unit
   method moduleDef_post: module_type -> unit
+  
   (* definition *)
   method definition_pre: module_type -> definition_type ->  unit
   method definition_post: module_type -> definition_type ->  unit
+  
   (* process *)
   method choice_pre: module_type -> definition_type -> process choice_process_type  -> unit
   method choice_post: module_type -> definition_type -> process choice_process_type  -> unit
@@ -276,6 +312,7 @@ class type iter_fold_node = object
   method call_post: module_type -> definition_type -> call_process_type  -> unit
   method term_pre: module_type -> definition_type -> term_process_type -> unit
   method term_post: module_type -> definition_type -> term_process_type -> unit
+  
   (* action *)
   method outAction_pre: module_type -> definition_type -> process prefix_process_type -> out_action_type ->  unit
   method outAction_post: module_type -> definition_type -> process prefix_process_type -> out_action_type ->  unit
@@ -291,6 +328,7 @@ class type iter_fold_node = object
   method primAction_post: module_type -> definition_type -> process prefix_process_type -> prim_action_type  -> unit
   method letAction_pre: module_type -> definition_type -> process prefix_process_type -> let_action_type -> unit
   method letAction_post: module_type -> definition_type -> process prefix_process_type -> let_action_type -> unit
+  
   (* value *)
   method trueValue_pre: module_type -> definition_type -> process_type -> Types.valueType -> bool const_value_type -> unit
   method trueValue_post: module_type -> definition_type -> process_type -> Types.valueType -> bool const_value_type -> unit
@@ -309,20 +347,24 @@ class type iter_fold_node = object
 end
 
 class abstract_iter_fold_node_repr (n:int) : iter_fold_node = object(self)
+  
   (* config *)
   method verbosity = n
   method echo vn str = if vn<=n then print_string str
   method echoln vn str = if vn<=n then print_endline str
+  
   (* module *)
   method moduleDef m rs = self#moduleDef_post m
   method moduleDef_val m = ()
   method moduleDef_pre m = ()
   method moduleDef_post m = ()
+  
   (* definition *)
   method definition v m d r = self#definition_post m d
   method definition_val v m d = ()
   method definition_pre m d = ()
   method definition_post m d = ()
+  
   (* process *)
   method choice v m d p rs = self#choice_post m d p
   method choice_val v m d p = ()
@@ -340,6 +382,7 @@ class abstract_iter_fold_node_repr (n:int) : iter_fold_node = object(self)
   method term_val v m d p = ()
   method term_pre m d p = ()
   method term_post m d p = ()
+  
   (* action *)
   method outAction v m d p a r = self#outAction_post m d p a
   method outAction_val v m d p a = ()
@@ -369,6 +412,7 @@ class abstract_iter_fold_node_repr (n:int) : iter_fold_node = object(self)
   method letAction_val v m d p a = ()
   method letAction_pre m d p a = ()
   method letAction_post m d p a = ()
+  
   (* value *)  
   method trueValue w m d p t v = self#trueValue_post m d p t v
   method trueValue_val w m d p t v = ()
@@ -402,16 +446,20 @@ end
 
 class ['a,'b] seq_fold_node_repr (n1:iter_fold_node) (n2:('a,'b) fold_node) : ['a,'b] fold_node = 
 object(self)
+  
   (* config *)
   method verbosity = max (n1#verbosity) (n2#verbosity)
   method echo vn str = if vn<=self#verbosity then print_string str
   method echoln vn str = if vn<=self#verbosity then print_endline str
+  
   (* module *)
   method moduleDef_val m = n1#moduleDef_val m ; n2#moduleDef_val m
   method moduleDef m rs = n1#moduleDef m [] ; n2#moduleDef m rs
+  
   (* definition *)
   method definition_val v m d = n1#definition_val () m d ; n2#definition_val v m d
   method definition v m d r = n1#definition () m d () ; n2#definition v m d r
+  
   (* process *)
   method choice_val v m d p = n1#choice_val () m d p ; n2#choice_val v m d p
   method choice v m d p rs = n1#choice () m d p [] ; n2#choice v m d p rs
@@ -421,6 +469,7 @@ object(self)
   method call v m d p rs = n1#call () m d p [] ; n2#call v m d p rs
   method term_val v m d p = n1#term_val () m d p ; n2#term_val v m d p
   method term v m d p = n1#term () m d p ; n2#term v m d p
+  
   (* action *)
   method outAction_val v m d p a = n1#outAction_val () m d p a ; n2#outAction_val v m d p a
   method outAction v m d p a r = n1#outAction () m d p a () ; n2#outAction v m d p a r
@@ -436,6 +485,7 @@ object(self)
   method primAction v m d p a rs = n1#primAction () m d p a [] ; n2#primAction v m d p a rs
   method letAction_val v m d p a = n1#letAction_val () m d p a ; n2#letAction_val v m d p a
   method letAction v m d p a r = n1#letAction () m d p a () ; n2#letAction v m d p a r
+  
   (* value *)  
   method trueValue_val w m d p t v = n1#trueValue_val () m d p t v ; n2#trueValue_val w m d p t v
   method trueValue w m d p t v = n1#trueValue () m d p t v ; n2#trueValue w m d p t v
