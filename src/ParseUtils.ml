@@ -1,4 +1,6 @@
 
+(** This module defines various utility functions used in the Parser module. *)
+
 (* 
  module ParseUtils
 

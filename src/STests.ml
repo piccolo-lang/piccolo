@@ -6,7 +6,9 @@
 
 *)
 
-open Types ;;
+(** Various tests for the Syntax module *)
+
+open Types ;; 
 open TypeRepr ;;
 open Syntax ;;
 open ASTRepr ;;
