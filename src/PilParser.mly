@@ -1,8 +1,8 @@
 
-(** Parser for Pi-Thread *)
 
 /* header */
 %{
+  (** Parser for Pi-Thread *)
   open Utils ;;
 
   open Types ;;
