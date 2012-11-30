@@ -10,6 +10,7 @@ open Utils ;;
 open Syntax ;;
 open Typing ;;
 
+(** Compute esize *)
 class env_compute_pass (n:int) : [string list, int] ASTUtils.fold_node = 
   let lookup env v = 
     let rec aux env n = match env with

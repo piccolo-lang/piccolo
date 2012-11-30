@@ -11,7 +11,7 @@ let parseFromString m =
 
 let parseDefinitionFromString def =
   let m = parseFromString ("module test\n" ^ def)
-  in match m with Syntax.Module m' -> match m'#definitions with d::_ -> d
+  in match m with Syntax.Module m' -> match m'#definitions with d::_ -> d | [] -> assert false
 
 let parseProcessFromString proc =
   let def = parseDefinitionFromString ("def Test() = " ^ proc)

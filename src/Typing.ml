@@ -69,15 +69,25 @@ object(self)
       errs
   method inAction_fold (m:module_type) (d:definition_type) (p:process prefix_process_type) (a: in_action_type) :typeErrors =
     self#echoln 3 "--Typing input";
+    (* [TOASK] what is a channelIndex ?? do we test ?? cf outAction_fold *)
+    (if a#variableType <> TUnknown then Printf.printf "%s already typed ?? [check !!]\n%!" a#variable);
     
-    []
-    (* failwith "inAction_fold: not yet implemented" *)
+    match d#fetchBinderType a#variable with (*binder can be something else than the definition correction !!! *)
+	None -> [ TypeError (("Unbound value "^a#variable), (a:>ast_type)) ]
+      | Some ty -> a#setVariableType ty; []
+	  (* failwith "inAction_fold: not yet implemented" *)
 
   method tauAction_fold (m:module_type) (d:definition_type) (p:process prefix_process_type) (a:tau_action_type) : typeErrors =
     self#echoln 3 "-- Typing tau" ;
     []
-  method newAction_fold: module_type -> definition_type -> process prefix_process_type ->  new_action_type -> typeErrors =
+  method newAction_fold (m:module_type) (d:definition_type) (p:process prefix_process_type) (a:new_action_type) : typeErrors =
     failwith "newAction_fold: not yet implemented"
+    (* self#echoln 3 "-- Typing newAction" ; *)
+    (* match d#lookupEnv a#variable with *)
+    (* 	None ->  *)
+    (*   | Some n -> [TypeError (("Already bound variable "^n), (a:>ast_type))] *)
+	  (* -> new bound hiding the previous one !! cf calcul esize -> [TODO] recode *)
+    
   method spawnAction_fold: module_type -> definition_type -> process prefix_process_type ->  spawn_action_type -> typeErrors list -> typeErrors =
     failwith "spawnAction_fold: not yet implemented"
   method primAction_fold: module_type -> definition_type -> process prefix_process_type ->  prim_action_type -> typeErrors list -> typeErrors =
@@ -91,23 +101,30 @@ object(self)
     let errs = match t with
       | TBool -> []
       | _ -> [TypeError("Mismatch type '" ^ (string_of_valueType t) ^ "' for constant, expected Bool", (v:>ast_type))]
-    in                                                                                                         v#setType TBool;
-    errs
+    in
+      v#setType TBool;
+      errs
   method falseValue_fold: module_type -> definition_type -> process_type -> Types.valueType -> bool  const_value_type -> typeErrors =
     failwith "falseValue_fold: not yet implemented"
   method intValue_fold: module_type -> definition_type -> process_type -> Types.valueType -> int  const_value_type -> typeErrors =
     failwith "intValue_fold: not yet implemented"
+
   method stringValue_fold (m:module_type) (d:definition_type) (p:process_type) (t:Types.valueType) (v:string  const_value_type) : typeErrors =
     self#echoln 3 "-- Typing string constant" ;
     let errs = match t with
       | TString -> []
       | _ -> [TypeError("Mismatch type '" ^ (string_of_valueType t) ^ "' for constant, expected String", (v:>ast_type))]
-    in                                                                                                         v#setType TString;
-    errs
-  method tupleValue_fold: module_type -> definition_type -> process_type -> Types.valueType -> value  tuple_value_type -> typeErrors list -> typeErrors =
+    in
+      v#setType TString;
+      errs
+      
+  method tupleValue_fold (m: module_type) (d: definition_type) (p: process_type) (t: Types.valueType) (v: value tuple_value_type) (errs: typeErrors list) : typeErrors =
     failwith "tupleValue_fold: not yet implemented"
-  method varValue_fold: module_type -> definition_type -> process_type -> Types.valueType ->  variable_type -> typeErrors =
+  
+  method varValue_fold (m:module_type) (d:definition_type) (p:process_type) (t:Types.valueType) (v: variable_type) : typeErrors =
+    self#echoln 3 "-- Typing variable";
     failwith " varValue_fold: not yet implemented"
+      
   method primValue_fold: module_type -> definition_type -> process_type -> Types.valueType ->  value prim_value_type -> typeErrors list -> typeErrors =
     failwith "primValue_fold: not yet implemented"
 end
