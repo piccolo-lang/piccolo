@@ -6,9 +6,11 @@
 
 *)
 
-open Types ;;
-open TypeRepr ;;
-open Syntax ;;
+(** Various tests for the Typing module *)
+
+open Types ;;  
+open TypeRepr ;; 
+open Syntax ;; 
 open ASTRepr ;;
 
 let ppstr = "def PingPong(i:chan<string>,o:chan<string>,msg:string) = i?(m), #core/io:println(m), o!msg, PingPong(i,o,msg)";;
