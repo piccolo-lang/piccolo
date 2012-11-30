@@ -13,6 +13,7 @@ open Syntax ;;
 (* AST Folding framework *)
 (* --------------------- *)
 
+(** Common interface to use with fold_module *)
 class type ['a,'b] fold_node = object
 
   (* echo *)
@@ -250,6 +251,12 @@ class virtual  ['a,'b,'c,'d] merge_fold_node_repr (n1:('a,'b) fold_node) (n2:('c
   method primValue_val w m d p t v = (n1#primValue_val (fst w) m d p t v , n2#primValue_val (snd w) m d p t v)
 end
 
+(**
+   args:
+   n1 n2
+   method m
+   m -> (n1#m , n2#m )
+*)
 class ['a,'b,'c,'d] compose_fold_node_repr (n1:('a,'b) fold_node) (n2:('c,'d) fold_node) : [('a*'c),('b * 'd)] fold_node = 
 object(self)
   inherit ['a,'b,'c,'d] merge_fold_node_repr n1 n2
@@ -444,6 +451,13 @@ class abstract_iter_fold_node_repr (n:int) : iter_fold_node = object(self)
   method primValue_post m d p t v = ()
 end
 
+(** Take two parameters :
+    n1:iter_fold_node
+    n2:('a,'b) fold_node
+    
+    for each method m arg_1 ... arg_n will apply the sequence 
+    n1#m arg_1 ... arg_n; n2#arg_1 ... arg_n
+*)
 class ['a,'b] seq_fold_node_repr (n1:iter_fold_node) (n2:('a,'b) fold_node) : ['a,'b] fold_node = 
 object(self)
   
@@ -509,28 +523,40 @@ let rec fold_seq_all ns n = match ns with
   | [] -> n
   | n'::ns' -> fold_seq n' (fold_seq_all ns' n)
 
+
+(* [TODO] : rédiger proprement et en anglais le commentaire
+   "handler" des objets fold -> point d'entrée *)
 let rec fold_module (m:moduleDef) (n:('a,'b) fold_node) : 'b =
   match m with
     | Module m' -> 
       n#moduleDef m' (List.fold_left (fun ds d -> (definition_fold (n#moduleDef_val m') m' d n)::ds) [] m'#definitions)
+	(* n#moduleDef: module_type -> 'b list -> 'b *)
+	
 and definition_fold (v:'a) (m:module_type) (def:definition) (n:('a,'b) fold_node) =
   match def with
     | Def d ->
       n#definition v m d (process_fold (n#definition_val v m d) m d d#process n)
+	(* n#definition: 'a -> module_type -> definition_type -> ('a, 'b) -> ('a, 'b) *)
+
 and process_fold (v:'a) (m:module_type) (d:definition_type) (proc:process) (n:('a,'b) fold_node) =
   match proc with
     | Term p -> term_process_fold v m d p n
     | Call p -> call_process_fold v m d p n
     | Choice p -> choice_process_fold v m d p n
+
 and term_process_fold (v:'a) (m:module_type) (d:definition_type) (p:term_process_type) (n:('a,'b) fold_node) =
   n#term_val v m d p ; n#term v m d p
+
 and call_process_fold (v:'a) (m:module_type) (d:definition_type) (p:call_process_type) (n:('a,'b) fold_node) =
   n#call v m d p (List.fold_left (fun vs (t',v') -> (value_fold (n#call_val v m d p) m d (p:>process_type) t' v' n)::vs) [] (List.combine p#argTypes p#args))
+
 and choice_process_fold (v:'a) (m:module_type) (d:definition_type) (p:process choice_process_type) (n:('a,'b) fold_node) =
   n#choice v m d p (list_fold_n (fun bs index branch -> (branch_process_fold (n#choice_val v m d p) m d p index branch n)::bs) [] p#branches)
+
 and branch_process_fold (v:'a) (m:module_type) (d:definition_type) (c:process choice_process_type) (index:int) (p:process prefix_process_type) (n:('a,'b) fold_node) =
   let w = n#branch_val v m d c index p in
   n#branch v m d c index p (value_fold w m d (p:>process_type) p#guardType p#guard n) (action_fold w m d p p#action n) (process_fold w m d p#continuation n)
+
 and action_fold (v:'a) (m:module_type) (d:definition_type) (p:process prefix_process_type) (act:action) (n:('a,'b) fold_node) =
   match act with
     | Tau a -> tau_action_fold v m d p a n

@@ -131,3 +131,5 @@ let fibStr = "def Fib(n:int,m:int,p:int,r:chan<int>)=[n]r!m,end+tau,Fib(n,m,m,r)
    let fibStr = "def Fib(n:int,m:int,p:int,r:chan<int>)=[n=0]r!m,end+tau,Fib(n-1,m+p,m,r)";; *)
 
 let fibdef = ParseUtils.parseDefinitionFromString fibStr;;
+
+print_endline (string_of_definition fibdef) ;;

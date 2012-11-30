@@ -67,8 +67,12 @@ object(self)
         else [TypeError("Mismatch channel type, expecting '" ^ (string_of_valueType (TChan t2)), (a:>ast_type))]
       | (_,t2) -> [TypeError("Not a channel type, expecting '" ^ (string_of_valueType (TChan t2)), (a:>ast_type))]) @
       errs
-  method inAction_fold: module_type -> definition_type -> process prefix_process_type ->  in_action_type -> typeErrors =
-    failwith "inAction_fold: not yet implemented"
+  method inAction_fold (m:module_type) (d:definition_type) (p:process prefix_process_type) (a: in_action_type) :typeErrors =
+    self#echoln 3 "--Typing input";
+    
+    []
+    (* failwith "inAction_fold: not yet implemented" *)
+
   method tauAction_fold (m:module_type) (d:definition_type) (p:process prefix_process_type) (a:tau_action_type) : typeErrors =
     self#echoln 3 "-- Typing tau" ;
     []
