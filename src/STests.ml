@@ -124,3 +124,5 @@ print_endline (string_of_definition ppdef) ;;
 let pp = ParseUtils.parseFromString ("module Test/PingPong \n" ^ ppstr ^ "\n def Main() = new(c1:chan<string>),new(c2:chan<string>),spawn{PingPong(c1,c2,\"<PING>\")},spawn{PingPong(c2,c1,\"<PONG>\")},c1!\"<INIT>\",end") ;;
 
 print_endline (string_of_module pp) ;;
+
+let v = new value_repr ()
