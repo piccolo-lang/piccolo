@@ -41,16 +41,20 @@ object(self)
     end
 
   (* definition *)
-  method definition_fold: module_type -> definition_type -> typeErrors -> typeErrors =
-    failwith "definition_fold: not yet implemented"
-
+  method definition_fold (m:module_type) (d:definition_type) (errs:typeErrors) :typeErrors =
+    self#echoln 3 "-- Typing definition [TODO] check if correct" ;
+    errs
   (* process *)
-  method choice_fold: module_type -> definition_type -> process choice_process_type -> typeErrors list -> typeErrors =
-    failwith "choice_fold: not yet implemented"
-  method branch_fold: module_type -> definition_type -> process choice_process_type -> int -> process prefix_process_type -> typeErrors -> typeErrors -> typeErrors -> typeErrors =
-    failwith " branch_fold: not yet implemented"
-  method call_fold: module_type -> definition_type ->  call_process_type -> typeErrors list -> typeErrors =
-    failwith "call_fold: not yet implemented"
+  method choice_fold (m:module_type) (d:definition_type) (p:process choice_process_type) (errs:typeErrors list) :typeErrors =
+    self#echoln 3 "-- Typing choice [TODO] check if correct" ;
+    List.flatten errs
+  method branch_fold (m:module_type) (d:definition_type) (parent:process choice_process_type) (index:int) (p:process prefix_process_type) (guardErrs:typeErrors) (actErrs:typeErrors) (continuationErrs:typeErrors) :typeErrors =
+    self#echoln 3 "-- Typing branch [TODO] check if correct" ;
+    guardErrs @ actErrs @ continuationErrs
+  method call_fold (m:module_type) (d:definition_type) (p:call_process_type) (errs:typeErrors list) : typeErrors =
+    self#echoln 3 "-- Typing call [TODO] !!!" ;
+    
+    List.flatten errs
   method term_fold (m:module_type) (d:definition_type) (p:term_process_type) : typeErrors =
     self#echoln 3 "-- Typing term" ;
     []
@@ -68,48 +72,66 @@ object(self)
       | (_,t2) -> [TypeError("Not a channel type, expecting '" ^ (string_of_valueType (TChan t2)), (a:>ast_type))]) @
       errs
   method inAction_fold (m:module_type) (d:definition_type) (p:process prefix_process_type) (a: in_action_type) :typeErrors =
-    self#echoln 3 "--Typing input";
+    self#echoln 3 "-- Typing input";
     (* [TOASK] what is a channelIndex ?? do we test ?? cf outAction_fold *)
-    (if a#variableType <> TUnknown then Printf.printf "%s already typed ?? [check !!]\n%!" a#variable);
     
-    match d#fetchBinderType a#variable with (*binder can be something else than the definition correction !!! *)
-	None -> [ TypeError (("Unbound value "^a#variable), (a:>ast_type)) ]
-      | Some ty -> a#setVariableType ty; []
-	  (* failwith "inAction_fold: not yet implemented" *)
+    (if a#variableType <> TUnknown then Printf.printf "%s already typed ?? [check !!]\n%!" a#variable);
+    match d#fetchBinderType a#channel with 
+      (*binder can be something else than the definition correction !!! *)
+      None -> (* search binder and only if not found then error*)
+	[ TypeError (("Unbound channel "^a#channel), (a:>ast_type)) ]
+    | Some (TChan var_ty)-> 
+      a#setChannelBinder (d:>ast_binder_type);
+      a#setVariableType var_ty; 
+      self#echoln 3 ("---- setting var to type :" ^ (string_of_valueType var_ty));
+      []
+    |Some _ -> [TypeError("Mismatch type for " ^ a#channel ^ " expecting Channel type'", (a:>ast_type))]
 
   method tauAction_fold (m:module_type) (d:definition_type) (p:process prefix_process_type) (a:tau_action_type) : typeErrors =
-    self#echoln 3 "-- Typing tau" ;
+    (* self#echoln 3 "-- Typing tau" ; *)
     []
+  
   method newAction_fold (m:module_type) (d:definition_type) (p:process prefix_process_type) (a:new_action_type) : typeErrors =
-    failwith "newAction_fold: not yet implemented"
-    (* self#echoln 3 "-- Typing newAction" ; *)
-    (* match d#lookupEnv a#variable with *)
-    (* 	None ->  *)
-    (*   | Some n -> [TypeError (("Already bound variable "^n), (a:>ast_type))] *)
-	  (* -> new bound hiding the previous one !! cf calcul esize -> [TODO] recode *)
+    self#echoln 3 "-- Typing new_action" ;
+    (*enrichir un environnement local ??*)
+    []
+
+  method spawnAction_fold (m:module_type) (d:definition_type) (p:process prefix_process_type) (s:spawn_action_type) (errs:typeErrors list) :typeErrors =
+    self#echoln 3 "-- Typing spawn" ;
+    List.flatten errs
     
-  method spawnAction_fold: module_type -> definition_type -> process prefix_process_type ->  spawn_action_type -> typeErrors list -> typeErrors =
-    failwith "spawnAction_fold: not yet implemented"
   method primAction_fold: module_type -> definition_type -> process prefix_process_type ->  prim_action_type -> typeErrors list -> typeErrors =
     failwith "primAction_fold: not yet implemented"
-  method letAction_fold: module_type -> definition_type -> process prefix_process_type ->  let_action_type -> typeErrors-> typeErrors =
+  method letAction_fold (m:module_type) (d:definition_type) (p:process prefix_process_type) (a:let_action_type) (errs: typeErrors): typeErrors =
     failwith "letAction_fold: not yet implemented"
-  
   (* value *)
-  method trueValue_fold (m:module_type) (d:definition_type) (p:process_type) (t:Types.valueType) (v:bool  const_value_type) : typeErrors =
+  method trueValue_fold (m:module_type) (d:definition_type) (p:process_type) (t:Types.valueType) (v:bool const_value_type) : typeErrors =
     self#echoln 3 "-- Typing constant true" ;
     let errs = match t with
       | TBool -> []
       | _ -> [TypeError("Mismatch type '" ^ (string_of_valueType t) ^ "' for constant, expected Bool", (v:>ast_type))]
     in
-      v#setType TBool;
-      errs
-  method falseValue_fold: module_type -> definition_type -> process_type -> Types.valueType -> bool  const_value_type -> typeErrors =
-    failwith "falseValue_fold: not yet implemented"
-  method intValue_fold: module_type -> definition_type -> process_type -> Types.valueType -> int  const_value_type -> typeErrors =
-    failwith "intValue_fold: not yet implemented"
+    v#setType TBool;
+    errs
+  method falseValue_fold (m:module_type) (d:definition_type) (p:process_type) (t:Types.valueType) (v:bool const_value_type) : typeErrors =
+    self#echoln 3 "-- Typing constant false" ;
+    let errs = match t with
+      | TBool -> []
+      | _ -> [TypeError("Mismatch type '" ^ (string_of_valueType t) ^ "' for constant, expected Bool", (v:>ast_type))]
+    in
+    v#setType TBool;
+    errs
 
-  method stringValue_fold (m:module_type) (d:definition_type) (p:process_type) (t:Types.valueType) (v:string  const_value_type) : typeErrors =
+  method intValue_fold (m:module_type) (d:definition_type) (p:process_type) (t:Types.valueType) (v:int const_value_type) : typeErrors =
+    self#echoln 3 "-- Typing constant int" ;
+    let errs = match t with
+      | TInt -> []
+      | _ -> [TypeError("Mismatch type '" ^ (string_of_valueType t) ^ "' for constant, expected Int", (v:>ast_type))]
+    in
+    v#setType TInt;
+    errs
+
+  method stringValue_fold (m:module_type) (d:definition_type) (p:process_type) (t:Types.valueType) (v:string const_value_type) : typeErrors =
     self#echoln 3 "-- Typing string constant" ;
     let errs = match t with
       | TString -> []
@@ -123,7 +145,12 @@ object(self)
   
   method varValue_fold (m:module_type) (d:definition_type) (p:process_type) (t:Types.valueType) (v: variable_type) : typeErrors =
     self#echoln 3 "-- Typing variable";
-    failwith " varValue_fold: not yet implemented"
+    (if v#ofType <> TUnknown then Printf.printf "%s already typed ?? [check !!]\n%!" v#name);
+    match d#fetchBinderType v#name with 
+      (*binder can be something else than the definition correction !!! *)
+      None -> (* search binder and only if not found then error*)
+	  [ TypeError (("Unbound value "^v#name), (v:>ast_type)) ]
+    | Some ty -> v#setType ty; []
       
   method primValue_fold: module_type -> definition_type -> process_type -> Types.valueType ->  value prim_value_type -> typeErrors list -> typeErrors =
     failwith "primValue_fold: not yet implemented"

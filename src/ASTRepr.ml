@@ -116,7 +116,6 @@ class variable_repr vt n = object
      let_action_repr
      definition_repr
  *)
-
   method toString = n ^ ":" ^ (string_of_valueType vt)
 end
 
@@ -193,7 +192,7 @@ class in_action_repr (ch:string) (v:string) (vt:valueType) = object(self)
     (** add *)
   method setVariableType t = _variableType <- t
     (** **)
-  method toString = ch ^ "?(" ^ v ^ ")"
+  method toString = ch ^ "?(" ^ v ^ ":" ^ (string_of_valueType _variableType) ^ ")"
 end
 
 (** Input action constructor *)
