@@ -58,16 +58,22 @@ class type ['a,'b] fold_node = object
   (* value *)
   method trueValue_val: 'a -> module_type -> definition_type -> process_type -> Types.valueType -> bool  const_value_type -> unit
   method trueValue: 'a -> module_type -> definition_type -> process_type -> Types.valueType -> bool  const_value_type -> 'b
+  
   method falseValue_val: 'a -> module_type -> definition_type -> process_type -> Types.valueType -> bool  const_value_type -> unit
   method falseValue: 'a -> module_type -> definition_type -> process_type -> Types.valueType -> bool  const_value_type -> 'b
+  
   method intValue_val: 'a -> module_type -> definition_type -> process_type -> Types.valueType -> int  const_value_type -> unit
   method intValue: 'a -> module_type -> definition_type -> process_type -> Types.valueType -> int  const_value_type -> 'b
+  
   method stringValue_val: 'a -> module_type -> definition_type -> process_type -> Types.valueType -> string  const_value_type -> unit
   method stringValue: 'a -> module_type -> definition_type -> process_type -> Types.valueType -> string  const_value_type -> 'b
+  
   method tupleValue_val: 'a -> module_type -> definition_type -> process_type -> Types.valueType -> value  tuple_value_type -> 'a
   method tupleValue: 'a -> module_type -> definition_type -> process_type -> Types.valueType -> value  tuple_value_type -> 'b list -> 'b
+  
   method varValue_val: 'a -> module_type -> definition_type -> process_type -> Types.valueType ->  variable_type -> unit
   method varValue: 'a -> module_type -> definition_type -> process_type -> Types.valueType ->  variable_type -> 'b
+  
   method primValue_val: 'a -> module_type -> definition_type -> process_type -> Types.valueType ->  value prim_value_type -> 'a
   method primValue: 'a -> module_type -> definition_type -> process_type -> Types.valueType ->  value prim_value_type -> 'b list -> 'b
 end
@@ -526,6 +532,7 @@ let rec fold_seq_all ns n = match ns with
 
 (* [TODO] : rédiger proprement et en anglais le commentaire
    "handler" des objets fold -> point d'entrée *)
+(** fold_node "handler", apply the fold_node methods on a moduleDef and his definition list *)
 let rec fold_module (m:moduleDef) (n:('a,'b) fold_node) : 'b =
   match m with
     | Module m' -> 

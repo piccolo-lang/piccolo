@@ -101,7 +101,8 @@ let makeTuple vt vs =
 
 
 (** Representation of variable_type *)
-class variable_repr vt n = object
+class variable_repr vt n = 
+object(self)
   inherit value_repr vt
   val mutable _index = -1
   val mutable _binder = None
@@ -116,7 +117,7 @@ class variable_repr vt n = object
      let_action_repr
      definition_repr
  *)
-  method toString = n ^ ":" ^ (string_of_valueType vt)
+  method toString = n ^ ":" ^ (string_of_valueType self#ofType)
 end
 
 (** Variable value constructor *)
