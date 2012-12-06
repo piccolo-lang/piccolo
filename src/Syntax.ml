@@ -295,7 +295,7 @@ type definition =
 let definition_type_of_definition = function
   | Def d -> d
 
-(** string representing a definitnion *)
+(** string representing a definition *)
 let string_of_definition = function
   | Def d -> d#toString
     

@@ -286,6 +286,7 @@ class term_process_repr m d = object
   method toString = "0"
 end
 
+(** Term process constructor *)
 let makeTerm m d = Term (new term_process_repr m d) ;;
 
 (** Representation of call_process_type *)
@@ -301,8 +302,10 @@ class call_process_repr m d (mname:string) (dname:string) (vts : valueType list)
   method toString = mname ^ ":" ^ dname ^ (string_of_collection "(" ")" "," string_of_value vs)
 end
 
+(** Call process constructor *)
 let makeCall m d mname dname vts vs = Call (new call_process_repr m d mname dname vts vs)
 
+(** Spawn action constructor helper: build a spawn on the Call argument *)
 let makeSpawnCall = function
   | Call c -> makeSpawn c#moduleName c#defName c#argTypes c#args
   | _ -> failwith "Not a call (please report)"
@@ -316,6 +319,7 @@ class prefix_process_repr (mname:string) (dname:string) (g:value) (gt:valueType)
   method setGuardType gt = _guardType <- gt
   method action = a
   method continuation = p
+    (** Index of the branch in the parent choice*)
   method index = i
   method toString = 
     (match g with | VTrue _ -> "" | _ -> "[" ^ (string_of_value g) ^ "] ")
@@ -323,6 +327,7 @@ class prefix_process_repr (mname:string) (dname:string) (g:value) (gt:valueType)
   ^ "," ^ (string_of_process p)
 end
 
+(** Prefix process constructor *)
 let makePrefixRepr m d g a p i = new prefix_process_repr m d g a p i
 
 (** Representation of choice_process_type *)
@@ -337,16 +342,19 @@ class choice_process_repr m d (bs: (process prefix_process_type) list)  =
       else string_of_collection "" "" "+" (function x -> x#toString) bs
   end
 
+(** Choice process constructor *)
 let makeChoice m d bs =
   let rec makeBranches i bs = match bs with
     | [] -> []
     | (g,gt,a,p)::bs' -> (makePrefixRepr m d g gt a p i)::(makeBranches (i+1) bs')
   in Choice (new choice_process_repr m d (makeBranches 0 bs))
 
+(** 1 branch Choice process constructor *)
 let makePrefix m d a p = makeChoice m d [ (makeVTrue (), TBool, a, p) ]
 
 (** {2 Definitions representations } *)
 
+(** Representation of a parameter used in definition_repr *)
 class param_repr n t = object
   val mutable _type = t
   method name = n
@@ -354,6 +362,7 @@ class param_repr n t = object
   method toString = n ^ ":" ^ (string_of_valueType t)
 end
 
+(** Representation of definition_type *)
 class definition_repr (n:string) (ps:(string * valueType) list)  (p:process) = 
   let ps' = List.map (fun (n,t) -> new param_repr n t) ps
   in
@@ -382,6 +391,7 @@ object
   method toString = "def " ^ n ^ (string_of_collection "(" ")" "," (fun p -> p#toString) _params) ^ " = " ^ (string_of_process p)
 end
 
+(** Definition constructor *)
 let makeDefinition n ps p = Def (new definition_repr n ps p)
 
 (* modules *)
