@@ -27,47 +27,6 @@ type typeErrors = typeError list
 let string_of_typeErrors errs = string_of_collection "" "" "\n" string_of_typeError errs
   
 (** representation of the type of a fold_node *)
-class typing_pass_node (verbosity:int) = 
-object(self)
-  inherit [typeErrors] ASTUtils.simple_abstract_fold_node_repr verbosity
-    (* module *)
-    (* method echoln of interface ASTUtils.fold_node *) 
-  method moduleDef_val (m:module_type) : unit =
-    self#echoln 2 "Low-level Typing pass started"
-      (* method displaying the low-level of errors *)
-  method moduleDef_fold (m:module_type) (errs:typeErrors list) : typeErrors =
-    self#echoln 2 "Low-level Typing pass finished" ;
-    let errs' = List.fold_left (fun es es' -> es@es') [] errs
-    in
-      if empty_list errs'
-      then begin 
-	self#echoln 2 ("  ==> no low-level type error") ; errs'
-      end else begin
-	List.iter (fun err -> self#echoln 1 (string_of_typeError err)) errs' ;
-	errs'
-      end	
-	(* method for folding a definition  *)
-  method definition_fold: module_type -> definition_type -> typeErrors -> typeErrors =
-    failwith "definition_fold: not yet implemented"
-      
-  (* process *)
-  (* method for folding a choice process *)
-  method choice_fold: module_type -> definition_type -> process choice_process_type -> typeErrors list -> typeErrors =
-    failwith "choice_fold: not yet implemented"
-      (* method for folding a branch processus *)
-  method branch_fold: module_type -> definition_type -> process choice_process_type -> int -> process prefix_process_type -> typeErrors -> typeErrors -> typeErrors -> typeErrors =
-    failwith " branch_fold: not yet implemented"
-      (* method for folding a call process *)
-  method call_fold: module_type -> definition_type ->  call_process_type -> typeErrors list -> typeErrors =
-    failwith "call_fold: not yet implemented"
-      (* method for folding a termination process *) 
-  method term_fold (m:module_type) (d:definition_type) (p:term_process_type) : typeErrors =
-    self#echoln 3 "-- Typing term" ;
-    []
-      
-  (* action *)
-  (* method for typing an output! action *)
-  method outAction_fold (m:module_type) (d:definition_type) (p:process prefix_process_type) (a:out_action_type) (errs:typeErrors) : typeErrors =
 
 type typingEnv = ((string * valueType) * ast_binder_type) list
 
@@ -76,8 +35,6 @@ let print_typingEnv env =
   Printf.printf "\n%!"
 
 let string_of_typeErrors errs = string_of_collection "" "" "\n" string_of_typeError errs
-
-
 
 (* class typing_pass_node (verbosity:int) =  *)
 (* object(self) *)
