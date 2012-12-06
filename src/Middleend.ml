@@ -6,10 +6,13 @@
 
 *)
 
+(** *)
+
 open Utils ;;
 open Syntax ;;
 open Typing ;;
 
+(** Representation of a [string list,int] fold_node  *)
 class env_compute_pass (n:int) : [string list, int] ASTUtils.fold_node = 
   let lookup env v = 
     let rec aux env n = match env with
@@ -100,13 +103,14 @@ object(self)
   method primValue env m d p t v rs = 0
 end
 
+(** Representation of a iter_fold_node *)
 class csize_compute_pass (n:int) : ASTUtils.iter_fold_node = 
-object(self)
+object(self) 
   inherit ASTUtils.abstract_iter_fold_node_repr n
   method moduleDef_post m = self#echoln 2 ("csize pass in Module: " ^ m#name)
 end
 
-
+(**  *)
 let first_pass m v = 
   ASTUtils.fold_module m 
     (ASTUtils.fold_seq (new csize_compute_pass v) 
