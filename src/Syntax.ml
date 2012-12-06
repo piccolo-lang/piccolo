@@ -157,7 +157,7 @@ class type spawn_action_type = object
   method toString : string
 end
 
-(** interface representing the type of the primitive action, extends ast_type *)
+(** interface representing the type of a primitive action, extends ast_type *)
 class type prim_action_type = object
   inherit ast_type
   method moduleName : string
