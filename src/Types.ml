@@ -6,7 +6,7 @@
 *)
 (** This module defines various utility functions used in other parts of the compiler. *)
 
-open Utils ;;
+open Utils;;
 
 (** interface representing a tuple of a given type *)
 class type ['a] tuple_type = object

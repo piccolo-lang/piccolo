@@ -1,14 +1,14 @@
-
-(*
-  Module Middleend
+(* module Middleend
+  ---------------
 
   Middleend passes
 
 *)
+(** This module defines the middle end part of the compiler. *)
 
-open Utils ;;
-open Syntax ;;
-open Typing ;;
+open Utils;;
+open Syntax;;
+open Typing;;
 
 class env_compute_pass (n:int) : [string list, int] ASTUtils.fold_node = 
   let lookup env v = 
