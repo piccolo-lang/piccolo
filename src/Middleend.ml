@@ -6,13 +6,14 @@
 
 *)
 
-(** *)
+(** This module defines the Middle End part of the compiler.*)
 
 open Utils ;;
 open Syntax ;;
 open Typing ;;
 
-(** Representation of a [string list,int] fold_node  *)
+
+(** Representation of a [string list,int] fold_node. Compute esize *)
 class env_compute_pass (n:int) : [string list, int] ASTUtils.fold_node = 
   let lookup env v = 
     let rec aux env n = match env with
@@ -56,7 +57,8 @@ object(self)
     | _ -> env
   method branch env m d p i b s1 s2 s3 = s1+s2+s3
   method call_val env m d p = env
-  method call env m d p _ = p#arity (* Note: a second pass must refine this because the call arity may be not enough *)
+  method call env m d p _ = p#arity 
+  (* Note: a second pass must refine this because the call arity may be not enough *)
   method term_val env m d p = ()
   method term env m d p = 0
   (* actions *)
