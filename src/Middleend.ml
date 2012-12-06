@@ -10,6 +10,7 @@ open Utils;;
 open Syntax;;
 open Typing;;
 
+(** Representation of a [string list,int] fold_node. Compute esize *)
 class env_compute_pass (n:int) : [string list, int] ASTUtils.fold_node = 
   let lookup env v = 
     let rec aux env n = match env with
@@ -53,7 +54,8 @@ object(self)
     | _ -> env
   method branch env m d p i b s1 s2 s3 = s1+s2+s3
   method call_val env m d p = env
-  method call env m d p _ = p#arity (* Note: a second pass must refine this because the call arity may be not enough *)
+  method call env m d p _ = p#arity 
+  (* Note: a second pass must refine this because the call arity may be not enough *)
   method term_val env m d p = ()
   method term env m d p = 0
   (* actions *)
@@ -100,13 +102,14 @@ object(self)
   method primValue env m d p t v rs = 0
 end
 
+(** Representation of a iter_fold_node *)
 class csize_compute_pass (n:int) : ASTUtils.iter_fold_node = 
-object(self)
+object(self) 
   inherit ASTUtils.abstract_iter_fold_node_repr n
   method moduleDef_post m = self#echoln 2 ("csize pass in Module: " ^ m#name)
 end
 
-
+(**  *)
 let first_pass m v = 
   ASTUtils.fold_module m 
     (ASTUtils.fold_seq (new csize_compute_pass v) 

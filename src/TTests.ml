@@ -6,18 +6,30 @@
 
 *)
 
-open Types ;;
-open TypeRepr ;;
-open Syntax ;;
+(** Various tests for the Typing module *)
+
+open Types ;;  
+open TypeRepr ;; 
+open Syntax ;; 
 open ASTRepr ;;
 
-let ppstr = "def PingPong(i:chan<string>,o:chan<string>,msg:string) = i?(m), #core/io:println(m), o!msg, PingPong(i,o,msg)";;
 
-let pp = ParseUtils.parseFromString ("module Test/PingPong \n" ^ ppstr ^ "\n def Main() = new(c1:chan<string>),new(c2:chan<string>),spawn{PingPong(c1,c2,\"<PING>\")},spawn{PingPong(c2,c1,\"<PONG>\")},c1!\"<INIT>\",end") ;;
+
+(* let ppstr = "def PingPong(i:chan<string>,o:chan<string>,msg:string) = i?(m), #core/io:println(m), o!msg, PingPong(i,o,msg)";; *)
+
+(* let pp = ParseUtils.parseFromString ("module Test/PingPong \n" ^ ppstr ^ "\n def Main() = new(c1:chan<string>),new(c2:chan<string>),spawn{PingPong(c1,c2,\"<PING>\")},spawn{PingPong(c2,c1,\"<PONG>\")},c1!\"<INIT>\",end") ;; *)
+
+
+let ppstr = "def PingPong(i:chan<string>,o:chan<string>,msg:string) = i?(m),end";;
+
+
+let pp = ParseUtils.parseFromString ("module Test/PingPong \n" ^ ppstr ^ "\n def Main() = new(c1:chan<string>),new(c2:chan<string>),spawn{PingPong(c1,c2,\"<PING>\")}, end") ;;
 
 let check_pp () = Middleend.first_pass pp 3 ;;
 
 check_pp () ;;
+
+print_endline (string_of_module pp) ;;
 
 (*
 let check_pp = checkAndInferTypes pp ;;

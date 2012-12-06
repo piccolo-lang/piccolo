@@ -125,6 +125,7 @@ class type in_action_type = object
   method variableIndex : int
   method fetchBinderType : string -> valueType option
   method setVariableIndex : int -> unit
+  method setVariableType : valueType -> unit
   method toString : string
 end
 
@@ -230,11 +231,9 @@ class type call_process_type = object
   method toString : string
 end
 
-<<<<<<< HEAD
-(** interface representing the type of a prefix process, extends process_type *)
-=======
-(* 'a = process ? find another instanciation of 'a *)
->>>>>>> 71873978b8b6f80813a76046f9bbde9653e49faf
+(* 'a = process ? find another instanciation of 'a 
+   [TOASK] why 'a if only one instanciation *)
+(** interface representing a prefix process, extends process_type *)
 class type ['a] prefix_process_type = object
   inherit process_type
   method guard : value

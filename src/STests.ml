@@ -6,7 +6,9 @@
 
 *)
 
-open Types ;;
+(** Various tests for the Syntax module *)
+
+open Types ;; 
 open TypeRepr ;;
 open Syntax ;;
 open ASTRepr ;;
@@ -132,3 +134,4 @@ let fibStr = "def Fib(n:int,m:int,p:int,r:chan<int>)=[n]r!m,end+tau,Fib(n,m,m,r)
 
 let fibdef = ParseUtils.parseDefinitionFromString fibStr;;
 
+print_endline (string_of_definition fibdef) ;;
