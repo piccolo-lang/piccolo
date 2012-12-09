@@ -36,6 +36,9 @@ let print_typingEnv env =
 
 let string_of_typeErrors errs = string_of_collection "" "" "\n" string_of_typeError errs
 
+(** Thread a typing env which is enriched with definitions and choice_process
+  * return a list of errors wich is printed in level 2 verbosity
+  *)
 class typing_pass_node (n:int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
   let lookup env v = 
     try Some (List.find (fun ((name,_), _) -> name=v ) env)
@@ -68,7 +71,7 @@ object(self)
     List.map (fun p -> (p, (d:>ast_binder_type))) d#params
 
   method definition _ (m:module_type) (d:definition_type) (errs:typeErrors) :typeErrors = 
-    self#echoln 2 ("-- typing pass finished in definition "^ d#name ^" [TODO] check if correct") ;
+    self#echoln 2 ("-- typing pass finished in definition "^ d#name ^" [TODO] check if correct\n") ;
     errs 
 
   (* processes *)
@@ -77,9 +80,15 @@ object(self)
     self#echoln 3 "-- Typing choice [TODO] check if correct" ;
     List.flatten errs
 
-  method branch_val env m d c i p = 
+  method branch_val (env:typingEnv) (m:module_type) (d:definition_type) (c:process choice_process_type) (i:int) (p:process prefix_process_type) : typingEnv = 
     match p#action with
-      | Input a -> ((a#variable, a#variableType), (a:>ast_binder_type))::env
+      | Input a -> 
+	  (match lookup env a#channel with
+	     | Some ((_,TChan var_ty), binder)->
+	     	 ((a#variable, var_ty), (a:>ast_binder_type))::env 
+	     | Some ((_, _), binder)-> 
+		 ((a#variable, TUnknown), (a:>ast_binder_type))::env (* Erreur !!*)
+	     | None -> env)	  
       | New a -> ((a#variable, a#variableType), (a:>ast_binder_type))::env
       | Let a -> ((a#variable, a#variableType), (a:>ast_binder_type))::env
       | _ -> env
@@ -99,16 +108,34 @@ object(self)
       
   (* actions *)
   method outAction_val env m d p a = env
+
   method outAction env (m:module_type) (d:definition_type) (p:process prefix_process_type) (a:out_action_type) (errs:typeErrors) : typeErrors =
     self#echoln 3 "-- Typing output" ;
-    (if a#channelIndex == -1
-     then [TypeError("Channel variable '" ^ a#channel ^ "' not in scope",(a:>ast_type))]
-     else []) @
-      (match (a#channelType, a#valueType) with
-	 | (TChan t1,t2) -> 
-             if type_eq t1 t2 then []
-             else [TypeError("Mismatch channel type, expecting '" ^ (string_of_valueType (TChan t2)), (a:>ast_type))]
-	 | (_,t2) -> [TypeError("Not a channel type, expecting '" ^ (string_of_valueType (TChan t2)), (a:>ast_type))]) @
+    (* (if a#channelIndex == -1 *)
+    (*  then [TypeError("Channel variable '" ^ a#channel ^ "' not in scope",(a:>ast_type))] *)
+    (*  else []) @ *)
+      ( match lookup env a#channel with
+	  | None -> [TypeError("Unbound channel " ^ a#channel, (a:>ast_type))]
+	  | Some ((_,chType),_) ->
+	      try 
+		let valType= 
+		  match a#value with 
+		    | VVar v -> 
+			(match lookup env v#name with
+			  | Some ((_,ty),_) -> ty
+			  | None -> failwith v#name)
+		    | _ -> a#valueType
+		in
+		  begin
+		    match (chType, valType) with
+		      | (TChan t1, t2) ->
+			  (* Printf.printf "##### Comparing %s with %s #####" (string_of_valueType t1) (string_of_valueType t2); *)
+			  if type_eq t1 t2 then []
+			  else [TypeError("Mismatch channel type, expecting '" ^ (string_of_valueType (TChan t2)), (a:>ast_type))]
+		      | (_, t2) -> [TypeError("Not a channel type, expecting '" ^ (string_of_valueType (TChan t2)), (a:>ast_type))]
+		  end
+	      with Failure var_name -> [TypeError("Unbound variable " ^ var_name, (a:>ast_type))]
+       	  ) @
       errs
 
   method inAction_val env m d p a = () 
@@ -200,19 +227,18 @@ object(self)
   method varValue_val env m d p t v = ()
   method varValue env (m:module_type) (d:definition_type) (p:process_type) (t:Types.valueType) (v: variable_type) : typeErrors =
     self#echoln 3 "-- Typing variable";
-    print_typingEnv env;
+    (* print_typingEnv env; *)
     (if v#ofType <> TUnknown then Printf.printf "%s already typed ?? [check !!]\n%!" v#name);
     match lookup env v#name with
+      | Some ((_, TUnknown), binder) -> 
+	  v#setBinder binder; 
+	  self#echoln 5 (Printf.sprintf "ERROR setted to %s \n" v#toString);      
+	  [TypeError (("Unknown type for "^v#name), (v:>ast_type))]
       | Some ((_, ty), binder) -> 
-	  Printf.printf "setting %s to %s\n" v#name (string_of_valueType ty); 
 	  v#setType ty; 
 	  v#setBinder binder; 
-	  Printf.printf "setted to %s \n" v#toString;      
+	  self#echoln 5 (Printf.sprintf "%s setted to %s \n" v#name v#toString);
 	  []
-	    (* (match binder#fetchBinderType v#name with  *)
-	    (*   (\*binder can be something else than the definition correction !!! *\) *)
-	    (*   None -> [ TypeError (("Unbound value "^v#name), (v:>ast_type)) ] *)
-	    (* | Some ty -> v#setType ty; []) *)
       | None -> [ TypeError (("Unbound value "^v#name), (v:>ast_type)) ]
   method primValue_val env m d p t v = env
   method primValue: typingEnv -> module_type -> definition_type -> process_type -> Types.valueType ->  value prim_value_type -> typeErrors list -> typeErrors =
@@ -360,6 +386,8 @@ let typing_pass n = ((new typing_pass_node n) :> (typingEnv,typeErrors) ASTUtils
 (* end *)
 
 (* let typing_pass n = ((new typing_pass_node n) :> (unit,typeErrors) ASTUtils.fold_node) *)
+
+
 
 
 

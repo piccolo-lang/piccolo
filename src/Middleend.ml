@@ -10,7 +10,10 @@ open Utils;;
 open Syntax;;
 open Typing;;
 
-(** Representation of a [string list,int] fold_node. Compute esize *)
+(** Representation of a [string list,int] fold_node. 
+    Compute esize and attribute De Bruijn index *)
+
+(* [TODO] attribuer les indices aux paramètres *)
 class env_compute_pass (n:int) : [string list, int] ASTUtils.fold_node = 
   let lookup env v = 
     let rec aux env n = match env with
@@ -30,7 +33,7 @@ object(self)
     list_max esizes
   (* definitions *)
   method definition_val _ m (d:definition_type) = 
-    List.iter (fun (n,_) -> d#extendEnv n) d#params ;
+    (* List.iter (fun (n,_) -> d#extendEnv n) d#params ; -- constructed in the parsing *)
     d#env
   method definition _ m d esize = 
     self#echoln 2 ("env pass finished in Definition: " ^ d#name) ;

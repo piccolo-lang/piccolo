@@ -190,10 +190,10 @@ class in_action_repr (ch:string) (v:string) (vt:valueType) = object(self)
   method variableIndex = _variableIndex
   method setVariableIndex i = _variableIndex <- i
   method variableType = _variableType
+  method toString = ch ^ "?(" ^ v ^ ":" ^ (string_of_valueType _variableType) ^ ")"
     (** add *)
   method setVariableType t = _variableType <- t
     (** **)
-  method toString = ch ^ "?(" ^ v ^ ":" ^ (string_of_valueType _variableType) ^ ")"
 end
 
 (** Input action constructor *)
@@ -336,6 +336,7 @@ class choice_process_repr m d (bs: (process prefix_process_type) list)  =
   in object
     inherit process_repr m d
     method branches = bs
+      (** Number of branches *)
     method arity = ar
     method toString = 
       if ar=1 then (List.hd bs)#toString 
@@ -397,6 +398,7 @@ let makeDefinition n ps p = Def (new definition_repr n ps p)
 (* modules *)
 (** {2 Modules representations } *)
 
+(** Representation of module_type *)
 class module_repr (n:string) (defs:definition list) = 
 object
   inherit ast_repr
