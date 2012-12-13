@@ -24,6 +24,14 @@ class type virtual ast_binder_type = object
   inherit ast_type
   method fetchBinderType: string -> valueType option
 end
+
+(* classes implantant ast_binder_type:  
+   in_action_repr
+   new_action_repr
+   let_action_repr
+   definition_repr
+*)
+
             
 (* values *)
                   

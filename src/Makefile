@@ -10,7 +10,7 @@ OCFLAGS = -g
 YACC = $(OCAMLPATH)/ocamlyacc
 LEX = $(OCAMLPATH)/ocamllex
 
-all: stests ttests
+all: stests ttests ctests
 
 Utils: Utils.cmo
 Syntax: Syntax.cmo
@@ -22,6 +22,7 @@ PilParser: PilParser.cmo
 ParseUtils: ParseUtils.cmo
 Typing: Typing.cmo
 Middleend: Middleend.cmo
+Backend: Backend.cmo
 
 FICHIERS=$(wildcard *.ml)
 
@@ -46,6 +47,9 @@ ASTUtils.cmo: Utils.ml Syntax.ml ASTUtils.ml
 Middleend.cmo: Utils.ml Syntax.ml ASTUtils.ml Typing.ml Middleend.ml
 	$(OCAMLC) -c $(OCFLAGS) Middleend.ml -o Middleend.cmo
 
+Backend.cmo: Types.ml Syntax.ml Backend.ml
+	$(OCAMLC) -c $(OCFLAGS) Backend.ml -o Backend.cmo
+
 TypeRepr.cmo: Utils.ml Types.ml TypeRepr.ml
 	$(OCAMLC) -c $(OCFLAGS) TypeRepr.ml -o TypeRepr.cmo
 
@@ -69,11 +73,17 @@ STests.cmo: Utils.ml Types.ml Syntax.ml ASTRepr.ml TypeRepr.ml STests.ml
 TTests.cmo: Utils.ml Types.ml Syntax.ml ASTRepr.ml TypeRepr.ml ASTUtils.ml Typing.ml Middleend.ml TTests.ml
 	$(OCAMLC) -c $(OCFLAGS) TTests.ml -o TTests.cmo
 
+CTests.cmo: Utils.ml Types.ml Syntax.ml ASTRepr.ml TypeRepr.ml ASTUtils.ml Typing.ml Middleend.ml Backend.ml TTests.ml
+	$(OCAMLC) -c $(OCFLAGS) CTests.ml -o CTests.cmo
+
 stests: Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilParser.cmo ParseUtils.cmo STests.cmo
 	$(OCAMLC) $(OCFLAGS) Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilLexer.cmo PilParser.cmo ParseUtils.cmo STests.cmo -o STests
 
 ttests: Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilParser.cmo ParseUtils.cmo Typing.cmo Middleend.cmo TTests.cmo
 	$(OCAMLC) $(OCFLAGS) Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilLexer.cmo PilParser.cmo ParseUtils.cmo Typing.cmo Middleend.cmo TTests.cmo -o TTests
+
+ctests: Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilParser.cmo ParseUtils.cmo Typing.cmo Middleend.cmo Backend.cmo CTests.cmo
+	$(OCAMLC) $(OCFLAGS) Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilLexer.cmo PilParser.cmo ParseUtils.cmo Typing.cmo Middleend.cmo Backend.cmo CTests.cmo -o CTests
 
 clean:
 	rm -f Types.cm[oi]

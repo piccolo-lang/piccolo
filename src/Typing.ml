@@ -111,7 +111,9 @@ object(self)
 
   method outAction env (m:module_type) (d:definition_type) (p:process prefix_process_type) (a:out_action_type) (errs:typeErrors) : typeErrors =
     self#echoln 3 "-- Typing output" ;
-    (* (if a#channelIndex == -1 *)
+    (* [TOASK] must we use channelIndex ? the env_coupute_pass is done in parallele *)
+    
+      (* (if a#channelIndex == -1 *) (* *)
     (*  then [TypeError("Channel variable '" ^ a#channel ^ "' not in scope",(a:>ast_type))] *)
     (*  else []) @ *)
       ( match lookup env a#channel with
@@ -141,8 +143,6 @@ object(self)
   method inAction_val env m d p a = () 
   method inAction env (m:module_type) (d:definition_type) (p:process prefix_process_type) (a: in_action_type) :typeErrors =
     self#echoln 3 "-- Typing input";
-    (* [TOASK] what is a channelIndex ?? do we test ?? cf outAction_fold *)
-    
     (if a#variableType <> TUnknown then Printf.printf "%s already typed ?? [check !!]\n%!" a#variable);
     match d#fetchBinderType a#channel with 
 	(*binder can be something else than the definition correction !!! *)

@@ -16,13 +16,7 @@ open ASTRepr ;;
 
 let env_printer def = 
   let def = definition_type_of_definition def in
-  let rec aux names acc =
-    match names with
-	[]-> acc
-      | n::[] -> aux [] acc^n
-      | n::tl -> aux tl acc^", "^n
-  in
-    Printf.printf "%s env :[ %s ]\n " def#name (aux def#env "")
+  Printf.printf "%s env :[ %s ]\n " def#name (String.concat ", " def#env )
 
 (* [TOASK] comment fonctionnent les primitives ??*)
 (* let ppstr = "def PingPong(i:chan<string>,o:chan<string>,msg:string) = i?(m), #core/io:println(m), o!msg, PingPong(i,o,msg)";; *)
@@ -43,8 +37,6 @@ check_pp ();;
 env_printer (List.hd (module_type_of_module pp)#definitions);;
 
 print_endline (string_of_module pp) ;;
-
-
 
 (*
 let check_pp = checkAndInferTypes pp ;;

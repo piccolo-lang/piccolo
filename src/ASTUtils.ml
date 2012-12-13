@@ -529,9 +529,6 @@ let rec fold_seq_all ns n = match ns with
   | [] -> n
   | n'::ns' -> fold_seq n' (fold_seq_all ns' n)
 
-
-(* [TODO] : rédiger proprement et en anglais le commentaire
-   "handler" des objets fold -> point d'entrée *)
 (** fold_node "handler", apply the fold_node methods on a moduleDef and his definition list *)
 let rec fold_module (m:moduleDef) (n:('a,'b) fold_node) : 'b =
   match m with

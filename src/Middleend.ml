@@ -26,10 +26,11 @@ object(self)
   method verbosity = n
   method echo vn str = if vn<=n then print_string str
   method echoln vn str = if vn<=n then print_endline str
+      
   (* module *)
   method moduleDef_val m = []
   method moduleDef m esizes = 
-    self#echoln 2 ("env pass finished in Module: " ^ m#name) ;
+    self#echoln 2 ("env pass finished in Module: " ^ m#name);
     list_max esizes
   (* definitions *)
   method definition_val _ m (d:definition_type) = 
@@ -44,16 +45,36 @@ object(self)
   (* processes *)
   method choice_val env m d p = env
   method choice env m d p esizes = list_max esizes
-  method branch_val env m d p i b = match b#action with
-    | Input a -> (match (lookup env a#variable) with
-        | None -> (a#setVariableIndex (List.length env)) ; env @ [a#variable]
-        | Some n -> a#setVariableIndex n ; env)
-    | New a ->  (match (lookup env a#variable) with
-        | None -> a#setVariableIndex (List.length env) ; env @ [a#variable]
-        | Some n -> a#setVariableIndex n ; env)
+  method branch_val env (m:module_type) (d:definition_type) (p:process choice_process_type) (i:int) (b:process prefix_process_type) = 
+    match b#action with
+    | Input a ->
+      (match (lookup env a#channel) with
+      | None -> () (* an error will be return by the typing pass *)
+      | Some n -> a#setChannelIndex n);
+      (match (lookup env a#variable) with
+      | None -> (a#setVariableIndex (List.length env)) ; 
+	d#extendEnv a#variable;
+	env @ [a#variable]
+      | Some n -> a#setVariableIndex n ; env)
+    
+    | Output a ->
+      (match (lookup env a#channel) with
+      | None -> () (* an error will be return by the typing pass *)
+      | Some n -> a#setChannelIndex n);
+      env
+    
+    | New a ->  
+      (match (lookup env a#variable) with
+      | None -> a#setVariableIndex (List.length env) ; 
+	d#extendEnv a#variable;
+	env @ [a#variable]
+      | Some n -> a#setVariableIndex n ; env)
+	
     | Let a ->  (match (lookup env a#variable) with
-        | None -> a#setVariableIndex (List.length env) ; env @ [a#variable]
-        | Some n -> a#setVariableIndex n ; env)
+      | None -> a#setVariableIndex (List.length env) ; 
+	d#extendEnv a#variable;
+	env @ [a#variable]
+      | Some n -> a#setVariableIndex n ; env)
     | _ -> env
   method branch env m d p i b s1 s2 s3 = s1+s2+s3
   method call_val env m d p = env
@@ -67,15 +88,15 @@ object(self)
   method inAction_val env m d p a = () 
   method inAction env m d p a =
     match (lookup env a#variable) with
-      | None -> 1
-      | Some _ -> 0
+    | None -> 1
+    | Some _ -> 0
   method tauAction_val env m d p a = ()
   method tauAction env m d p a = 0
   method newAction_val env m d p a = ()
   method newAction env m d p a =
     match (lookup env a#variable) with
-      | None -> 1
-      | Some _ -> 0
+    | None -> 1
+    | Some _ -> 0
   method spawnAction_val env m d p a = env
   method spawnAction env m d p a rs = 0
   method primAction_val env m d p a = env
@@ -83,9 +104,9 @@ object(self)
   method letAction_val env m d p a = env
   method letAction env m d p a r =  
     match (lookup env a#variable) with
-      | None -> 1
-      | Some _ -> 0
-(* value *)
+    | None -> 1
+    | Some _ -> 0
+  (* value *)
   method trueValue_val env m d p t v = ()
   method trueValue env m d p t v = 0
   method falseValue_val env m d p t v = ()
@@ -98,8 +119,8 @@ object(self)
   method tupleValue env m d p t v rs = 0
   method varValue_val env m d p t v =
     match (lookup env v#name) with
-      | None -> (* generate an error and save in module errors ??? *) ()
-      | Some n -> v#setIndex n (* or in a further pass, just test if index is still -1 *)
+    | None -> (* generate an error and save in module errors ??? *) ()
+    | Some n -> v#setIndex n (* or in a further pass, just test if index is still -1 *)
   method varValue env m d p t v = 0
   method primValue_val env m d p t v = env
   method primValue env m d p t v rs = 0
