@@ -7,6 +7,8 @@
 
 (** This module defines various utility functions used in other parts of the compiler. *)
 
+module SMap = Map.Make(String)
+
 (* printing functions *)
 
 (** Convert a collection to a string. *)
