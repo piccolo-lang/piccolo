@@ -2,6 +2,77 @@
 open Types;;
 open Syntax;;
 
+open SeqAST;;
+open SeqASTconst;;
+
+(* type label = string *)
+
+(* class seqAst_maker : [ (label array) option , instr list] fold_node =  *)
+(*   let declare name typ =  *)
+(*     Declaration (SimpleName name, typ) *)
+(*   and assign name typ value =  *)
+(*     Assignment ((SimpleName name, typ), Val (value, typ)) *)
+(*   in *)
+(* object(self) *)
+(*   (\* config *\) *)
+(*   method verbosity = n *)
+(*   method echo vn str = if vn<=n then print_string str *)
+(*   method echoln vn str = if vn<=n then print_endline str *)
+      
+(*   (\* module *\) *)
+(*   method moduleDef_val m = None *)
+(*   method moduleDef m esizes =  *)
+(*     self#echoln 2 ("env pass finished in Module: " ^ m#name); *)
+(*     list_max esizes *)
+(*   (\* definitions *\) *)
+(*   method definition_val _ m (d:definition_type) = None *)
+(*   method definition _ m d esize =  *)
+(*   (\* processes *\) *)
+(*   method choice_val env m d p =  *)
+(*     [declare "tryresult" TryResultEnum; *)
+(*      declare "nbdisabled" PInt; *)
+(*      assign "nbdisabled" PInt "0"; *)
+     
+(*     ] *)
+(*   method choice env m d p esizes = list_max esizes *)
+(*   method branch_val env m d p i b =  *)
+(*   method branch env m d p i b s1 s2 s3 = s1+s2+s3 *)
+(*   method call_val env m d p = env *)
+(*   method call env m d p _ = p#arity  *)
+(*   method term_val env m d p = () *)
+(*   method term env m d p = 0 *)
+(*   (\* actions *\) *)
+(*   method outAction_val env m d p a = env *)
+(*   method outAction env m d p a r = 0 *)
+(*   method inAction_val env m d p a = ()  *)
+(*   method inAction env m d p a = *)
+(*   method tauAction_val env m d p a = () *)
+(*   method tauAction env m d p a = 0 *)
+(*   method newAction_val env m d p a = () *)
+(*   method newAction env m d p a = *)
+(*   method spawnAction_val env m d p a = env *)
+(*   method spawnAction env m d p a rs = 0 *)
+(*   method primAction_val env m d p a = env *)
+(*   method primAction env m d p a rs = 0 *)
+(*   method letAction_val env m d p a = env *)
+(*   method letAction env m d p a r =   *)
+(*   (\* value *\) *)
+(*   method trueValue_val env m d p t v = () *)
+(*   method trueValue env m d p t v = 0 *)
+(*   method falseValue_val env m d p t v = () *)
+(*   method falseValue env m d p t v = 0 *)
+(*   method intValue_val env m d p t v = () *)
+(*   method intValue env m d p t v = 0 *)
+(*   method stringValue_val env m d p t v = () *)
+(*   method stringValue env m d p t v = 0 *)
+(*   method tupleValue_val env m d p t v = env *)
+(*   method tupleValue env m d p t v rs = 0 *)
+(*   method varValue_val env m d p t v = *)
+(*   method varValue env m d p t v = 0 *)
+(*   method primValue_val env m d p t v = env *)
+(*   method primValue env m d p t v rs = 0 *)
+(* end *)
+
 
 class c_printer : ASTUtils.iter_fold_node =
 let tprint i str =
@@ -51,8 +122,8 @@ object(self)
     tprint 2 "case @D_entry:"
       
   method definition_post m d =
-    tprint 1 "}";(* fin switch *)
-    tprint 0 "}" (* fin fun def*)
+    tprint 1 "}";(* end switch *)
+    tprint 0 "}" (* end fun def*)
 
   (* process *)
   method choice v m d p rs = self#choice_post m d p

@@ -22,6 +22,8 @@ PilParser: PilParser.cmo
 ParseUtils: ParseUtils.cmo
 Typing: Typing.cmo
 Middleend: Middleend.cmo
+SeqAST: SeqAST.cmo
+SeqASTconst: SeqASTconst.cmo
 Backend: Backend.cmo
 
 FICHIERS=$(wildcard *.ml)
@@ -47,7 +49,13 @@ ASTUtils.cmo: Utils.ml Syntax.ml ASTUtils.ml
 Middleend.cmo: Utils.ml Syntax.ml ASTUtils.ml Typing.ml Middleend.ml
 	$(OCAMLC) -c $(OCFLAGS) Middleend.ml -o Middleend.cmo
 
-Backend.cmo: Types.ml Syntax.ml Backend.ml
+SeqAST.cmo : SeqAST.ml
+	$(OCAMLC) -c $(OCFLAGS) SeqAST.ml -o SeqAST.cmo
+
+SeqASTconst.cmo : SeqAST.ml SeqASTconst.ml
+	$(OCAMLC) -c $(OCFLAGS) SeqASTconst.ml -o SeqASTconst.cmo
+
+Backend.cmo: Types.ml Syntax.ml SeqAST.ml SeqASTconst.ml Backend.ml
 	$(OCAMLC) -c $(OCFLAGS) Backend.ml -o Backend.cmo
 
 TypeRepr.cmo: Utils.ml Types.ml TypeRepr.ml
@@ -73,7 +81,7 @@ STests.cmo: Utils.ml Types.ml Syntax.ml ASTRepr.ml TypeRepr.ml STests.ml
 TTests.cmo: Utils.ml Types.ml Syntax.ml ASTRepr.ml TypeRepr.ml ASTUtils.ml Typing.ml Middleend.ml TTests.ml
 	$(OCAMLC) -c $(OCFLAGS) TTests.ml -o TTests.cmo
 
-CTests.cmo: Utils.ml Types.ml Syntax.ml ASTRepr.ml TypeRepr.ml ASTUtils.ml Typing.ml Middleend.ml Backend.ml TTests.ml
+CTests.cmo: Utils.ml Types.ml Syntax.ml ASTRepr.ml TypeRepr.ml ASTUtils.ml Typing.ml Middleend.ml SeqAST.ml SeqASTconst.ml Backend.ml TTests.ml
 	$(OCAMLC) -c $(OCFLAGS) CTests.ml -o CTests.cmo
 
 stests: Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilParser.cmo ParseUtils.cmo STests.cmo
@@ -82,8 +90,9 @@ stests: Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo Pil
 ttests: Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilParser.cmo ParseUtils.cmo Typing.cmo Middleend.cmo TTests.cmo
 	$(OCAMLC) $(OCFLAGS) Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilLexer.cmo PilParser.cmo ParseUtils.cmo Typing.cmo Middleend.cmo TTests.cmo -o TTests
 
-ctests: Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilParser.cmo ParseUtils.cmo Typing.cmo Middleend.cmo Backend.cmo CTests.cmo
-	$(OCAMLC) $(OCFLAGS) Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilLexer.cmo PilParser.cmo ParseUtils.cmo Typing.cmo Middleend.cmo Backend.cmo CTests.cmo -o CTests
+ctests: Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilParser.cmo ParseUtils.cmo Typing.cmo Middleend.cmo SeqAST.cmo SeqASTconst.cmo Backend.cmo CTests.cmo
+	$(OCAMLC) $(OCFLAGS) Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilLexer.cmo PilParser.cmo ParseUtils.cmo Typing.cmo Middleend.cmo SeqAST.cmo SeqASTconst.cmo Backend.cmo CTests.cmo -o CTests
+
 
 clean:
 	rm -f Types.cm[oi]
@@ -92,6 +101,9 @@ clean:
 	rm -f ASTRepr.cm[oi]
 	rm -f ASTUtils.cm[oi]
 	rm -f Middleend.cm[oi]
+	rm -f SeqAST.cm[oi]
+	rm -f SeqASTconst.cm[oi]
+	rm -f Backend.cm[oi]
 	rm -f Utils.cm[oi]
 	rm -f PilParser.ml
 	rm -f PilParser.mli
@@ -102,6 +114,7 @@ clean:
 	rm -f PilLexer.ml
 	rm -f ParseUtils.cm[oi]
 	rm -f STests.cm[oi]
+	rm -f CTests.cm[oi]
 	rm -f TTests.cm[oi]
 	rm -f *~
 
