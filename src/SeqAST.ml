@@ -4,62 +4,44 @@
 (* | ContLabel of string *)
 
 
-type 
-  varName =
-  | SimpleName of string            (* name *)
-  | RecordName of varName * varName (* name.subField *)
-  | ArrayName  of varName * int     (* name[i] or name.subField[i] *)
-and
-  piccType =
-  | Void
-  | PBool
-  | PInt
-  | PValue
-  | SchedPool
-  | PiThread
-  | Channel
+type varName =
+| SimpleName of string            (* name *)
+| RecordName of varName * string (* name.subField *)
+| ArrayName  of varName * int     (* name[i] or name.subField[i] *)
 
-  | Queue
+type piccType =
+| Sty of string (* Simple Type *)
+| Pty of string * piccType (* Parameterized type *)
+| Fun of piccType * ( piccType list ) 
 
-  | Lock
-
-  | Commit 
-  | InCommit
-  | OutCommit
-  
-  | DLabel (* Definition label *)
-  | Fun of piccType * ( piccType list )
-  | KnowsSet (* of piccType *)
-  | PSet of piccType
-  | TryResultEnum
-  | StatusEnum
-and 
-  (* [TODO]? utiliser des ref pour que si on modifie un var toutes ses occurences soient modifiés en même temps?? *)
-  varDescr = varName * piccType
-
+(* [TODO]? utiliser des ref pour que si on modifie une var,
+   toutes ses occurences soient modifiés en même temps?? *)
+type varDescr = varName * piccType
 
 type binop = 
-  | Sum
-  | Minus
-  | Mult
-  | Div
-  | Equal
+| Sum
+| Minus
+| Mult
+| Div
+| Equal
 
 type value_t = string * piccType
 
 type expr =
-  | Val of value_t
-  | Var of varDescr
-  | Op of binop * expr * expr
-
+| Val of value_t
+| Var of varDescr
+| Op of binop * expr * expr
+| CallFun of varDescr * (expr list)
 
 type instr =
-  | Bloc of instr list (* real bloc semantic *)
-  | Seq of instr list (* just an instr list handler *)
-  | Call of varDescr * (varDescr list) (* piccType = Fun *)
-  | Declaration of varDescr
-  | Assignment of varDescr * expr
-  | Foreach of varDescr * varDescr * instr (* foreach (name : type) in (Fun) do () *)
-  | Ite of expr * instr * instr
-  | GLabel of string (*Goto Label *)
-  | Goto of string
+| Bloc of instr list (* real bloc semantic *)
+| Seq of instr list (* just an instr list handler *)
+| CallProc of varDescr * (expr list) (* Call procedure *)
+| Declare of varDescr
+| Assign of varDescr * expr
+| DeclareFun of varDescr * (instr list)
+| Foreach of varDescr * expr * (instr list) (* foreach (name : type) in (Fun) do () *)
+| Ite of expr * (instr list) * (instr list)
+| Label of string
+| Goto of string
+| Return of expr
