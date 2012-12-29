@@ -34,6 +34,8 @@ type expr =
 | CallFun of varDescr * (expr list)
 
 type instr =
+| Switch of expr * (instr list)
+| Case of expr
 | Bloc of instr list (* real bloc semantic *)
 | Seq of instr list (* just an instr list handler *)
 | CallProc of varDescr * (expr list) (* Call procedure *)

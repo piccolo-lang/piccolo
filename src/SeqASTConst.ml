@@ -21,11 +21,15 @@ let out_commit = Sty "OutCommit"
 let pc_label = Sty "Label"
 
 let knows_set = Sty "KnowsSet"
-let pset a = Pty ("set", a)
 
+let pset a = Pty ("set", a)
 let queue a = Pty ("Queue", a)
 
+(* let parray a = Pty ("array", a) *)
+
 let eval_ty = Fun (pvalue, [pi_thread]) 
+
+let pdef = Fun (void, [sched_pool; pi_thread])
 
 (* enum types and their values *)
 
@@ -104,7 +108,7 @@ let pt_knows = (RecordName (pt_name, "fuel"), knows_set)
 let pt_env i = (ArrayName ((RecordName (pt_name,"env") ), i), pvalue)
 let pt_commit = (RecordName (pt_name, "commit"), commit)
 let pt_commits = (RecordName (pt_name, "commits"), (pset commit))
-(* let pt_proc = (RecordName (pt_name, "proc"), !! function trouver signature!!) *)
+let pt_proc = (RecordName (pt_name, "proc"), pdef)
 let pt_pc = (RecordName (pt_name, "pc"), pc_label)
 let pt_val = (RecordName (pt_name, "val"), pvalue)
 let pt_clock = (RecordName (pt_name, "clock"), clock)
