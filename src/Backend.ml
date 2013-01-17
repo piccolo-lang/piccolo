@@ -77,6 +77,62 @@ and compile_yield label =
     return_void]
     
 
+let eot_label () = Printf.sprintf "end_of_try_%d" (make_label ())
+
+let compile_try_tau (action:tau_action_type) chans = failwith "TODO"
+ 
+let compile_try_in (action:in_action_type) chans = failwith "TODO"
+
+let compile_try_out (action:out_action_type) chans = 
+  let try_result = simple_desc "tryresult" try_result_enum in
+  let commit = SimpleName "commit", in_commit in
+  let ((ct_name, _ ) as commit_thread) = 
+    RecordName (SimpleName "commit", "thread"), pi_thread in
+  let commit_refvar = RecordName (SimpleName "commit", "refvar"), pint in
+  let commit_thread_env_rv = ArrayName (RecordName (ct_name, "env"), 
+					Var commit_refvar), pvalue in
+  let ok = SimpleName "ok", commit_status_enum in
+  let label_end_of_try = eot_label () in
+  let ((c_name, _) as pt_env_c) = pt_env action#channelIndex in
+  Bloc [
+    make_it (CallFun (set_add, [Var chans; Var (pt_env_c)]))
+      [CallProc (acquire, [Var (pt_env_lock action#channelIndex)])];
+    make_it (Op (Equal, Var (RecordName (c_name,"globalrc"), pint), Val ("1", pint)))
+      [Assign (try_result, try_disabled);
+       Goto label_end_of_try];
+    Declare commit;
+    Declare ok;
+    DoWhile begin [
+      Assign (commit, CallFun (fetch_input_commitment, [Var pt_env_c] ));
+      
+      make_it (Op (Equal, Var commit, Val null))
+      	[Assign (try_result, try_commit);
+      	 Goto label_end_of_try];
+      
+      DoWhile begin 
+	[Assign (ok, CallFun (can_awake, [Var commit_thread; Var commit]));
+      	 make_it (Op (Equal, Var ok, commit_cannot_acquire))
+      	   [CallProc (low_level_yield,[])]],
+      	(Op (Equal, Var ok, commit_cannot_acquire)) end;
+      
+      make_it (Op (Equal, Var ok, commit_valid))
+      	[ compile_value action#value;
+      	  Assign (commit_thread_env_rv, Var pt_val);
+      	  CallProc (awake, [Var scheduler; Var commit_thread(* ; commit *)]);
+      	  Assign (try_result, try_enabled);
+      	  Goto label_end_of_try]],
+      (CallFun (commit_list_is_empty, 
+		[Var (RecordName (c_name,"incommits"), commit_list)])) end;
+    
+    Label label_end_of_try]
+
+let compile_try_action (action:action) (chans:varDescr) = 
+  match action with
+  | Tau action -> compile_try_tau action chans
+  | Output action -> compile_try_out action chans
+  | Input action -> compile_try_in action chans
+  | _ -> failwith "only a tau, an output or an input action can be tried"
+
 let rec compile_process m d proc =
   match proc with
   | Term p -> compile_end status_ended
@@ -126,7 +182,7 @@ and compile_choice m d p =
       match b#action with
       | Output a ->
 	let eval = (simple_desc "eval" eval_ty) in
-	[DeclareFun (eval, [compile_value a#value; Return (Var pt_val)]);
+	[DeclareFun (eval, ["pt"] ,[compile_value a#value; Return (Var pt_val)]);
 	 CallProc (register_output_commitment, 
 		   [Var pt; Var (pt_env a#channelIndex); Var eval; pc])]
 	  
@@ -161,6 +217,7 @@ and compile_choice m d p =
        Seq [ Case (Val (string_of_int choice_cont.(i), pint));
 	     compile_process m d prefix#continuation]
      ) p#branches)]
+
 (* dans un switch case, le case peut être imbriqué dans plusieurs bloc !!
 
     on aura:
@@ -186,7 +243,7 @@ and compile_choice m d p =
     *)
 and compile_call m d p =
   
-  let args i= (ArrayName (SimpleName "args", i), pvalue) in
+  let args i= (ArrayName (SimpleName "args", Val (string_of_int i, pint)), pvalue) in
   
   let rec init_env acc i argsTypes =
     match argsTypes with
@@ -218,7 +275,7 @@ and compile_call m d p =
        
 let compile_def m (Def d) =
   init_label ();
-  DeclareFun (def_fun (m#name ^ "_" ^ d#name),
+  DeclareFun (def_fun (m#name ^ "_" ^ d#name), ["scheduler"; "pt"],
 	      [Switch (Var pt_pc, [Case d_entry;
 			       compile_process m d d#process
 			      ])])
