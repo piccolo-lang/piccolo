@@ -92,7 +92,7 @@ let commit_list_is_empty = makeFun "IsEmpty" pbool [commit_list]
 let wait_queue_push = makeFun "WaitQueuePush" void [queue pi_thread; pi_thread] (* WaitQueue *)
 let ready_queue_add = makeFun "ReadyQueueAdd" void [queue pi_thread; pi_thread] (* WaitQueue *)
 let release_all_channels = makeFun "ReleaseAllChannels" void [pset channel]
-let acquire = makeFun "Acquire" void [mutex]
+let acquire = makeFun "PIT_acquire" void [mutex]
 let release = makeFun "Release" void [mutex]
 let low_level_yield = makeFun "LowLevelYield" void []
 
