@@ -1,13 +1,16 @@
 
-OCAMLPATH=/opt/local/bin
+OCAMLPATH=$(OCAMLDIR)
+
+DOC=../doc
 
 OCAMLC = $(OCAMLPATH)/ocamlc
+OCAMLDOC=$(OCAMLPATH)/ocamldoc
 OCFLAGS = -g
 
 YACC = $(OCAMLPATH)/ocamlyacc
 LEX = $(OCAMLPATH)/ocamllex
 
-all: stests ttests
+all: stests ttests ctests
 
 Utils: Utils.cmo
 Syntax: Syntax.cmo
@@ -19,6 +22,15 @@ PilParser: PilParser.cmo
 ParseUtils: ParseUtils.cmo
 Typing: Typing.cmo
 Middleend: Middleend.cmo
+SeqAST: SeqAST.cmo
+SeqASTConst: SeqASTConst.cmo
+SeqASTPrettyPrinter: SeqASTPrettyPrinter.cmo
+Backend: Backend.cmo
+
+FICHIERS=$(wildcard *.ml)
+
+doc:
+	$(OCAMLDOC) -html -d $(DOC) ${FICHIERS}
 
 Utils.cmo: Utils.ml
 	$(OCAMLC) -c $(OCFLAGS) Utils.ml -o Utils.cmo
@@ -38,8 +50,22 @@ ASTUtils.cmo: Utils.ml Syntax.ml ASTUtils.ml
 Middleend.cmo: Utils.ml Syntax.ml ASTUtils.ml Typing.ml Middleend.ml
 	$(OCAMLC) -c $(OCFLAGS) Middleend.ml -o Middleend.cmo
 
+SeqAST.cmo : SeqAST.ml
+	$(OCAMLC) -c $(OCFLAGS) SeqAST.ml -o SeqAST.cmo
+
+SeqASTConst.cmo : SeqASTConst.ml SeqAST.ml
+	$(OCAMLC) -c $(OCFLAGS) SeqASTConst.ml -o SeqASTConst.cmo
+
+SeqASTPrettyPrinter.cmo: SeqASTPrettyPrinter.ml SeqAST.ml
+	$(OCAMLC) -c $(OCFLAGS) $< -o $@
+
+Backend.cmo: Types.ml Syntax.ml SeqAST.ml SeqASTConst.ml Backend.ml
+	$(OCAMLC) -c $(OCFLAGS) Backend.ml -o Backend.cmo
+
 TypeRepr.cmo: Utils.ml Types.ml TypeRepr.ml
 	$(OCAMLC) -c $(OCFLAGS) TypeRepr.ml -o TypeRepr.cmo
+
+PilLexer.cmo: PilParser.cmo
 
 PilParser.cmo: Utils.ml Types.ml TypeRepr.ml Syntax.ml ASTRepr.ml PilParser.mly PilLexer.mll
 	$(YACC) -v PilParser.mly
@@ -61,34 +87,29 @@ STests.cmo: Utils.ml Types.ml Syntax.ml ASTRepr.ml TypeRepr.ml STests.ml
 TTests.cmo: Utils.ml Types.ml Syntax.ml ASTRepr.ml TypeRepr.ml ASTUtils.ml Typing.ml Middleend.ml TTests.ml
 	$(OCAMLC) -c $(OCFLAGS) TTests.ml -o TTests.cmo
 
-stests: Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilParser.cmo ParseUtils.cmo STests.cmo
-	$(OCAMLC) $(OCFLAGS) Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilLexer.cmo PilParser.cmo ParseUtils.cmo STests.cmo -o STests
+CTests.cmo: Utils.ml Types.ml Syntax.ml ASTRepr.ml TypeRepr.ml ASTUtils.ml Typing.ml Middleend.ml SeqAST.ml SeqASTConst.ml Backend.ml TTests.ml
+	$(OCAMLC) -c $(OCFLAGS) CTests.ml -o CTests.cmo
 
-ttests: Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilParser.cmo ParseUtils.cmo Typing.cmo Middleend.cmo TTests.cmo
-	$(OCAMLC) $(OCFLAGS) Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilLexer.cmo PilParser.cmo ParseUtils.cmo Typing.cmo Middleend.cmo TTests.cmo -o TTests
+stests: Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilLexer.cmo PilParser.cmo ParseUtils.cmo STests.cmo
+	$(OCAMLC) $(OCFLAGS) $^ -o STests
+
+ttests: Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilLexer.cmo PilParser.cmo ParseUtils.cmo Typing.cmo Middleend.cmo TTests.cmo
+	$(OCAMLC) $(OCFLAGS) $^ -o TTests
+
+ctests: Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilLexer.cmo PilParser.cmo ParseUtils.cmo Typing.cmo Middleend.cmo SeqAST.cmo SeqASTConst.cmo SeqASTPrettyPrinter.cmo Backend.cmo CTests.cmo
+	$(OCAMLC) $(OCFLAGS) $^ -o CTests
+
 
 clean:
-	rm -f Types.cm[oi]
-	rm -f TypeRepr.cm[oi]
-	rm -f Syntax.cm[oi]
-	rm -f ASTRepr.cm[oi]
-	rm -f ASTUtils.cm[oi]
-	rm -f Middleend.cm[oi]
-	rm -f Utils.cm[oi]
+	rm -f *.cm[oi]
 	rm -f PilParser.ml
 	rm -f PilParser.mli
-	rm -f PilParser.cm[oi]
 	rm -f PilParser.output
-	rm -f PilLexer.cm[oi]
-	rm -f Typing.cm[oi]
 	rm -f PilLexer.ml
-	rm -f ParseUtils.cm[oi]
-	rm -f STests.cm[oi]
-	rm -f TTests.cm[oi]
 	rm -f *~
 
 cleanall: clean
 	rm -f STests
 	rm -f TTests
-
+	rm -f CTests
 
