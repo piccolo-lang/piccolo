@@ -43,7 +43,7 @@ let print_binop fmt = function
 
 let rec print_varName fmt = function
   | SimpleName n -> fprintf fmt "%s" n
-  | RecordName (v,n) -> fprintf fmt "%a.%s" print_varName v n
+  | RecordName ((v,_),n) -> fprintf fmt "%a.%s" print_varName v n
   | ArrayName (v,e) -> fprintf fmt "%a[%a]" print_varName v print_expr e
 
 and print_expr fmt = function
@@ -92,6 +92,9 @@ let rec print_instr fmt = function
   | Label s ->fprintf fmt "%s:" s
   | Goto s -> fprintf fmt "goto %s;" s
   | Return e -> fprintf fmt "return %a;" print_expr e
-
+  | DoWhile (il, e) -> fprintf fmt "do{@\n%a}while(%a);" 
+    (print_list_eol' print_instr "") il
+    print_expr e
+      
 let print_instr_list_std il =
   List.iter (fun i -> Format.printf "%a@\n" print_instr i) il

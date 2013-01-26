@@ -105,27 +105,25 @@ let p_dec v = Assign (v, (Op (Minus, Var v, Val ("1", pint))))
 let return_void = Return (Val ("null", void))
 
 (* SchedPool fields *)
-
-let sched = SimpleName "scheduler"
-let scheduler = sched, sched_pool
-let sched_ready = (RecordName (sched, "ready"), (queue pi_thread)) (* ConcurrentReadyQueue?*)
-let sched_wait = (RecordName (sched, "wait"), (queue pi_thread)) (* ConcurrentWaitQueue?*)
+let scheduler = SimpleName "scheduler", sched_pool
+let sched_ready = (RecordName (scheduler, "ready"), (queue pi_thread)) (* ConcurrentReadyQueue?*)
+let sched_wait = (RecordName (scheduler, "wait"), (queue pi_thread)) (* ConcurrentWaitQueue?*)
 
 (* PiThread fields *)
-let pt_name = SimpleName "pt"
-let pt = (pt_name, pi_thread)
-let pt_status =(RecordName (pt_name, "status"), status_enum)
-let pt_enabled i = (ArrayName ((RecordName (pt_name,"enabled") ), Val (string_of_int i, pint)), pbool)
-let pt_knows = (RecordName (pt_name, "fuel"), knows_set)
-let pt_env i = (ArrayName ((RecordName (pt_name,"env") ), Val (string_of_int i, pint)), pvalue)
-let pt_env_lock i = (RecordName (ArrayName ((RecordName (pt_name,"env") ), Val (string_of_int i, pint)),"lock") , mutex)
-let pt_commit = (RecordName (pt_name, "commit"), commit)
-let pt_commits = (RecordName (pt_name, "commits"), (pset commit))
-let pt_proc = (RecordName (pt_name, "proc"), pdef)
-let pt_pc = (RecordName (pt_name, "pc"), pc_label)
-let pt_val = (RecordName (pt_name, "val"), pvalue)
-let pt_clock = (RecordName (pt_name, "clock"), clock)
-let pt_fuel = (RecordName (pt_name, "fuel"), pint)
-let pt_lock = (RecordName (pt_name, "lock"), mutex)
+let pt = (SimpleName "pt", pi_thread)
+let pt_status =(RecordName (pt, "status"), status_enum)
+let pt_enabled i = (ArrayName ((RecordName (pt,"enabled") ), Val (string_of_int i, pint)), pbool)
+let pt_knows = (RecordName (pt, "fuel"), knows_set)
+let pt_env i = (ArrayName ((RecordName (pt,"env") ), Val (string_of_int i, pint)), pvalue)
+let pt_env_lock i = (RecordName (pt_env i ,"lock") , mutex)
+let pt_commit = (RecordName (pt, "commit"), commit)
+let pt_commits = (RecordName (pt, "commits"), (pset commit))
+let pt_proc = (RecordName (pt, "proc"), pdef)
+let pt_pc = (RecordName (pt, "pc"), pc_label)
+let pt_val = (RecordName (pt, "val"), pvalue)
+let pt_clock = (RecordName (pt, "clock"), clock)
+let pt_fuel = (RecordName (pt, "fuel"), pint)
+let pt_lock = (RecordName (pt, "lock"), mutex)
 
-let null = "NULL", Sty "NULL"
+(* NULL value *)
+let null:value_t = "NULL", Sty "NULL"

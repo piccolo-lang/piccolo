@@ -14,20 +14,16 @@ let make_label, init_label =
 
 let def_label_pattern m d = (Printf.sprintf "%s_%s_begin" m d)
 
-let def_fun name = SimpleName name, pdef
-
 let d_entry = Val ("0", pint)
 
-let simple_desc name typ =
-  (SimpleName name, typ)
-and assign_val ((name, typ) as varDesc) value =
-  Assign (varDesc, Val (value, typ))
+let def_fun name = SimpleName name, pdef
+let simple_desc name typ = SimpleName name, typ
 
 let make_ite e i1 i2 = Ite (e, i1, i2) (* nicer declaration and indentation *)
 let make_it e i = Ite (e, i, [])
 
-
 let chan = (simple_desc "chan" channel)  (*/!\ en C écrire les foreach dans des blocs *)
+
 
 let compile_value = function
   | VTrue _ -> Assign (pt_val, Val ("true", pbool))
@@ -79,23 +75,24 @@ and compile_yield label =
 
 let eot_label () = Printf.sprintf "end_of_try_%d" (make_label ())
 
-let compile_try_tau (action:tau_action_type) chans = failwith "TODO"
+let compile_try_tau = 
+  let try_result = simple_desc "tryresult" try_result_enum in
+  Assign (try_result, try_enabled)
  
 let compile_try_in (action:in_action_type) chans = 
   let try_result = simple_desc "tryresult" try_result_enum in
-  let commit_name = SimpleName "commit" in
-  let commit = commit_name, out_commit in
-  let commit_thread = RecordName (commit_name, "thread"), pi_thread in
-  let commit_eval = RecordName(commit_name, "evalfunc"), eval_ty in
+  let commit = SimpleName "commit", out_commit in
+  let commit_thread = RecordName (commit, "thread"), pi_thread in
+  let commit_eval = RecordName(commit, "evalfunc"), eval_ty in
   let ok = SimpleName "ok", commit_status_enum in
   let vl = SimpleName "val", pvalue in
   let pt_env_x = pt_env action#variableIndex in
-  let ((c_name, _) as pt_env_c) = pt_env action#channelIndex in
+  let pt_env_c = pt_env action#channelIndex in
   let label_end_of_try = eot_label () in
     Bloc [
       make_it (CallFun (set_add, [Var chans; Var (pt_env_c)]))
 	[CallProc (acquire, [Var (pt_env_lock action#channelIndex)])];
-      make_it (Op (Equal, Var (RecordName (c_name,"globalrc"), pint), Val ("1", pint)))
+      make_it (Op (Equal, Var (RecordName (pt_env_c,"globalrc"), pint), Val ("1", pint)))
 	[Assign (try_result, try_disabled);
 	 Goto label_end_of_try];
       Declare commit;
@@ -130,7 +127,7 @@ let compile_try_in (action:in_action_type) chans =
       	    Goto label_end_of_try]],
 	
 	(CallFun (commit_list_is_empty, 
-		  [Var (RecordName (c_name, "outcommits"), commit_list)])) 
+		  [Var (RecordName (pt_env_c, "outcommits"), commit_list)])) 
       end;
       Label label_end_of_try]
     
@@ -139,19 +136,18 @@ let compile_try_in (action:in_action_type) chans =
 let compile_try_out (action:out_action_type) chans = 
   let try_result = simple_desc "tryresult" try_result_enum in
   let commit = SimpleName "commit", in_commit in
-  let ((ct_name, _ ) as commit_thread) = 
-    RecordName (SimpleName "commit", "thread"), pi_thread in
-  let commit_refvar = RecordName (SimpleName "commit", "refvar"), pint in
-  let commit_thread_env_rv = ArrayName (RecordName (ct_name, "env"), 
+  let commit_thread = RecordName (commit, "thread"), pi_thread in
+  let commit_refvar = RecordName (commit, "refvar"), pint in
+  let commit_thread_env_rv = ArrayName (RecordName (commit, "env"), 
 					Var commit_refvar), pvalue in
   let ok = SimpleName "ok", commit_status_enum in
   let label_end_of_try = eot_label () in
-  let ((c_name, _) as pt_env_c) = pt_env action#channelIndex in
+  let pt_env_c = pt_env action#channelIndex in
 
   Bloc [
     make_it (CallFun (set_add, [Var chans; Var (pt_env_c)]))
       [CallProc (acquire, [Var (pt_env_lock action#channelIndex)])];
-    make_it (Op (Equal, Var (RecordName (c_name,"globalrc"), pint), Val ("1", pint)))
+    make_it (Op (Equal, Var (RecordName (pt_env_c,"globalrc"), pint), Val ("1", pint)))
       [Assign (try_result, try_disabled);
        Goto label_end_of_try];
     Declare commit;
@@ -176,12 +172,12 @@ let compile_try_out (action:out_action_type) chans =
       	  Assign (try_result, try_enabled);
       	  Goto label_end_of_try]],
       (CallFun (commit_list_is_empty, 
-		[Var (RecordName (c_name,"incommits"), commit_list)])) end;
+		[Var (RecordName (pt_env_c,"incommits"), commit_list)])) end;
     Label label_end_of_try]
 
 let compile_try_action (action:action) (chans:varDescr) = 
   match action with
-  | Tau action -> compile_try_tau action chans
+  | Tau action -> compile_try_tau
   | Output action -> compile_try_out action chans
   | Input action -> compile_try_in action chans
   | _ -> failwith "only a tau, an output or an input action can be tried"
@@ -210,11 +206,11 @@ and compile_choice m d p =
       compile_value b#guard; 
       Assign ((pt_enabled i), Var pt_val); (* ("pt->enabled["^stri^"]=pt->val.content.as_bool;"); *)
       make_ite (Var (pt_enabled i))
-	[(* [TODO] compileTryAction('a_i, chans) *)
+	[compile_try_action b#action chans;
       	  make_ite 
 	    (Op (Equal, Var try_result, try_disabled))
 	    
-	    [assign_val (pt_enabled i) "false";
+	    [Assign ((pt_enabled i), Val ("false", pbool));
 	     p_inc nb_disabled ]
 	    
 	    [make_it (Op (Equal, Var try_result, try_enabled))
@@ -223,7 +219,6 @@ and compile_choice m d p =
 		   [CallProc (release_all_channels, [Var chans]);
 		    compile_yield cont_pc];
 		 
-		 (*[TODO/TOASK] modifier la spec ? ou solution trop spécifique à c ? *)
 		 Assign (pt_pc, cont_pc);
 		 Goto def_label]]
 	]    
@@ -251,7 +246,7 @@ and compile_choice m d p =
   Bloc (* cvar after_wait_fuel : label *)
     [Declare try_result ;
      Declare nb_disabled ;
-     assign_val nb_disabled "0";
+     Assign (nb_disabled, Val ("0", pint));
      Declare chans;
      
      Seq (List.mapi guard_mapper p#branches);
@@ -335,199 +330,4 @@ let compile_def m (Def d) =
 
 let compile_module (Module m) =
   Seq (List.map (compile_def m) m#definitions)
-	   
 
-(* class c_printer : ASTUtils.iter_fold_node = *)
-(* let tprint i str = *)
-(*   print_endline ((String.make i '\t')^str) *)
-(* in *)
-(* let compile_value t v = *)
-(*   match v with *)
-(*   | VTrue _ -> tprint t "pt->val.content.as_bool=true;" *)
-(*   | VFalse _ -> tprint t "pt->val.content.as_bool=false;" *)
-(*   | VInt vt -> tprint t ("pt->val.content.as_int="^(string_of_int vt#toVal)^";") *)
-(*   | VString _ -> tprint t "/* string expr TODO */" *)
-(*   | VTuple _ -> tprint t "/* tuple expr TODO */" *)
-(*   | VVar vt -> tprint t ("pt->val=pt->env["^(string_of_int vt#index)^"];") *)
-(*   | VPrim _ -> tprint t "/* prim expr TODO */" *)
-
-(* and compile_end t status = *)
-(*   tprint t "PIT_KnownsSet knows = PIT_knows_set_knows(pt->knowns);"; *)
-(*   tprint t "//foreach chan in knows -> macro ?"; *)
-(*   tprint t "PIT_channel_dec_ref_count(chan, /*? error ?*/);"; *)
-(*   tprint t "//end foreach"; *)
-(*   tprint t "knows = PIT_knows_set_forget(pt->knowns);"; *)
-(*   tprint t "//foreach chan in knows -> macro ?"; *)
-(*   tprint t "PIT_channel_dec_ref_count(chan, NULL);"; (\* NULL = pointeur optionnel pour les erreurs *\) *)
-(*   tprint t "//end foreach"; *)
-(*   tprint t ("pt->status = "^status^";"); *)
-(*   tprint t "return;" *)
-(* in *)
-(* object(self) *)
-(*   (\* faire un compiler fold node héritant de abstract_iter_fold_node *)
-(*      et qui fait appeler la méthode truc_pre par la méthode truc_val ?? *)
-(*      sémantiquement ce serait plus agréable à lire *)
-(*   *\) *)
-(*   inherit ASTUtils.abstract_iter_fold_node_repr 0 *)
-  
-(*   (\* module *\) *)
-(*   method moduleDef m rs = self#moduleDef_post m *)
-(*   method moduleDef_val m = () *)
-(*   method moduleDef_pre m = () *)
-(*   method moduleDef_post m = () *)
-  
-(*   (\* definition *\) *)
-(*   method definition_val v m d = *)
-(*     tprint 0 "//D_entry: Dynlabel"; *)
-(*     tprint 0 "//D_entry <- GenerateLabel()"; *)
-(*     tprint 0 ("void "^m#name^"_"^d#name^"(PIT_SchedPool* scheduler, PIT_PiThread *pt){"); *)
-(*     tprint 1 "switch(pt->pc){"; *)
-(*     tprint 2 "case @D_entry:" *)
-      
-(*   method definition_post m d = *)
-(*     tprint 1 "}";(\* end switch *\) *)
-(*     tprint 0 "}" (\* end fun def*\) *)
-
-(*   (\* process *\) *)
-(*   method choice v m d p rs = self#choice_post m d p *)
-(*   method choice_val v m d p = *)
-(*     tprint 2 "{/* Compiled choice */"; *)
-(*     (\* cvar after_wait_fuel : label *\) *)
-(*     tprint 3 "PIT_try_result_t tryresult;"; *)
-(*     tprint 3 "// enum {TRY_ENABLED, TRY_DISABLED, TRY_COMMIT} PIT_try_result_t;"; *)
-(*     tprint 3 "int nbdisabled = 0;"; *)
-(*     (\* cvar choice_cont : Array[dynLabel] *\) *)
-(*     tprint 3 "PIT_Set chans = PIT_Set_empty_set();//[C] Ask C guys"; *)
-
-(*     let branch_iterator = (fun i b -> *)
-(*       let stri = (string_of_int i) in *)
-(*       (\* choice_cont <- generate_label *\) *)
-(*       compile_value 3 b#guard;  *)
-(*       tprint 3 ("pt->enabled["^stri^"]=pt->val.content.as_bool;"); *)
-(*       tprint 3 ("if( pt->enabled["^stri^"]){"); *)
-(*       (\* compileTryAction('a(i), chans) *\) *)
-(*       tprint 4 "if( tryresult == TRY_DISABLED ){"; *)
-(*       tprint 5 ("pt->enabled["^stri^"]=false;"); *)
-(*       tprint 5 "nbdisabled++;"; *)
-(*       tprint 4 "else if (tryresult == TRY_ENABLED){"; *)
-(*       tprint 5 "pt->fuel--;"; *)
-(*       tprint 5 "if(pt->fuel == 0){"; *)
-(*       tprint 6 "PIT_release_all_channels(chans); //[C] check function Name"; *)
-(*       (\* compileYield *\) *)
-(*       tprint 5 "}"; *)
-(*       tprint 5 ("goto @choice_cont["^stri^"]; // !!!"); *)
-(*       tprint 4 "}"; *)
-(*       tprint 3 "else{"; *)
-(*       tprint 4 "nbdisabled++;"; *)
-(*       tprint 3 "}" *)
-(*     ) in *)
-(*     List.iteri branch_iterator p#branches; *)
-
-(*     tprint 3 ("if( nbdisabled == "^(string_of_int p#arity)^" ){"); *)
-(*     tprint 4 "PIT_release_all_channels(chans); //[C] check function name"; *)
-(*     compile_end 4 "STATUS_BLOCKED"; *)
-(*     tprint 3 "}"; *)
-    
-(*     let branch_iterator = (fun i b -> *)
-(*       let stri = (string_of_int i) in *)
-(*       tprint 3 ("if( pt->enabled["^stri^"] ){"); *)
-(*       (match b#action with *)
-(*       | Output a -> *)
-(* 	tprint 4 "PIT_EvalFunction eval(PIT_PiThread *pt){"; *)
-(* 	compile_value 5 a#value; *)
-(* 	tprint 5 "return pt->val;//[C] changer en retour de pointer, si kind non utilisé dans la runtime"; *)
-(* 	tprint 5 "               // changer PIT_value pour que ce ne soit qu'une union ??"; *)
-(* 	tprint 4 "};"; *)
-(* 	let c_index= string_of_int a#channelIndex in *)
-(* 	tprint 4 ("PIT_register_output_commitment(pt, pt->env["^c_index^"].content.as_channel,eval, /*? choice_cont["^stri^"]?*/);") (\* choice_cont[i] *\) *)
-
-(*       | Input a ->  *)
-(* 	let c_index= string_of_int a#channelIndex in *)
-(* 	tprint 4 ("PIT_register_input_commitment(pt, pt->env["^c_index^"].content.as_channel, /*? choice_cont["^stri^"]?*/);") (\* choice_cont[i] *\) *)
-
-	
-(*       | _ -> assert false); *)
-(*       tprint 3 "}" *)
-(*     ) in *)
-(*     List.iteri branch_iterator p#branches; *)
-
-(*     tprint 3 "PIT_acquire(pt->lock); //[C] check function Name"; *)
-(*     tprint 3 "PIT_release_all_channels(chans); //[C] check function Name"; *)
-    
-(*     (\*Compile wait*\) *)
-    
-(*     (\* *)
-(*       cfor i : int from 0 to n − 1 *)
-(*          case @choice_cont[i] : *)
-(*          Compile(Pi ) *)
-(*       cendfor *)
-(*     *\) *)
-(*     tprint 2 "}" *)
-      
-(*   method branch v m d p index b g a q = self#branch_post m d p index b *)
-(*   method branch_val v m d p index b = () *)
-(*   method branch_pre m d p index b = () *)
-(*   method branch_post m d p index b = () *)
-
-(*   (\* method call v m d p rs = self#call_post m d p *\) *)
-(*   method call_post m d p = *)
-(*     tprint 2 "{/* D(v1:T1, ...,vn:Tn) */"; *)
-(*     tprint 3 ("PIT_value args["^(string_of_int p#arity)^"];"); *)
-(*     tprint 3 "PIT_knows_set_forget_all(pt->knows);"; *)
-(*     tprint 3 "/*[CHECK] La copie de structure est censé fonctionné*/"; *)
-(*     List.iteri *)
-(*       (fun i v -> *)
-(* 	compile_value 3 v; *)
-(* 	tprint 3 ("args["^(string_of_int i)^"]=pt->val;") *)
-(*     ) p#args; *)
-(*     (\*[CHECK/TOASK] ne peut on pas directement affecté dans pt->env ?? *\) *)
-(*     List.iteri *)
-(*       (fun i t -> *)
-(* 	let stri = (string_of_int i) in *)
-(* 	tprint 3 ( "pt->env["^stri^"] = args["^stri^"];"); *)
-(* 	match t with *)
-(* 	  TChan _ -> tprint 3 ("PIT_knows_register(pt->knows, args["^stri^"].content.as_channel);") *)
-(* 	| _ -> () *)
-(*       ) p#argTypes; *)
-(*     tprint 3 "pt->proc = D; // find what is D "; *)
-(*     tprint 3 "pt->pc = @D_entry // same"; *)
-(*     tprint 3 "pt->status = STATUS_CALL;"; *)
-(*     tprint 3 "return;"; *)
-(*     tprint 2 "}" *)
-
-(*  (\* Reqmarque pour le code C: signatures sans pointeurs ??*\) *)
-(*   method term_post m d p = () *)
-    
-(*   (\* action *\) *)
-(*   method outAction v m d p a r = self#outAction_post m d p a *)
-(*   method outAction_val v m d p a = () *)
-(*   method outAction_pre m d p a = () *)
-(*   method outAction_post m d p a = () *)
-(*   method inAction v m d p a = self#inAction_post m d p a *)
-(*   method inAction_val v m d p a = () *)
-(*   method inAction_pre m d p a = () *)
-(*   method inAction_post m d p a = () *)
-
-(*   method tauAction_post m d p a = *)
-(*     tprint 1 "try_result=STATUS;" *)
-
-(*   method newAction v m d p a = self#newAction_post m d p a *)
-(*   method newAction_val v m d p a = () *)
-(*   method newAction_pre m d p a = () *)
-(*   method newAction_post m d p a = () *)
-(*   method spawnAction v m d p a rs = self#spawnAction_post m d p a *)
-(*   method spawnAction_val v m d p a = () *)
-(*   method spawnAction_pre m d p a = () *)
-(*   method spawnAction_post m d p a = () *)
-(*   method primAction v m d p a rs = self#primAction_post m d p a *)
-(*   method primAction_val v m d p a = () *)
-(*   method primAction_pre m d p a = () *)
-(*   method primAction_post m d p a = () *)
-(*   method letAction v m d p a r = self#letAction_post m d p a *)
-(*   method letAction_val v m d p a = () *)
-(*   method letAction_pre m d p a = () *)
-(*   method letAction_post m d p a = () *)
-(* end *)
-
-(* let pass m =  *)
-(*   ASTUtils.fold_module m ((new c_printer ):> (unit, unit) ASTUtils.fold_node) *)
