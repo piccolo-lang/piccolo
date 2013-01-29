@@ -175,12 +175,15 @@ let compile_try_out (action:out_action_type) chans =
 		[Var (RecordName (pt_env_c,"incommits"), commit_list)])) end;
     Label label_end_of_try]
 
+exception NoTry
+
 let compile_try_action (action:action) (chans:varDescr) = 
   match action with
   | Tau action -> compile_try_tau
   | Output action -> compile_try_out action chans
   | Input action -> compile_try_in action chans
-  | _ -> failwith "only a tau, an output or an input action can be tried"
+  | _ -> Seq [] (* NOOP *)
+(* failwith "only a tau, an output or an input action can be tried" *)
 
 let rec compile_process m d proc =
   match proc with
@@ -206,8 +209,7 @@ and compile_choice m d p =
       compile_value b#guard; 
       Assign ((pt_enabled i), Var pt_val); (* ("pt->enabled["^stri^"]=pt->val.content.as_bool;"); *)
       make_ite (Var (pt_enabled i))
-	[compile_try_action b#action chans;
-      	  make_ite 
+	[ make_ite 
 	    (Op (Equal, Var try_result, try_disabled))
 	    
 	    [Assign ((pt_enabled i), Val ("false", pbool));
@@ -324,10 +326,13 @@ and compile_call m d p =
 let compile_def m (Def d) =
   init_label ();
   DeclareFun (def_fun (m#name ^ "_" ^ d#name), ["scheduler"; "pt"],
-	      [Switch (Var pt_pc, [Case d_entry;
+	      [Label (def_label_pattern m#name d#name);
+		Switch (Var pt_pc, [Case d_entry;
 			       compile_process m d d#process
 			      ])])
 
 let compile_module (Module m) =
   Seq (List.map (compile_def m) m#definitions)
+
+
 

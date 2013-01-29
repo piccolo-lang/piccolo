@@ -40,6 +40,7 @@ print_endline (string_of_module pp) ;;
 (* let _ = Backend.pass pp ;; *)
 
 let _ =
+  Printexc.record_backtrace true;
   let c_code = Backend.compile_module pp in
   SeqASTPrettyPrinter.print_instr_list_std [c_code]
 (*

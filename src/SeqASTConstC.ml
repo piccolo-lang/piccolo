@@ -47,9 +47,9 @@ let wait_queue = Sty "PICC_WaitQueue"
 
 (* let parray a = Pty ("array", a) *)
 
-let eval_ty = Fun (pvalue, [pi_thread]) 
+let eval_ty = Fun (pointer pvalue, [pointer pi_thread]) 
 
-let pdef = Fun (void, [sched_pool; pi_thread])
+let pdef = Fun (void, [pointer sched_pool; pointer pi_thread])
 
 (* enum types and their values *)
 

@@ -25,7 +25,7 @@ class type virtual ast_binder_type = object
   method fetchBinderType: string -> valueType option
 end
 
-(* classes implantant ast_binder_type:  
+(* classes that are ast_binder_type:  
    in_action_repr
    new_action_repr
    let_action_repr
@@ -88,7 +88,7 @@ type value =
   | VString of string const_value_type
   | VTuple of value tuple_value_type
   | VVar of variable_type
-  | VPrim of value prim_value_type  (* primitives *)
+  | VPrim of value prim_value_type
       
 (** value representing a valueType *)
 let value_type_of_value : (value -> value_type) = function
