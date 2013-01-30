@@ -90,11 +90,15 @@ let commit_list_is_empty = makeFun "IsEmpty" pbool [commit_list]
 
 (* Thread Synchronization function *)
 let wait_queue_push = makeFun "WaitQueuePush" void [queue pi_thread; pi_thread] (* WaitQueue *)
+let ready_queue_push = makeFun "ReadyQueuePush" void [queue pi_thread; pi_thread]
 let ready_queue_add = makeFun "ReadyQueueAdd" void [queue pi_thread; pi_thread] (* WaitQueue *)
 let release_all_channels = makeFun "ReleaseAllChannels" void [pset channel]
 let acquire = makeFun "PIT_acquire" void [mutex]
 let release = makeFun "Release" void [mutex]
 let low_level_yield = makeFun "LowLevelYield" void []
+
+let generate_channel = makeFun "GenerateChannel" channel [] 
+let generate_pi_thread = makeFun "GeneratePiThread" pi_thread [] 
 
 (* Misc *)
 let emptySet = makeFun "EmptySet" (pset channel) []
@@ -113,7 +117,7 @@ let sched_wait = (RecordName (scheduler, "wait"), (queue pi_thread)) (* Concurre
 let pt = (SimpleName "pt", pi_thread)
 let pt_status =(RecordName (pt, "status"), status_enum)
 let pt_enabled i = (ArrayName ((RecordName (pt,"enabled") ), Val (string_of_int i, pint)), pbool)
-let pt_knows = (RecordName (pt, "fuel"), knows_set)
+let pt_knows = (RecordName (pt, "knows"), knows_set)
 let pt_env i = (ArrayName ((RecordName (pt,"env") ), Val (string_of_int i, pint)), pvalue)
 let pt_env_lock i = (RecordName (pt_env i ,"lock") , mutex)
 let pt_commit = (RecordName (pt, "commit"), commit)
@@ -124,6 +128,10 @@ let pt_val = (RecordName (pt, "val"), pvalue)
 let pt_clock = (RecordName (pt, "clock"), clock)
 let pt_fuel = (RecordName (pt, "fuel"), pint)
 let pt_lock = (RecordName (pt, "lock"), mutex)
+
+
+let try_result = SimpleName "tryresult", try_result_enum
+  
 
 (* NULL value *)
 let null:value_t = "NULL", Sty "NULL"

@@ -75,12 +75,9 @@ and compile_yield label =
 
 let eot_label () = Printf.sprintf "end_of_try_%d" (make_label ())
 
-let compile_try_tau = 
-  let try_result = simple_desc "tryresult" try_result_enum in
-  Assign (try_result, try_enabled)
+let compile_try_tau = Assign (try_result, try_enabled)
  
 let compile_try_in (action:in_action_type) chans = 
-  let try_result = simple_desc "tryresult" try_result_enum in
   let commit = SimpleName "commit", out_commit in
   let commit_thread = RecordName (commit, "thread"), pi_thread in
   let commit_eval = RecordName(commit, "evalfunc"), eval_ty in
@@ -134,7 +131,6 @@ let compile_try_in (action:in_action_type) chans =
 
 
 let compile_try_out (action:out_action_type) chans = 
-  let try_result = simple_desc "tryresult" try_result_enum in
   let commit = SimpleName "commit", in_commit in
   let commit_thread = RecordName (commit, "thread"), pi_thread in
   let commit_refvar = RecordName (commit, "refvar"), pint in
@@ -175,14 +171,63 @@ let compile_try_out (action:out_action_type) chans =
 		[Var (RecordName (pt_env_c,"incommits"), commit_list)])) end;
     Label label_end_of_try]
 
-exception NoTry
+let compile_try_new (action:new_action_type) chans = 
+  let newchan = SimpleName "newchan", channel in
+  Bloc [
+    Declare newchan;
+    Assign (newchan, CallFun (generate_channel, []));
+    Assign (pt_env action#variableIndex, Var newchan);
+    (*[TOASK]!!! dans la spec: knowsSetSwitch(pt.knows,channel,KNOWN*)
+    CallProc (knows_register, [Var pt_knows; Var newchan]);
+    Assign (try_result, try_enabled)]
+    
+let compile_try_spawn (action:spawn_action_type) chans = 
+  let args i= (ArrayName (SimpleName "args", Val (string_of_int i, pint)), pvalue) in
+  let child = SimpleName "child", pi_thread in
+    
+  let child_proc = (RecordName (child, "proc"), pdef) in
+  let child_pc = (RecordName (child, "pc"), pc_label) in
+  let child_status =(RecordName (child, "status"), status_enum) in
+  let child_knows = (RecordName (child, "knows"), knows_set) in
+  let child_env i = (ArrayName ((RecordName (child,"env") ), Val (string_of_int i, pint)), pvalue) in
+
+  let args_mapper i arg =
+    Seq [ compile_value arg;
+	  Assign (args i, Var pt_val);
+	  (match (value_type_of_value arg)#ofType with
+	     | TChan _ -> CallProc (knows_register, [Var child_knows; Var (args i)])
+	     | _ -> Seq []);
+	  Assign ((child_env i), Var (args i));
+	]
+  in
+    Bloc[
+      Declare (args action#arity);
+      Declare child;
+      Assign (child, CallFun (generate_pi_thread, []));
+      
+      Seq (List.mapi args_mapper action#args);
+      
+      Assign (child_proc, Val (action#modName ^ "_" ^ action#defName, pdef));
+      Assign (child_pc, Val ("0", pc_label));
+      Assign (child_status, status_run);
+      CallProc (ready_queue_push, [Var sched_ready; Var child]);
+      Assign (try_result, try_enabled)
+    ]
+
+let compile_try_prim (action:prim_action_type) chans = failwith "TODO"
+
+let compile_try_let (action:let_action_type) chans = failwith "TODO"
 
 let compile_try_action (action:action) (chans:varDescr) = 
+  (* est il nécessaire de passer chans en arguments ?? *)
   match action with
   | Tau action -> compile_try_tau
   | Output action -> compile_try_out action chans
   | Input action -> compile_try_in action chans
-  | _ -> Seq [] (* NOOP *)
+  | New action -> compile_try_new action chans
+  | Spawn action -> compile_try_spawn action chans
+  | Prim action -> compile_try_prim action chans
+  | Let action -> compile_try_let action chans
 (* failwith "only a tau, an output or an input action can be tried" *)
 
 let rec compile_process m d proc =
@@ -192,8 +237,7 @@ let rec compile_process m d proc =
   | Choice p -> compile_choice m d p
 
 and compile_choice m d p = 
-  let try_result = simple_desc "tryresult" try_result_enum
-  and nb_disabled = simple_desc "nbdisabled" pint
+  let nb_disabled = simple_desc "nbdisabled" pint
   and chans = simple_desc "chans" (pset channel)
   and def_label = def_label_pattern m#name d#name
   and choice_cont = Array.make p#arity 0

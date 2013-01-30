@@ -17,9 +17,9 @@ let pstring = pointer (Sty "char")
 let pvalue = Sty "PICC_Value"
 let sched_pool = Sty "PICC_SchedPool"
 
-let pi_thread = Sty "PICC_PiThread"
+let pi_thread = pointer (Sty "PICC_PiThread")
 
-let channel = Sty "PICC_Channel"
+let channel = pointer (Sty "PICC_Channel")
 let mutex = Sty "PICC_Mutex"
 let clock = Sty "PICC_Clock"
 
@@ -47,9 +47,9 @@ let wait_queue = Sty "PICC_WaitQueue"
 
 (* let parray a = Pty ("array", a) *)
 
-let eval_ty = Fun (pointer pvalue, [pointer pi_thread]) 
+let eval_ty = Fun (pointer pvalue, [pi_thread]) 
 
-let pdef = Fun (void, [pointer sched_pool; pointer pi_thread])
+let pdef = Fun (void, [pointer sched_pool; pi_thread]) (*PICC_PiThreadProc*)
 
 (* enum types and their values *)
 
@@ -85,15 +85,15 @@ let invalid_pc = Val ("InvalidPC", pc_label)
 let makeFun name ret args =
   SimpleName name, Fun (ret, args)
 
-let awake = makeFun "PICC_awake" void [pointer sched_pool; pointer pi_thread(*; *error *)] 
-let can_awake = makeFun "PICC_can_awake" commit_status_enum [pointer pi_thread; pointer commit(*; *error *)]
-let channel_dec_ref_count = makeFun "PICC_channel_dec_ref_count" void [ pointer channel(*; *error *)]
-let channel_incr_ref_count = makeFun "PICC_channel_incr_ref_count" void [ pointer channel(*; *error *)]
+let awake = makeFun "PICC_awake" void [pointer sched_pool; pi_thread(*; *error *)] 
+let can_awake = makeFun "PICC_can_awake" commit_status_enum [pi_thread; pointer commit(*; *error *)]
+let channel_dec_ref_count = makeFun "PICC_channel_dec_ref_count" void [ channel(*; *error *)]
+let channel_incr_ref_count = makeFun "PICC_channel_incr_ref_count" void [ channel(*; *error *)]
 
-let fetch_input_commitment = makeFun "PICC_fetch_commitment" (pointer commit) [pointer channel (*; *error *)]
+let fetch_input_commitment = makeFun "PICC_fetch_commitment" (pointer commit) [channel (*; *error *)]
 let fetch_output_commitment = fetch_input_commitment (* in the C code these functions are the same*)
 
-let knows_register = makeFun "PICC_knowns_register" pbool [pointer knows_set; pointer channel(*; *error *)]
+let knows_register = makeFun "PICC_knowns_register" pbool [pointer knows_set; channel(*; *error *)]
 let knows_set_forget_all = makeFun "KnowsSetForgetAll" void [pointer knows_set] (*[MISSING]*)
 let knows_set_forget_to_unknown = makeFun "KnowsSetForgetToUnknown" void [knows_set] (*[MISSING]*)
 
@@ -104,22 +104,29 @@ let knows_set_knows = makeFun "PICC_knowns_set_knows"
 (* (pset channel) *) (pointer knows_set) [pointer knows_set]
 
 let register_input_commitment = makeFun "PICC_register_input_commitment" 
-  void [pointer pi_thread; pointer channel; pint; pc_label]
+  void [pi_thread; channel; pint; pc_label]
 
 let register_output_commitment = makeFun "PICC_register_output_commitment" 
-  void [pointer pi_thread; pointer channel; pointer (Fun (pvalue, [pi_thread])); pc_label ]
+  void [pi_thread; channel; pointer (Fun (pvalue, [pi_thread])); pc_label ]
 
-let set_add = makeFun "PICC_set_add" pbool [pointer (pset channel); pointer channel] 
+let set_add = makeFun "PICC_set_add" pbool [pointer (pset channel); channel] 
 (*[MISSING] or [TO CORRECT]*)
 let commit_list_is_empty = makeFun "IsEmpty" pbool [commit_list] (* [MISSING] *)
 
 (* Thread Synchronization function *)
-let wait_queue_push = makeFun "PICC_wait_queue_push" void [pointer wait_queue; pointer pi_thread]
-let ready_queue_add = makeFun "PICC_ready_queue_add" void [pointer ready_queue; pointer pi_thread] 
+let wait_queue_push = makeFun "PICC_wait_queue_push" void [pointer wait_queue; pi_thread]
+let ready_queue_push = makeFun "PICC_ready_queue_push" void [queue pi_thread; pi_thread]
+let ready_queue_add = makeFun "PICC_ready_queue_add" void [pointer ready_queue; pi_thread] 
 let release_all_channels = makeFun "ReleaseAllChannels" void [pset channel] (* [MISSING] *)
 let acquire = makeFun "PICC_acquire" void [pointer mutex]
 let release = makeFun "PICC_release" void [pointer mutex]
 let low_level_yield = makeFun "LowLevelYield" void [] (* [MISSING] *)
+
+
+let generate_channel = makeFun "PICC_create_channel" channel [] 
+let generate_pi_thread = makeFun "PICC_create_pithread" pi_thread [] 
+
+
 
 (* Misc *)
 let emptySet = makeFun "PICC_set_make" (pointer (pset channel)) [] 
@@ -141,10 +148,10 @@ let sched_ready = (RecordName (scheduler, "ready"), (queue pi_thread)) (* Concur
 let sched_wait = (RecordName (scheduler, "wait"), (queue pi_thread)) (* ConcurrentWaitQueue?*)
 
 (* PiThread fields *)
-let pt = (SimpleName "pt", pointer pi_thread)
+let pt = (SimpleName "pt", pi_thread)
 let pt_status =(RecordName (pt, "status"), status_enum)
 let pt_enabled i = (ArrayName ((RecordName (pt,"enabled") ), Val (string_of_int i, pint)), pbool)
-let pt_knows = (RecordName (pt, "fuel"), knows_set)
+let pt_knows = (RecordName (pt, "knows"), knows_set)
 let pt_env i = (ArrayName ((RecordName (pt,"env") ), Val (string_of_int i, pint)), pvalue)
 let pt_env_lock i = (RecordName (pt_env i ,"lock") , mutex)
 let pt_commit = (RecordName (pt, "commit"), commit)
@@ -155,6 +162,8 @@ let pt_val = (RecordName (pt, "val"), pvalue)
 let pt_clock = (RecordName (pt, "clock"), clock)
 let pt_fuel = (RecordName (pt, "fuel"), pint)
 let pt_lock = (RecordName (pt, "lock"), mutex)
+
+let try_result = SimpleName "tryresult", try_result_enum
 
 (* NULL value *)
 let null:value_t = "NULL", Sty "NULL"

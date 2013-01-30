@@ -87,11 +87,15 @@ val commit_list_is_empty : varDescr
 
 (* Thread Synchronization function *)
 val wait_queue_push : varDescr
+val ready_queue_push : varDescr
 val ready_queue_add : varDescr
 val release_all_channels : varDescr
 val acquire : varDescr
 val release : varDescr
 val low_level_yield : varDescr
+
+val generate_channel : varDescr
+val generate_pi_thread : varDescr
 
 (* Misc *)
 val emptySet : varDescr
@@ -121,6 +125,8 @@ val pt_val : varDescr
 val pt_clock : varDescr
 val pt_fuel : varDescr
 val pt_lock : varDescr
+
+val try_result : varDescr
 
 (* NULL value *)
 val null:value_t
