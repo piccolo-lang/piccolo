@@ -1,5 +1,3 @@
-
-
 /* header */
 %{
   (** Parser for Pi-Thread *)
@@ -89,7 +87,7 @@ moduleID COLON IDENT LPAREN RPAREN { makeCall !current_module !current_definitio
 | IDENT LPAREN values RPAREN { makeCall !current_module !current_definition "" $1 (List.map snd $3) (List.map fst $3) }
 
 choiceProcess:
-branch { [$1] }
+| branch { [$1] }
 | branch PLUS choiceProcess { $1::$3 }
 
 branch:
@@ -107,11 +105,13 @@ action: TAU { makeTau () }
 
 /* types */
 
-typeDef: TBOOL { TBool }
+typeDefSingle: TBOOL { TBool }
 | TINT { TInt }
 | TSTRING { TString }
 | TCHAN INF typeDef SUP { TChan $3 }
-| types { makeTupleType $1 }
+
+typeDef: typeDefSingle { $1 }
+| LPAREN types RPAREN { makeTupleType $2 }
 
 types : typeDef { [$1] }
 | typeDef STAR types { $1::$3 }
@@ -125,15 +125,10 @@ value : TRUE { (makeVTrue (),TBool) }
 | FALSE { (makeVFalse (), TBool) }
 | INT { (makeVInt $1, TInt) }
 | STRING { (makeVString (String.sub $1 1 ((String.length $1) - 2)), TString) }
-| LPAREN value RPAREN { $2 }
 | LPAREN values RPAREN { let ts = List.map snd $2
-                         in (makeTuple ts (List.map fst $2), makeTupleType ts)  }
+                         in (makeTuple ts (List.map fst $2), makeTupleType ts) }
 | IDENT { (makeVVar TUnknown $1, TUnknown) }
 | SHARP moduleID COLON IDENT LPAREN RPAREN { (makeVPrim $2 $4 [] TUnknown [], TUnknown) }
 | SHARP moduleID COLON IDENT LPAREN values RPAREN { (makeVPrim $2 $4 (List.map snd $6) TUnknown (List.map fst $6), TUnknown) }
 
 %%
-
-  
-
-
