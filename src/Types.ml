@@ -72,5 +72,5 @@ let rec type_eq t1 t2 =
     | (TTuple t1, TTuple t2) -> t1#arity = t2#arity && List.for_all2 type_eq t1#elements t2#elements
     | (TChan t1, TChan t2) -> type_eq t1 t2
     | (TPrim t1, TPrim t2) -> t1#arity = t2#arity && (List.for_all2 type_eq t1#params t2#params) && (type_eq t1#return t2#return)
-    | (_,_) -> false
+    | (_, _) -> false
 
