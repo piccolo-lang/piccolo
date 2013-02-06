@@ -1,11 +1,9 @@
-
 (* module STests 
    -------------
 
   Tests of Syntax module
 
 *)
-
 (** Various tests for the Syntax module *)
 
 open Types ;; 
