@@ -1,0 +1,114 @@
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage[pdfborder = {0 0 0}]{hyperref}
+
+\definecolor{compilecolor}{gray}{0.45}
+\definecolor{synchrocolor}{rgb}{0.1, 0.2, 0.8}
+\title{PiThread Data Representation Specifications}
+\date{\today}
+\author{Aurélien Deharbe and Fr\'ed\'eric Peschanski\\ UPMC -- LIP6 -- APR}
+
+\newenvironment{program}{
+  \begin{sffamily}
+  \begin{scriptsize}
+  \begin{tabbing}}
+ {\end{tabbing}
+  \end{scriptsize}
+  \end{sffamily}}
+
+\newcommand{\kw}[1]{\textsf{\textbf{#1}}}
+\newcommand{\pindent}{\hspace{2em}\=}
+\newcommand{\compiletime}[1]{\textcolor{compilecolor}{#1}}
+\newcommand{\synchro}[1]{\textcolor{synchrocolor}{#1}}
+
+\newcommand{\algotitle}[1]{\noindent\\ \noindent#1\par\nobreak\vspace{3pt}\hrule\vspace{6pt}}
+\newcommand{\algosection}[1]{
+  \phantomsection
+  \addcontentsline{toc}{subsection}{#1}
+  \algotitle{#1}
+}
+\newcommand{\myref}[1]{
+  \hyperref[#1]{#1}
+}
+
+\begin{document}
+
+\renewcommand{\contentsname}{Table of contents}
+\maketitle
+$ $\newline
+$ $\newline
+\begin{center}
+\includegraphics[scale=0.45]{pithreads.png}
+\end{center}
+\newpage
+\tableofcontents
+\newpage
+
+%%%%%%%%%%%%%%% Section COMMENTS %%%%%%%%%%%%%%%%%%
+\section{Overview}
+
+This document describes the low-level representation of values manipulated
+by the pithreads backend compiler and runtime system.
+
+There are 5 distinct categories of values manipulated in the pithreads:
+\begin{itemize}
+\item immediate values
+\item ``by-copy'' immutable structured values
+\item ``by-reference'' acyclic immutable structured values
+\item ``by-reference'' acyclic mutable structured values
+\item channel references
+\end{itemize}
+
+A value can be either kernel or user-defined. Immediate values
+ can only be of the kernel kind.
+
+Each value as a representation type, e.g. bool, int, float, string, etc.
+Note that this representation type may be distinct from the types
+manipulated at compilation-time.
+
+%%%%%%%%%%%%%%% Section Tagged representation %%%%%%%%%%%
+\section{Tagged representation}
+
+The common representation of  values is as follows:
+
+\begin{tabular}{|l|l|l|}
+\hline
+tag & control & info \\
+\hline
+\end{tabular}
+
+with:
+
+\begin{itemize}
+\item the tag part uniquely identifies the representation type of the value. The tag is mandatory.
+\item the control part provide control-level informations about the value. The control is optional.
+\item the info part provide data-level informations about the value. The info is mandatory.
+\end{itemize}
+
+The exact number of bits occupied by such a value is not strictly enforced, 
+however it should be consistent for a given executable backend/runtime. 
+Also, 8 bits minimum are required to encode the tag part.
+And one can use at most two memory words ($2\times 32$ bits on a 32bit machine, $2 \times 64$ bits on a 64 machine) to
+represent a single value.
+
+There are rooms for 256 distinct tags, with
+\begin{itemize}
+\item tag 0 is reserved
+\item tag 1 is novalue
+\item tag 2 is boolean
+\item tag 3 is integer
+\item tag 4 is float
+\item tag 64 is tuple
+\item tag 128 is string
+\item tag 254 is channel
+\item tag 255 is user-defined
+\end{itemize}
+
+Tags 0-254 are for kernel values.
+Tag 255 is a special marker for a user-defined value.
+
+
+\end{document}
