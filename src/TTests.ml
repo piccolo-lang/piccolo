@@ -1,18 +1,15 @@
-
 (* module TTests 
    -------------
 
   Tests of Typing module
 
 *)
-
 (** Various tests for the Typing module *)
 
-open Types ;;  
-open TypeRepr ;; 
-open Syntax ;; 
-open ASTRepr ;;
-
+open Types;;  
+open TypeRepr;; 
+open Syntax;; 
+open ASTRepr;;
 
 let env_printer def = 
   let def = definition_type_of_definition def in

@@ -207,7 +207,7 @@ let compile_try_spawn (action:spawn_action_type) chans =
       
       Seq (List.mapi args_mapper action#args);
       
-      Assign (child_proc, Val (action#modName ^ "_" ^ action#defName, pdef));
+      Assign (child_proc, Val (action#moduleName ^ "_" ^ action#defName, pdef));
       Assign (child_pc, Val ("0", pc_label));
       Assign (child_status, status_run);
       CallProc (ready_queue_push, [Var sched_ready; Var child]);

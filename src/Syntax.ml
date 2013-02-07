@@ -11,8 +11,8 @@ open Types;;
 
 (** interface representing the type of an abstract syntax tree *)
 class type virtual ast_type = object
-  method startLine : int
   method startChar : int
+  method startLine : int
   method endChar : int
   method endLine : int
   method posString : string
@@ -31,9 +31,8 @@ end
    let_action_repr
    definition_repr
 *)
-
             
-(* values *)
+(** {2 Values } *)
                   
 (** interface representing a valueType, extends ast_type *) 
 class type virtual value_type = object
@@ -103,7 +102,7 @@ let value_type_of_value : (value -> value_type) = function
 (** string representing a value *)
 let string_of_value v = (value_type_of_value v)#toString 
   
-(* actions *)
+(** {2 Actions} *)
   
 (** interface representing the type of an output! action, extends ast_type *)
 class type out_action_type = object
@@ -157,7 +156,7 @@ end
 (** interface representing the type of the thread creation spawn, extends ast_type *)
 class type spawn_action_type = object
   inherit ast_type
-  method modName : string
+  method moduleName : string
   method defName : string
   method arity : int
   method args : value list
@@ -212,7 +211,7 @@ let ast_type_of_action : (action -> ast_type) = function
 (** string representing an action *)
 let string_of_action a = (ast_type_of_action a)#toString
 
-(* processes *)
+(** {2 Processes} *)
 
 (** interface representing the type of a process, extends ast_type *)
 class type virtual process_type = object
@@ -245,8 +244,8 @@ end
 class type ['a] prefix_process_type = object
   inherit process_type
   method guard : value
-  method setGuardType: valueType -> unit
   method guardType : valueType
+  method setGuardType: valueType -> unit
   method action : action
   method continuation : 'a
   method index : int
@@ -276,7 +275,7 @@ let process_type_of_process = function
 (** string representing a process *)
 let string_of_process p = (process_type_of_process p)#toString
 
-(* definitions *)
+(** {2 Definition} *)
 
 (** interface representing the type of a definition, extends ast_binder_type *)
 class type definition_type = object
@@ -288,10 +287,10 @@ class type definition_type = object
   method env : string list
   method extendEnv : string -> unit
   method lookupEnv : string -> int option
-  method fetchBinderType : string -> valueType option
   method esize : int
   method csize : int
   method process : process
+  method fetchBinderType : string -> valueType option
   method toString : string
 end
 
@@ -307,7 +306,7 @@ let definition_type_of_definition = function
 let string_of_definition = function
   | Def d -> d#toString
     
-(* modules *)
+(** {2 Module} *)
 
 (** interface representing the type of a module *)
 class type module_type = object

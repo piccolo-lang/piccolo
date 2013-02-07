@@ -3,12 +3,12 @@ OCAMLPATH=$(OCAMLDIR)
 
 DOC=../doc
 
-OCAMLC = $(OCAMLPATH)/ocamlc
-OCAMLDOC=$(OCAMLPATH)/ocamldoc
+OCAMLC = ocamlc
+OCAMLDOC= ocamldoc
 OCFLAGS = -g -annot
 
-YACC = $(OCAMLPATH)/ocamlyacc
-LEX = $(OCAMLPATH)/ocamllex
+YACC = ocamlyacc
+LEX = ocamllex
 
 all: stests ttests ctests cctests
 
