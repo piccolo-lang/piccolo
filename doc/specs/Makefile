@@ -1,22 +1,34 @@
 
 PDFLATEX=pdflatex
 
-SOURCE=picompil_specs
+COMPILE_SPEC=picompil_specs
+DATAREPR_SPEC=datarepr_specs
 
-all: pdf
+all: compile datarepr
 
-pdf: $(SOURCE).pdf
+compile: $(COMPILE_SPEC).pdf
 
-$(SOURCE).pdf: $(SOURCE).tex
-	$(PDFLATEX) $(SOURCE).tex
+datarepr: $(DATAREPR_SPEC).pdf
+
+$(COMPILE_SPEC).pdf: $(COMPILE_SPEC).tex
+	$(PDFLATEX) $(COMPILE_SPEC).tex
+
+$(DATAREPR_SPEC).pdf: $(DATAREPR_SPEC).tex
+	$(PDFLATEX) $(DATAREPR_SPEC).tex
+
 
 clean:
 	rm -f *~
-	rm -f $(SOURCE).aux
-	rm -f $(SOURCE).log
-	rm -f $(SOURCE).toc
-	rm -f $(SOURCE).out
+	rm -f $(COMPILE_SPEC).aux
+	rm -f $(COMPILE_SPEC).log
+	rm -f $(COMPILE_SPEC).toc
+	rm -f $(COMPILE_SPEC).out
+	rm -f $(DATAREPR_SPEC).aux
+	rm -f $(DATAREPR_SPEC).log
+	rm -f $(DATAREPR_SPEC).toc
+	rm -f $(DATAREPR_SPEC).out
 
 cleanall: clean
-	rm -f $(SOURCE).pdf
+	rm -f $(COMPILE_SPEC).pdf
+	rm -f $(DATAREPR_SPEC).pdf
 

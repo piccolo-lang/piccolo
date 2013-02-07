@@ -74,9 +74,9 @@ manipulated at compilation-time.
 
 The common representation of  values is as follows:
 
-\begin{tabular}{|l|l|l|}
+\begin{tabular}{|l|l|}
 \hline
-tag & control & info \\
+tag + control & data \\
 \hline
 \end{tabular}
 
@@ -87,6 +87,11 @@ with:
 \item the control part provide control-level informations about the value. The control is optional.
 \item the info part provide data-level informations about the value. The info is mandatory.
 \end{itemize}
+
+The expected low-level representation would be :
+
+TODO
+
 
 The exact number of bits occupied by such a value is not strictly enforced, 
 however it should be consistent for a given executable backend/runtime. 
@@ -110,5 +115,88 @@ There are rooms for 256 distinct tags, with
 Tags 0-254 are for kernel values.
 Tag 255 is a special marker for a user-defined value.
 
+
+%%%%%%%%%%%%%%% Section Immediate Values %%%%%%%%%%%
+\section{Immediate Values}
+
+Immediate values are encoded using the following scheme:
+
+\begin{tabular}{|l|l|}
+\hline
+tag & info \\
+\hline
+\end{tabular}
+
+The control part is thus empty, and everything except the tag describes
+ the value.
+
+There are multiple possible schemes for the low-level representation:
+\begin{enumerate}
+\item the tag takes one full machine word,  and so is the info part.
+\item all representation bits except the tag is used for the info part.
+\end{enumerate}
+
+The following are not mandatory low level representations, but they do make sense.
+
+\subsection{No value}
+
+The no-value is represented by the tag $1$ and has no further information attached to it.
+
+\subsection{Boolean values}
+
+Here, a single machine word is enough to represent the whole value.
+
+The representation of false is as follows:
+
+\begin{tabular}{|l|l|}
+\hline
+tag & info \\
+\hline
+\end{tabular}
+
+The value false has tag $2$ and information $0$.
+The value true has tag $2$ and information $1$.
+
+\subsection{Integer values}
+
+The default integer type is the machine-word signed integer representation (i.e. int in C).
+
+\begin{program}
+\kw{typedef} \kw{struct} \_int\_value\_t \{\\
+\pindent tag\_ctrl\_t tag\_ctrl ; \\
+\> data\_t data;\\
+\} int\_value\_t;
+\end{program}
+
+\subsection{Float values}
+
+The default float type is the double-precision IEEE FP representation (i.e. double in C).
+
+
+%%%%%%%%%%%%%%% Section String values %%%%%%%%%%%
+\section{String Values}
+
+
+For string values, the tag part is 128, the control part contains the number of
+references to the string, and the info part contains the C-like representation of
+ the string.   Note that all string are considered encoded as UTF-8.
+
+%%%%%%%%%%%%%%% Section Tuple values %%%%%%%%%%%
+\section{Tuple Values}
+
+For tuple values, the tag is 64,  the control part contains the number of
+sub-values, and the info part contains the successive sub-values.
+
+%%%%%%%%%%%%%%% Section Channel values %%%%%%%%%%%
+\section{Channel Values}
+
+The tag is $254$ the control part gives the reference count and/or the
+kind of channel  (standard, I/O, linear channel, etc.).
+
+%%%%%%%%%%%%%%% Section User-defined values %%%%%%%%%%%
+\section{User-defined Values}
+
+The tag part is $255$, the control part contains the sub-type descriptor
+ and the info part is user-defined.
 
 \end{document}
