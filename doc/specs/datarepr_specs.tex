@@ -1,9 +1,12 @@
 \documentclass[a4paper,11pt]{article}
 
 \usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
 \usepackage{color}
 \usepackage{graphicx}
 \usepackage[pdfborder = {0 0 0}]{hyperref}
+\usepackage{multicol}
+\usepackage{multirow}
 
 \definecolor{compilecolor}{gray}{0.45}
 \definecolor{synchrocolor}{rgb}{0.1, 0.2, 0.8}
@@ -19,6 +22,7 @@
   \end{scriptsize}
   \end{sffamily}}
 
+\newcommand{\code}[1]{\textsf{#1}}
 \newcommand{\kw}[1]{\textsf{\textbf{#1}}}
 \newcommand{\pindent}{\hspace{2em}\=}
 \newcommand{\compiletime}[1]{\textcolor{compilecolor}{#1}}
@@ -56,27 +60,22 @@ by the pithreads backend compiler and runtime system.
 There are 5 distinct categories of values manipulated in the pithreads:
 \begin{itemize}
 \item immediate values
-\item ``by-copy'' immutable structured values
-\item ``by-reference'' acyclic immutable structured values
-\item ``by-reference'' acyclic mutable structured values
-\item channel references
+\item immutable heap-allocated values: essentially tuples
+\item managed values, heap-allocated and GC-friendly: e.g. strings and channels 
+\item user-defined types: immediate or managed
 \end{itemize}
 
-A value can be either kernel or user-defined. Immediate values
- can only be of the kernel kind.
-
-Each value as a representation type, e.g. bool, int, float, string, etc.
-Note that this representation type may be distinct from the types
-manipulated at compilation-time.
 
 %%%%%%%%%%%%%%% Section Tagged representation %%%%%%%%%%%
 \section{Tagged representation}
 
 The common representation of  values is as follows:
 
-\begin{tabular}{|l|l|}
+\begin{tabular}{|c|c|c|}
 \hline
-tag + control & data \\
+\code{tag} & \code{control} & \code{data} \\
+\hline
+\multicolumn{2}{|c|}{1 word} & $\geq 0$ word(s) \\
 \hline
 \end{tabular}
 
@@ -85,19 +84,12 @@ with:
 \begin{itemize}
 \item the tag part uniquely identifies the representation type of the value. The tag is mandatory.
 \item the control part provide control-level informations about the value. The control is optional.
-\item the info part provide data-level informations about the value. The info is mandatory.
+\item the data part provide data-level informations about the value. The data part is optional.
 \end{itemize}
 
-The expected low-level representation would be :
-
-TODO
-
-
-The exact number of bits occupied by such a value is not strictly enforced, 
-however it should be consistent for a given executable backend/runtime. 
-Also, 8 bits minimum are required to encode the tag part.
-And one can use at most two memory words ($2\times 32$ bits on a 32bit machine, $2 \times 64$ bits on a 64 machine) to
-represent a single value.
+The exact number of bits occupied by a value is not strictly enforced, 
+however, the tag part requires at least 8 bits and share with the control part at most a machine word (32bits or 64bits depending on the architecture).
+The data part is of an arbitrary number of machine words, but essential 1 and 2 words.
 
 There are rooms for 256 distinct tags, with
 \begin{itemize}
@@ -108,95 +100,190 @@ There are rooms for 256 distinct tags, with
 \item tag 4 is float
 \item tag 64 is tuple
 \item tag 128 is string
-\item tag 254 is channel
-\item tag 255 is user-defined
+\item tag 253 is channel
+\item tag 254 is user-defined / immediate
+\item tag 255 is user-defined / managed
 \end{itemize}
 
-Tags 0-254 are for kernel values.
-Tag 255 is a special marker for a user-defined value.
+Tags 0-253 are for kernel values.
+Tags 254 andd 255 are special markers for user-defined values.
 
 
 %%%%%%%%%%%%%%% Section Immediate Values %%%%%%%%%%%
 \section{Immediate Values}
 
-Immediate values are encoded using the following scheme:
-
-\begin{tabular}{|l|l|}
-\hline
-tag & info \\
-\hline
-\end{tabular}
-
-The control part is thus empty, and everything except the tag describes
- the value.
-
-There are multiple possible schemes for the low-level representation:
-\begin{enumerate}
-\item the tag takes one full machine word,  and so is the info part.
-\item all representation bits except the tag is used for the info part.
-\end{enumerate}
-
-The following are not mandatory low level representations, but they do make sense.
-
 \subsection{No value}
 
 The no-value is represented by the tag $1$ and has no further information attached to it.
+
+The representation is as follows:
+
+\begin{tabular}{|c|c|c|}
+\hline
+\multirow{3}{*}{\code{novalue}} & 1 & (empty) \\
+\cline{2-3}
+& \code{tag} & \code{ctrl} \\
+\cline{2-3}
+& \multicolumn{2}{|c|}{1 word} \\
+\hline
+\end{tabular}
+
 
 \subsection{Boolean values}
 
 Here, a single machine word is enough to represent the whole value.
 
-The representation of false is as follows:
+The value false has tag $2$ and information $0$.
 
-\begin{tabular}{|l|l|}
+\begin{tabular}{|c|c|c|}
 \hline
-tag & info \\
+\multirow{3}{*}{\code{false}} & 2 & 0 \\
+\cline{2-3}
+& \code{tag} & \code{ctrl} \\
+\cline{2-3}
+& \multicolumn{2}{|c|}{1 word} \\
 \hline
 \end{tabular}
 
-The value false has tag $2$ and information $0$.
 The value true has tag $2$ and information $1$.
+
+\begin{tabular}{|c|c|c|}
+\hline
+\multirow{3}{*}{\code{true}} & 2 & 1 \\
+\cline{2-3}
+& \code{tag} & \code{ctrl} \\
+\cline{2-3}
+& \multicolumn{2}{|c|}{1 word} \\
+\hline
+\end{tabular}
+
 
 \subsection{Integer values}
 
 The default integer type is the machine-word signed integer representation (i.e. int in C).
 
-\begin{program}
-\kw{typedef} \kw{struct} \_int\_value\_t \{\\
-\pindent tag\_ctrl\_t tag\_ctrl ; \\
-\> data\_t data;\\
-\} int\_value\_t;
-\end{program}
+The representation is:
+
+\begin{tabular}{|c|c|c|c|}
+\hline
+\multirow{3}{*}{\code{int(n)}} & 3 & (empty) & \code{n} \\
+\cline{2-4}
+ & \code{tag} & \code{ctrl} & \code{data} \\
+\cline{2-4}
+ & \multicolumn{2}{|c|}{1 word} & 1 word \\
+\hline
+\end{tabular}
 
 \subsection{Float values}
 
 The default float type is the double-precision IEEE FP representation (i.e. double in C).
 
+\begin{tabular}{|c|c|c|c|}
+\hline
+\multirow{3}{*}{\code{float(x)}} & 3 & (empty) & \code{x} \\
+\cline{2-4}
+ & \code{tag} & \code{ctrl} & \code{data} \\
+\cline{2-4}
+ & \multicolumn{2}{|c|}{1 word} & 2 words \\
+\hline
+\end{tabular}
 
-%%%%%%%%%%%%%%% Section String values %%%%%%%%%%%
-\section{String Values}
 
 
-For string values, the tag part is 128, the control part contains the number of
+ part contains the number of
 references to the string, and the info part contains the C-like representation of
- the string.   Note that all string are considered encoded as UTF-8.
+ the string.   Note that all string 
 
 %%%%%%%%%%%%%%% Section Tuple values %%%%%%%%%%%
 \section{Tuple Values}
 
 For tuple values, the tag is 64,  the control part contains the number of
-sub-values, and the info part contains the successive sub-values.
+sub-values, and the info part contains pointers to the successive sub-values.
+
+\begin{tabular}{|c|c|c|c|}
+\hline
+\multirow{3}{*}{\code{tuple(v$_1$,$\ldots$,v$_n$)}} & 64 & \code{n} & \code{\&v$_1$,$\ldots$,\&v$_n$} \\
+\cline{2-4}
+ & \code{tag} & \code{ctrl} & \code{data} \\
+\cline{2-4}
+ & \multicolumn{2}{|c|}{1 word} & $n$ words \\
+\hline
+\end{tabular}
+
+\textbf{Remark}: the tuple must be allocated on the heap, but it is an immutable structure that
+ adopts a ``by-copy'' semantics.
+
+%%%%%%%%%%%%%%% Section String values %%%%%%%%%%%
+\section{String Values (managed)}
+
+For string values, the tag part is 128, the control is empty and the data
+ part provides a handle that allows to obtain the string representation.
+
+\begin{tabular}{|c|c|c|c|}
+\hline
+\multirow{3}{*}{\code{string(h)}} & 128 & (empty) & \code{h} \\
+\cline{2-4}
+ & \code{tag} & \code{ctrl} & \code{data} \\
+\cline{2-4}
+ & \multicolumn{2}{|c|}{1 word} & 1 word \\
+\hline
+\end{tabular}
+
+The string representation itself should be obtained by the handle \code{h}.
+Note that the handle must be managed by the \code{knows} set because of
+ alias-free reference counting for strings (cf. channel).
+
+For the representation of the string, the encoding is UTF-8 and a reference
+count is added. The string is \code{NULL}-terminated as in C.
+
+\begin{tabular}{|c|c|c|}
+\hline
+\multirow{3}{*}{\code{string\_repr(str)}} & \code{refcount} & \code{str} \\
+\cline{2-3}
+ & 1 word & $\geq 1$ word(s) \\
+\hline
+\end{tabular}
+
+\textbf{Remark}: an external library e.g. \code{utf8proc} can be considered
+for supporting strings.
 
 %%%%%%%%%%%%%%% Section Channel values %%%%%%%%%%%
-\section{Channel Values}
+\section{Channel Values (managed)}
 
-The tag is $254$ the control part gives the reference count and/or the
-kind of channel  (standard, I/O, linear channel, etc.).
+The tag is $253$ and the control part gives the the
+kind of channel  (standard, I/O, linear channel, etc.). The data part is a 
+handle allowing to fetch the channel representation.
+
+\begin{tabular}{|c|c|c|c|}
+\hline
+\multirow{3}{*}{\code{channel(k,h)}} & 128 & k & \code{h} \\
+\cline{2-4}
+ & \code{tag} & \code{ctrl} & \code{data} \\
+\cline{2-4}
+ & \multicolumn{2}{|c|}{1 word} & 1 word \\
+\hline
+\end{tabular}
+
+The channel representation is described in the compilation specification.
+The default channel kind is \code{PI\_CHANNEL} but other channel kinds can be
+added to the runtime with different semantics.
 
 %%%%%%%%%%%%%%% Section User-defined values %%%%%%%%%%%
 \section{User-defined Values}
 
+User-defined types are not yet specified, but the tags $254$ and $255$ must
+be reserved for that purpose.
+
+\subsection{immediate values}
+
+The tag part is $254$, the control part contains the sub-type descriptor
+ and the data part is user-defined.
+
+\subsection{managed values}
+
 The tag part is $255$, the control part contains the sub-type descriptor
- and the info part is user-defined.
+ and the data part is a handle allowing to the fetch the representation part,
+ which is user-specific.
+
 
 \end{document}
