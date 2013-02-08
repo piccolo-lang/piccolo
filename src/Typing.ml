@@ -18,7 +18,7 @@ type typeError =
       
 (** string representing a typeError *)
 let string_of_typeError = function
-  | TypeWarning (msg,ast) -> "Warning at " ^ (ast#posString) ^ "\n  ==> " ^ msg
+  | TypeWarning (msg, ast) -> "Warning at " ^ (ast#posString) ^ "\n  ==> " ^ msg
   | TypeError(msg, ast) -> "Error at "  ^ (ast#posString) ^ "\n  ==> " ^ msg
 ;;
       
@@ -263,82 +263,4 @@ object(self)
     failwith "primValue_fold: not yet implemented"
 end
 
-let typing_pass n = ((new typing_pass_node n) :> (typingEnv,typeErrors) ASTUtils.fold_node)
-
-
-(* let checkAndInferTypes_out m d out = *)
-(*   (let vref = d#envRef out#channel in *)
-(*    if vref = -1 then  *)
-(*      [ TypeError ("Unknown channel variable '" ^ out#channel ^ "'", (out :> ast_type)) ] *)
-(*    else out#setChannelRef vref ; []) *)
-(*   @ (checkAndInferTypes_value m d out#valueType out#value) *)
-
-(* let checkAndInferTypes_action m d act = match act with *)
-(*   | Tau -> [] *)
-(*   | Output o -> checkAndInferTypes_out m d o *)
-(*   | Input i -> checkAndInferTypes_in m d i *)
-(*   | New n -> checkAndInferTypes_new m d n *)
-(*   | Spawn s -> checkAndInferTypes_spawn m d s *)
-(*   | Prim p -> checkAndInferTypes_prim m d p *)
-(*   | Let l -> checkAndInferTypes_let m d l *)
-
-(* let checkAndInferTypes_branch m d c branch = *)
-(*   let errs =  *)
-(*     (let result = checkAndInferTypes_value m d branch#guardType branch#guard *)
-(*      in match result with *)
-(*      | Left errs -> errs *)
-(*      | Right t -> branch#setGuardType t ; []) *)
-(*     @ (checkAndInferTypes_action m d branch#action) *)
-(*     @ (checkAndInferTypes_proc m d branch#proc) *)
-(*   in errs *)
-
-(* let checkAndInferTypes_choice m d choice = *)
-(*   let rec aux branches errs = function *)
-(*     | [] -> errs *)
-(*     | b::bs -> aux bs (errs @ checkAndInferTypes_branch m d choice b) *)
-(*   in *)
-(*   aux choice#branches [] *)
-
-(* let checkAndInferTypes_callArg call ptype atype = match (ptype,atype) with *)
-(*   | (TUnknown, TUnknown) -> Left (TypeError ("Parameter and argument both have undefined types", call)) *)
-(*   | (TUnknown, t) -> Right t *)
-(*   | (t,TUnknown) -> Right t *)
-(*   | (t1,t2) ->  *)
-(*     if t1=t2 then Right t1 *)
-(*     else Left (TypeError ("Mismatch types in call expected " ^ (string_of_valueType t1) ^ " found " ^ (string_of_valueType t2),call)) *)
-
-(* let checkAndInferTypes_callArgs call ptypes atypes =  *)
-(*   let rec aux call ptypes atypes ts errs = *)
-(*     match (ptypes,atypes) with *)
-(*     | ([], []) -> if empty_list errs then Right (List.rev ts) else Left (List.rev errs)  *)
-(*     | (ptype::ptypes',atype::atypes') -> (match checkAndInferTypes_callArg call ptype atype with *)
-(*       | Left err -> aux call ptypes' atypes' (atype::ts) (err::errs) *)
-(*       | Right t -> aux call ptypes' atypes' (t::ts) errs) *)
-(*     | _ -> Left (List.rev ((TypeError ("Arity issue (please report)", call))::errs)) *)
-(*   in aux call ptypes atypes [] [] *)
-
-(* let checkAndInferTypes_call m d call =  *)
-(*   if m#name != call#moduleName then [ TypeError ("External calls not (yet) supported", (call :> ast_type)) ] *)
-(*   else try  *)
-(* 	 let callDef = m#lookupDef call#defName *)
-(* 	 in match callDef with *)
-(* 	 | Def def -> if call#arity != def#arity then [ TypeError ("Wrong number of arguments: expected " ^ (string_of_int def#arity) ^ " given " ^ (string_of_int call#arity), (call :> ast_type)) ] *)
-(* 	   else let result : (typeErrors,valueType list) either = checkAndInferTypes_callArgs (call:>ast_type) (List.map second def#params) call#argTypes *)
-(* 		in match result with *)
-(* 		| Left errs -> errs *)
-(* 		| Right types -> call#setArgTypes types ; def#setParamTypes types ; [] (\* no error *\) *)
-(*     with Not_found -> [ TypeError ("No such definition: " ^ call#defName, (call :> ast_type)) ] *)
-  
-(* let checkAndInferTypes_proc m d proc = match proc with *)
-(*   | Term _ -> [] *)
-(*   | Call c -> checkAndInferTypes_call m d c *)
-(*   | Choice c -> checkAndInferTypes_choice m d c *)
-
-(* let checkAndInferTypes_def m def = match def with *)
-(*   | Def d ->  *)
-(*     checkAndInferTypes_proc m d d#process *)
-
-(* let checkAndInferTypes = function *)
-(*   | Module m -> List.fold_left (fun errs def -> errs @ checkAndInferTypes_def m def) [] m#definitions *)
-
-
+let typing_pass n = ((new typing_pass_node n) :> (typingEnv,typeErrors) ASTUtils.fold_node);;

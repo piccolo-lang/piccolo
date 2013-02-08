@@ -134,11 +134,11 @@ object(self)
 end
 
 (**  *)
-let first_pass m v = 
-  ASTUtils.fold_module m 
-    (ASTUtils.fold_seq (new csize_compute_pass v) 
+let first_pass module verbosity = 
+  ASTUtils.fold_module module 
+    (ASTUtils.fold_seq (new csize_compute_pass verbosity) 
        (ASTUtils.fold_compose 
-          (new env_compute_pass v)
-          (typing_pass v)))
+          (new env_compute_pass verbosity)
+          (typing_pass verbosity)))
 
 
