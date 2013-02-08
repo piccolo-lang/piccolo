@@ -10,7 +10,7 @@ OCFLAGS = -g -annot
 YACC = ocamlyacc
 LEX = ocamllex
 
-all: stests ttests ctests cctests
+all: stests ttests ctests cctests ftests
 
 Utils: Utils.cmo
 PrintUtils: PrintUtils.cmo
@@ -112,6 +112,9 @@ STests.cmo: Utils.ml Types.ml Syntax.ml ASTRepr.ml TypeRepr.ml STests.ml
 TTests.cmo: Utils.ml Types.ml Syntax.ml ASTRepr.ml TypeRepr.ml ASTUtils.ml Typing.ml Middleend.ml TTests.ml
 	$(OCAMLC) -c $(OCFLAGS) TTests.ml -o TTests.cmo
 
+FTests.cmo: Utils.ml Types.ml Syntax.ml ASTRepr.ml TypeRepr.ml ASTUtils.ml Typing.ml Middleend.ml FTests.ml
+	$(OCAMLC) -c $(OCFLAGS) FTests.ml -o FTests.cmo
+
 CTests.cmo: Utils.ml Types.ml Syntax.ml ASTRepr.ml TypeRepr.ml ASTUtils.ml Typing.ml Middleend.ml SeqAST.ml SeqASTConst.mli Backend.ml TTests.ml
 	$(OCAMLC) -c $(OCFLAGS) CTests.ml -o CTests.cmo
 
@@ -120,6 +123,9 @@ stests: Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo Pil
 
 ttests: Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilLexer.cmo PilParser.cmo ParseUtils.cmo Typing.cmo Middleend.cmo TTests.cmo
 	$(OCAMLC) $(OCFLAGS) $^ -o TTests
+
+ftests: Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilLexer.cmo PilParser.cmo ParseUtils.cmo Typing.cmo Middleend.cmo FTests.cmo
+	$(OCAMLC) $(OCFLAGS) $^ -o FTests
 
 ctests: Utils.cmo PrintUtils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilLexer.cmo PilParser.cmo ParseUtils.cmo Typing.cmo Middleend.cmo SeqAST.cmo SeqASTConst.cmo SeqASTPrettyPrinter.cmo Backend.cmo CTests.cmo
 	$(OCAMLC) $(OCFLAGS) $^ -o CTests
@@ -144,6 +150,7 @@ clean:
 cleanall: clean
 	rm -f STests
 	rm -f TTests
+	rm -f FTests
 	rm -f CTests
 	rm -f CCTests
 

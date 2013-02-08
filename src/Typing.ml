@@ -58,11 +58,11 @@ object(self)
     
   (* module *)
   method moduleDef_val (m:module_type) : typingEnv = 
-    self#echoln 2 "Low-level Typing pass started";
+    self#echoln 2 "\n[TYPING_MODULE] Low-level Typing pass started";
     SMap.empty
   
   method moduleDef (m:module_type) (errs:typeErrors list) : typeErrors =
-    self#echoln 2 "Low-level Typing pass finished" ;
+    self#echoln 2 "\n[TYPING_MODULE] Low-level Typing pass finished" ;
     let errs' = List.fold_left (fun es es' -> es@es') [] errs in
       if empty_list errs' then 
 	begin 

@@ -32,7 +32,7 @@ let check_pp () = Middleend.first_pass pp 2 ;;
 check_pp ();; 
 
 env_printer (List.hd (module_type_of_module pp)#definitions);;
-
+Printf.printf "\n\n";;
 print_endline (string_of_module pp) ;;
 
 (*
