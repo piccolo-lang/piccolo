@@ -131,6 +131,7 @@ let pt_lock = (RecordName (pt, "lock"), mutex)
 
 
 let try_result = SimpleName "tryresult", try_result_enum
+let chan = SimpleName "chan", channel
   
 
 (* NULL value *)
