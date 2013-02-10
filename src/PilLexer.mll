@@ -1,5 +1,5 @@
-
 {
+  (** Lexer for Pi-Thread *)
   open PilParser ;;
 
   let incr_linenum lexbuf =
