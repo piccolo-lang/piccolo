@@ -1,12 +1,7 @@
 
-(* type label =  *)
-(* | DefLabel of int *)
-(* | ContLabel of string *)
-
-
 type varName =
 | SimpleName of string           (* name *)
-| RecordName of varName * string (* name.subField *)
+| RecordName of varDescr * string (* name.subField *)
 | ArrayName  of varName * expr    (* name[i] or name.subField[i] *)
 
 and piccType =
@@ -15,8 +10,6 @@ and piccType =
 | Fun of piccType * ( piccType list ) 
 
 and varDescr = varName * piccType
-(* [TODO]? utiliser des ref pour que si on modifie une var,
-   toutes ses occurences soient modifiés en même temps?? *)
 
 and value_t = string * piccType
 
