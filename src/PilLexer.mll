@@ -1,7 +1,3 @@
-
-
-
-
 {
   (** Lexer for Pi-Thread *)
   open PilParser ;;
