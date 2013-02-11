@@ -26,9 +26,9 @@ let pp = ParseUtils.parseFromString ("module Test/PingPong \n" ^ ppstr ^ "\n def
 
 
 
-let ppstr = "def ErrPingPong(i2:chan<int>,msg:string) = i2?(msg), ErrPingPong(i2,msg)";;
+let ppstr = "def ErrPingPong(i2:chan<string>,msg:string) = i2?(msg), ErrPingPong(i2,msg)";;
 
-let pp = ParseUtils.parseFromString ("module Test/PingPong \n" ^ ppstr ^ "\n def Main() = new(c1:chan<int>),spawn{ErrPingPong(c1,\"<PING>\")}, end") ;;
+let pp = ParseUtils.parseFromString ("module Test/PingPong \n" ^ ppstr ^ "\n def Main() = new(c1:chan<string>),spawn{ErrPingPong(c1,\"<PING>\")}, end") ;;
 
 
 let check_pp () = Middleend.first_pass pp 2 ;;
