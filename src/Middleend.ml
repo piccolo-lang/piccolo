@@ -36,7 +36,7 @@ object(self)
   (* module *)
   method moduleDef_val m = []
   method moduleDef m esizes = 
-    self#echoln 2 ("\n[ESIZE_MODULE] env pass finished in Module: " ^ m#name);
+    self#echoln 2 "";(*("\n[ESIZE_MODULE] env pass finished in Module: " ^ m#name);*)
     self#echoln 2 (string_of_int (list_max esizes));
     list_max esizes
 
@@ -45,7 +45,7 @@ object(self)
     (* List.iter (fun (n,_) -> d#extendEnv n) d#params ; -- constructed in the parsing *)
     d#env
   method definition _ m d esize = 
-    self#echoln 2 ("\n[ESIZE_DEF] env pass finished in Definition: " ^ d#name) ;
+    self#echoln 2 ""; (*("\n[ESIZE_DEF] env pass finished in Definition: " ^ d#name) ;*)
     let esize' = d#arity + esize in 
     (* [COMMENT]si plusieurs defs il faut additionner *)
     self#echoln 2 (" ==> computed env size = " ^ (string_of_int esize')) ;
@@ -144,7 +144,7 @@ end
 class csize_compute_pass (n:int) : ASTUtils.iter_fold_node = 
 object(self) 
   inherit ASTUtils.abstract_iter_fold_node_repr n
-  method moduleDef_post m = self#echoln 2 ("\n[CSIZE_MODULE] csize pass in Module: " ^ m#name)
+  method moduleDef_post m = () (*self#echoln 2 ("\n[CSIZE_MODULE] csize pass in Module: " ^ m#name)*)
 end
 
 (**  *)

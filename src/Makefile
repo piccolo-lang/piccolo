@@ -10,8 +10,7 @@ OCFLAGS = -g -annot
 YACC = ocamlyacc
 LEX = ocamllex
 
-all: stests ctests cctests
-#ttests
+all: stests ctests cctests ttests
 
 Utils: Utils.cmo
 PrintUtils: PrintUtils.cmo

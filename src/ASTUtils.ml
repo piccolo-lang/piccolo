@@ -56,7 +56,7 @@ class type ['a,'b] fold_node = object
   method letAction: 'a -> module_type -> definition_type -> process prefix_process_type ->  let_action_type -> 'b-> 'b
   
   (* value *)
-  method trueValue_val: 'a -> module_type -> definition_type -> process_type -> Types.valueType -> bool  const_value_type -> unit
+  method trueValue_val: 'a -> module_type -> definition_type -> process_type -> Types.valueType -> bool const_value_type -> unit
   method trueValue: 'a -> module_type -> definition_type -> process_type -> Types.valueType -> bool  const_value_type -> 'b
   
   method falseValue_val: 'a -> module_type -> definition_type -> process_type -> Types.valueType -> bool  const_value_type -> unit
