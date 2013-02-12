@@ -18,7 +18,7 @@ type typeError =
       
 (** string representing a typeError *)
 let string_of_typeError = function
-  | TypeWarning (msg,ast) -> "Warning at " ^ (ast#posString) ^ "\n  ==> " ^ msg
+  | TypeWarning (msg, ast) -> "Warning at " ^ (ast#posString) ^ "\n  ==> " ^ msg
   | TypeError(msg, ast) -> "Error at "  ^ (ast#posString) ^ "\n  ==> " ^ msg
 ;;
       
@@ -40,7 +40,7 @@ let print_typingEnv env =
 (** Thread a typing env which is enriched with definitions and choice_process
   * return a list of errors wich is printed in level 2 verbosity
   *)
-class typing_pass_node (n:int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
+class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
   let lookup env v = 
     try 
       Some(SMap.find v env)
@@ -49,92 +49,140 @@ class typing_pass_node (n:int) : [typingEnv, typeErrors] ASTUtils.fold_node =
 object(self)
   (* level of verbosity for the output messages *)
   method verbosity = n
-    
-  (* level *)
-  method echo vn str = if vn <= n then print_string str
-
-  (* level *)
-  method echoln vn str = if vn <= n then print_endline str
-    
-  (* module *)
-  method moduleDef_val (m:module_type) : typingEnv = 
-    self#echoln 2 "Low-level Typing pass started";
-    SMap.empty
   
-  method moduleDef (m:module_type) (errs:typeErrors list) : typeErrors =
-    self#echoln 2 "Low-level Typing pass finished" ;
-    let errs' = List.fold_left (fun es es' -> es@es') [] errs in
-      if empty_list errs' then 
-	begin 
-	  self#echoln 2 ("  ==> no low-level type error"); 
-	  errs'
-	end
-      else
-	begin
-	  List.iter (fun err -> self#echoln 1 (string_of_typeError err)) errs';
-	  errs'
-	end
-
-  (* definitions *)
-  method definition_val _ (m:module_type) (d:definition_type) : typingEnv = 
-    List.fold_left 
-      (fun env (name, typ) -> 
-	 SMap.add name (typ, (d:>ast_binder_type)) env) SMap.empty d#params
-      
-  method definition _ (m:module_type) (d:definition_type) (errs:typeErrors) : typeErrors = 
-    self#echoln 2 ("-- typing pass finished in definition "^ d#name ^" [TODO] check if correct\n");
-    errs 
-      
-  (* processes *)
-  method choice_val env m d p = env
+  method echo vn str = if vn <= n then print_string str
     
-  method choice env (m:module_type) (d:definition_type) (p:process choice_process_type) (errs:typeErrors list) :typeErrors =
-    self#echoln 3 "-- Typing choice [TODO] check if correct";
-    List.flatten errs
+  method echoln vn str = if vn <= n then print_endline str
 
-  (* branches *)
-  method branch_val (env:typingEnv) (m:module_type) (d:definition_type) (c:process choice_process_type) (i:int) (p:process prefix_process_type) : typingEnv = 
-    match p#action with
-      | Input a -> 
-	  (match lookup env a#channel with
-	     | Some (TChan var_ty, binder)-> SMap.add a#variable (var_ty, (a:>ast_binder_type)) env
-	     | Some (_, binder)-> SMap.add a#variable (TUnknown, (a:>ast_binder_type)) env (* Erreur !!*)
-	     | None -> env)	  
-      | New a -> SMap.add a#variable (a#variableType, (a:>ast_binder_type)) env
-      | Let a -> SMap.add a#variable (a#variableType, (a:>ast_binder_type)) env
-      | _ -> env
-
-  method branch env (m:module_type) (d:definition_type) (parent:process choice_process_type) (index:int) (p:process prefix_process_type) (guardErrs:typeErrors) (actErrs:typeErrors) (continuationErrs:typeErrors) :typeErrors =
-    self#echoln 3 "-- Typing branch [TODO] check if correct";
-    guardErrs @ actErrs @ continuationErrs
+  (* value *)
+  (* value true *)
+  method trueValue_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t : Types.valueType) (v : bool const_value_type) : unit =
+    self#echoln 4 "\n[TYPING BOOLEAN] started";
+    ()
       
-  (* call *)
-  method call_val env m d p = env
+  method trueValue (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t : Types.valueType) (v : bool const_value_type) : typeErrors =
+    self#echoln 4 "\n[TYPING CONSTANT TRUE] finished";
+    let errs =
+      match t with
+	| TBool -> []
+	| _ -> [TypeError("Mismatch type '" ^ (string_of_valueType t) ^ "' for constant, expected Bool", (v :> ast_type))]
+    in
+      v#setType TBool;
+      errs
+	
+  (* value false *)
+  method falseValue_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t : Types.valueType) (v : bool const_value_type) : unit =
+    self#echoln 4 "\n[TYPING BOOLEAN] started";
+    ()
     
-  method call env (m:module_type) (d:definition_type) (p:call_process_type) (errs:typeErrors list) : typeErrors =
-    self#echoln 3 "-- Typing call [TODO] !!!";
-    List.flatten errs
+  method falseValue (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t : Types.valueType) (v : bool const_value_type) : typeErrors =
+    self#echoln 4 "\n[TYPING CONSTANT FALSE] finished";
+    let errs =
+      match t with
+	| TBool -> []
+	| _ -> [TypeError("Mismatch type '" ^ (string_of_valueType t) ^ "' for constant, expected Bool", (v :> ast_type))]
+    in
+      v#setType TBool;
+      errs
+
+  (* value int *)
+  method intValue_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t : Types.valueType) (v : int const_value_type) : unit = 
+    self#echoln 4 "\n[TYPING INTEGER] started";
+    ()
+  
+  method intValue (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t : Types.valueType) (v : int const_value_type) : typeErrors =
+    self#echoln 4 "\n[TYPING CONSTANT INT] finished";
+    let errs =
+      match t with
+	| TInt -> []
+	| _ -> [TypeError("Mismatch type '" ^ (string_of_valueType t) ^ "' for constant, expected Int", (v:>ast_type))]
+    in
+      v#setType TInt;
+      errs
+
+  (* value string *)
+  method stringValue_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t : Types.valueType) (v : string const_value_type) : unit =
+    self#echoln 4 "\n[TYPING STRING] started";
+    ()
+  
+  method stringValue (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t : Types.valueType) (v : string const_value_type) : typeErrors =
+    self#echoln 4 "\n[TYPING CONSTANT STRING] finished";
+    let errs =
+      match t with
+	| TString -> []
+	| _ -> [TypeError("Mismatch type '" ^ (string_of_valueType t) ^ "' for constant, expected String", (v :> ast_type))]
+    in
+      v#setType TString;
+      errs
+	
+  (* value tuple *)
+  method tupleValue_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t : Types.valueType) (v : value tuple_value_type) : typingEnv =
+    self#echoln 4 "\n[TYPING TUPLE] started";
+    env
+    
+  method tupleValue (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t : Types.valueType) (v : value tuple_value_type) (errs : typeErrors list) : typeErrors =
+    self#echoln 4 "\n[TYPING TUPLE] finished";
+    failwith "tupleValue_fold: not yet implemented"
+
+  (* value variable /!\type check/!\ *)
+  method varValue_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t : Types.valueType) (v : variable_type) : unit =
+    self#echoln 2 "\n[TYPING VARIABLE] started";
+    ()
       
-  (* term *)
-  method term_val env m d p = ()
-  method term _ (m:module_type) (d:definition_type) (p:term_process_type) : typeErrors =
-    self#echoln 5 "-- Typing term";
+  method varValue env (m : module_type) (d : definition_type) (p : process_type) (t : Types.valueType) (v : variable_type) : typeErrors =
+    self#echoln 2 "\n[TYPING VARIABLE] finished";
+    (* print_typingEnv env; *)
+    (if v#ofType <> TUnknown then Printf.printf "%s already typed ?? [check !!]\n%!" v#name);
+    match lookup env v#name with
+      | Some (TUnknown, binder) -> 
+	  v#setBinder binder; 
+	  self#echoln 5 (Printf.sprintf "ERROR setted to %s \n" v#toString);      
+	  [TypeError (("Unknown type for "^v#name), (v :> ast_type))]
+      | Some (ty, binder) -> 
+	  failwith "under construction"
+	    (*
+	      if(type_eq ty t) then
+	      (v#setType ty; 
+	      v#setBinder binder; 
+	      self#echoln 5 (Printf.sprintf "%s setted to %s \n" v#name v#toString);
+	      []) *)
+      | None -> [TypeError (("Unbound value "^v#name), (v :> ast_type))]
+	  
+  (* value primitive *)
+  method primValue_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t : Types.valueType) (v : value prim_value_type) : typingEnv =
+    self#echoln 4 "\n[TYPING PRIMITIVE] started";
+    env
+      
+  method primValue (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t: Types.valueType) (v : value prim_value_type) (errs: typeErrors list) : typeErrors =
+    self#echoln 4 "\n[TYPING PRIMITIVE] finished";
+    failwith "primValue_fold: not yet implemented"
+
+  (* action *)
+  (* tau action *)
+  method tauAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : tau_action_type) : unit =
+    self#echoln 4 "\n[TYPING TAU ACTION] started";
+    ()
+      
+  method tauAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : tau_action_type) : typeErrors =
+    self#echoln 4 "\n[TYPING TAU ACTION] finished";
     []
+
+  (* out actions /!\type check/!\ *)
+  method outAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : out_action_type) : typingEnv =
+    self#echoln 2 "\n[TYPING OUT ACTION] started";
+    env
       
-  (* out actions *)
-  method outAction_val env m d p a = env
-    
-  method outAction env (m:module_type) (d:definition_type) (p:process prefix_process_type) (a:out_action_type) (errs:typeErrors) : typeErrors =
-    self#echoln 3 "-- Typing output";
+  method outAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : out_action_type) (errs : typeErrors) : typeErrors =
+    self#echoln 2 "\n[TYPING OUT ACTION] finished";
     (match lookup env a#channel with
-       | None -> [TypeError("Unbound channel " ^ a#channel, (a:>ast_type))]
-       | Some (chType,_) ->
+       | None -> [TypeError("Unbound channel " ^ a#channel, (a :> ast_type))]
+       | Some (chType, _) ->
 	   try 
 	     let valType= 
 	       match a#value with 
 		 | VVar v -> 
 		     (match lookup env v#name with
-			| Some (ty,_) -> ty
+			| Some (ty, _) -> ty
 			| None -> failwith v#name)
 		 | _ -> a#valueType
 	     in
@@ -145,200 +193,140 @@ object(self)
 		       if type_eq t1 t2 then
 			 []
 		       else
-			 [TypeError("Mismatch channel type, expecting '" ^ (string_of_valueType (TChan t2)), (a:>ast_type))]
-		   | (_, t2) -> [TypeError("Not a channel type, expecting '" ^ (string_of_valueType (TChan t2)), (a:>ast_type))]
+			 [TypeError("Mismatch channel type, expecting '" ^ (string_of_valueType (TChan t2)), (a :> ast_type))]
+		   | (_, t2) -> [TypeError("Not a channel type, expecting '" ^ (string_of_valueType (TChan t2)), (a :> ast_type))]
 	       end
-	   with Failure var_name -> [TypeError("Unbound variable " ^ var_name, (a:>ast_type))]
+	   with Failure var_name -> [TypeError("Unbound variable " ^ var_name, (a :> ast_type))]
     )
     @ errs
 
   (* in action *)
-  method inAction_val env m d p a = () 
+  method inAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : in_action_type) : unit =
+    self#echoln 2 "\n[TYPING INPUT ACTION] started";
+    ()
   
-  method inAction env (m:module_type) (d:definition_type) (p:process prefix_process_type) (a: in_action_type) :typeErrors =
-    self#echoln 3 "-- Typing input";
+  method inAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : in_action_type) : typeErrors =
+    self#echoln 2 "\n[TYPING INPUT ACTION] finished";
     (if a#variableType <> TUnknown then Printf.printf "%s already typed ?? [check !!]\n%!" a#variable);
     match d#fetchBinderType a#channel with 
 	(*binder can be something else than the definition correction !!! *)
 	(* search binder and only if not found then error*)
-      |	None -> [TypeError (("Unbound channel "^a#channel), (a:>ast_type)) ]
+      |	None -> [TypeError (("Unbound channel "^a#channel), (a :> ast_type)) ]
       | Some (TChan var_ty)-> 
-	  a#setChannelBinder (d:>ast_binder_type);
+	  a#setChannelBinder (d :> ast_binder_type);
 	  a#setVariableType var_ty; 
 	  self#echoln 3 ("---- setting var to type :" ^ (string_of_valueType var_ty));
 	  []
-      |Some _ -> [TypeError("Mismatch type for " ^ a#channel ^ " expecting Channel type'", (a:>ast_type))]
-
-  (* tau action *)
-  method tauAction_val env m d p a = ()
-  
-  method tauAction env (m:module_type) (d:definition_type) (p:process prefix_process_type) (a:tau_action_type) : typeErrors =
-    self#echoln 5 "-- Typing tau";
-    []
-
-  (* new action *)
-  method newAction_val env m d p a = ()
-  
-  method newAction env (m:module_type) (d:definition_type) (p:process prefix_process_type) (a:new_action_type) : typeErrors =
-    self#echoln 3 "-- Typing new_action" ;
+      |Some _ -> [TypeError("Mismatch type for " ^ a#channel ^ " expecting Channel type'", (a :> ast_type))]
+	 
+  (* new action /!\ *)
+  method newAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : new_action_type) : unit =
+    self#echoln 2 "\n[TYPING NEW ACTION] started";
+    ()
+      
+  method newAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : new_action_type) : typeErrors =
+    self#echoln 2 "\n[TYPING NEW ACTION] finished";
     (*enrichir un environnement local ??*)
     []
 
-  method spawnAction_val env m d p a = env
-  method spawnAction env (m:module_type) (d:definition_type) (p:process prefix_process_type) (s:spawn_action_type) (errs:typeErrors list) :typeErrors =
-    self#echoln 3 "-- Typing spawn" ;
+  (* spawn action *)
+  method spawnAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : spawn_action_type) : typingEnv =
+    self#echoln 4 "\n[TYPING SPAWN ACTION] started";
+    env
+      
+  method spawnAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : spawn_action_type) (errs : typeErrors list) : typeErrors =
+    self#echoln 4 "\n[TYPING SPAWN ACTION] finished";
     List.flatten errs
-
-  method primAction_val env m d p a = env
-  method primAction : typingEnv -> module_type -> definition_type -> process prefix_process_type ->  prim_action_type -> typeErrors list -> typeErrors =
+      
+  (* prim action *)
+  method primAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : prim_action_type) : typingEnv =
+    self#echoln 4 "\n[TYPING PRIM ACTION] started";
+    env
+      
+  method primAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : prim_action_type) (errs : typeErrors list) : typeErrors =
+    self#echoln 4 "\n[TYPING PRIM ACTION] finished";
     failwith "primAction: not yet implemented"
-
-  method letAction_val env m d p a = env
-  method letAction env (m:module_type) (d:definition_type) (p:process prefix_process_type) (a:let_action_type) (errs: typeErrors): typeErrors =
+      
+  (* let action /!\ type check /!\ *)
+  method letAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : let_action_type) : typingEnv =
+    self#echoln 2 "\n[TYPING LET ACTION] started";
+    env
+      
+  method letAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : let_action_type) (errs: typeErrors) : typeErrors =
+    self#echoln 2 "\n[TYPING LET ACTION] finished";
     failwith "letAction_fold: not yet implemented"
+      
+  (* process *)
+  (* branches *)
+  method branch_val (env : typingEnv) (m : module_type) (d : definition_type) (c : process choice_process_type) (i : int) (p : process prefix_process_type) : typingEnv = 
+    self#echoln 2 "\n[TYPING BRANCH] started";
+    match p#action with
+      | Input a -> 
+	  (match lookup env a#channel with
+	     | Some (TChan var_ty, binder)-> SMap.add a#variable (var_ty, (a :> ast_binder_type)) env
+	     | Some (_, binder)-> SMap.add a#variable (TUnknown, (a :> ast_binder_type)) env (* Erreur !!*)
+	     | None -> env)	  
+      | New(a) -> SMap.add a#variable (a#variableType, (a :> ast_binder_type)) env
+      | Let(a) -> SMap.add a#variable (a#variableType, (a :> ast_binder_type)) env
+      | _ -> env
 
-  (* value *)
-  method trueValue_val env m d p t v = ()
-  method trueValue env (m:module_type) (d:definition_type) (p:process_type) (t:Types.valueType) (v:bool const_value_type) : typeErrors =
-    self#echoln 3 "-- Typing constant true" ;
-    let errs = match t with
-      | TBool -> []
-      | _ -> [TypeError("Mismatch type '" ^ (string_of_valueType t) ^ "' for constant, expected Bool", (v:>ast_type))]
-    in
-      v#setType TBool;
-      errs
+  method branch (env : typingEnv) (m : module_type) (d : definition_type) (parent : process choice_process_type) (index : int) (p : process prefix_process_type) (guardErrs : typeErrors) (actErrs : typeErrors) (continuationErrs : typeErrors) : typeErrors =
+    self#echoln 2 "\n[TYPING BRANCH] finished";
+    guardErrs @ actErrs @ continuationErrs
+      
+  (* process term *)
+  method term_val (env : typingEnv) (m : module_type) (d : definition_type) (p : term_process_type) : unit =
+    self#echoln 4 "\n[TYPING END] started";
+    ()
 
-  method falseValue_val env m d p t v = ()
-  method falseValue env (m:module_type) (d:definition_type) (p:process_type) (t:Types.valueType) (v:bool const_value_type) : typeErrors =
-    self#echoln 3 "-- Typing constant false" ;
-    let errs = match t with
-      | TBool -> []
-      | _ -> [TypeError("Mismatch type '" ^ (string_of_valueType t) ^ "' for constant, expected Bool", (v:>ast_type))]
-    in
-      v#setType TBool;
-      errs
-
-  method intValue_val env m d p t v = ()
-  method intValue env (m:module_type) (d:definition_type) (p:process_type) (t:Types.valueType) (v:int const_value_type) : typeErrors =
-    self#echoln 3 "-- Typing constant int" ;
-    let errs = match t with
-      | TInt -> []
-      | _ -> [TypeError("Mismatch type '" ^ (string_of_valueType t) ^ "' for constant, expected Int", (v:>ast_type))]
-    in
-      v#setType TInt;
-      errs
-
-  method stringValue_val env m d p t v = ()
-  method stringValue env (m:module_type) (d:definition_type) (p:process_type) (t:Types.valueType) (v:string const_value_type) : typeErrors =
-    self#echoln 3 "-- Typing string constant" ;
-    let errs = match t with
-      | TString -> []
-      | _ -> [TypeError("Mismatch type '" ^ (string_of_valueType t) ^ "' for constant, expected String", (v:>ast_type))]
-    in
-      v#setType TString;
-      errs
-
-  method tupleValue_val env m d p t v = env
-  method tupleValue env (m: module_type) (d: definition_type) (p: process_type) (t: Types.valueType) (v: value tuple_value_type) (errs: typeErrors list) : typeErrors =
-    failwith "tupleValue_fold: not yet implemented"
-
-  method varValue_val env m d p t v = ()
-  method varValue env (m:module_type) (d:definition_type) (p:process_type) (t:Types.valueType) (v: variable_type) : typeErrors =
-    self#echoln 3 "-- Typing variable";
-    (* print_typingEnv env; *)
-    (if v#ofType <> TUnknown then Printf.printf "%s already typed ?? [check !!]\n%!" v#name);
-    match lookup env v#name with
-      | Some (TUnknown, binder) -> 
-	  v#setBinder binder; 
-	  self#echoln 5 (Printf.sprintf "ERROR setted to %s \n" v#toString);      
-	  [TypeError (("Unknown type for "^v#name), (v:>ast_type))]
-      | Some (ty, binder) -> 
-	  v#setType ty; 
-	  v#setBinder binder; 
-	  self#echoln 5 (Printf.sprintf "%s setted to %s \n" v#name v#toString);
-	  []
-      | None -> [ TypeError (("Unbound value "^v#name), (v:>ast_type)) ]
-  method primValue_val env m d p t v = env
-  method primValue: typingEnv -> module_type -> definition_type -> process_type -> Types.valueType ->  value prim_value_type -> typeErrors list -> typeErrors =
-    failwith "primValue_fold: not yet implemented"
+  method term (env : typingEnv) (m : module_type) (d : definition_type) (p : term_process_type) : typeErrors =
+    self#echoln 2 "\n[TYPING END] finished";
+    []
+      
+  (* process call *)
+  method call_val (env : typingEnv) (m : module_type) (d : definition_type) (p : call_process_type) : typingEnv =
+    self#echoln 3 "\n[TYPING CALL] started";
+    env
+      
+  method call (env : typingEnv) (m : module_type) (d : definition_type) (p : call_process_type) (errs : typeErrors list) : typeErrors =
+    self#echoln 3 "\n[TYPING CALL] finished";
+    List.flatten errs
+  
+  (* process choice *)
+  method choice_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process choice_process_type) : typingEnv =
+    self#echoln 4 "\n[TYPING CHOICE] started";
+    env
+      
+  method choice (env : typingEnv) (m : module_type) (d : definition_type) (p : process choice_process_type) (errs : typeErrors list) : typeErrors =
+    self#echoln 4 "\n[TYPING CHOICE] finished";
+    List.flatten errs
+	  
+  (* definitions *)
+  method definition_val (env : typingEnv) (m : module_type) (d : definition_type) : typingEnv = 
+    self#echoln 2 ("-- typing pass finished in definition "^ d#name ^" [TODO] check if correct\n");
+    List.fold_left 
+      (fun env (name, typ) -> 
+	 SMap.add name (typ, (d :> ast_binder_type)) env) SMap.empty d#params
+      
+  method definition (env : typingEnv) (m : module_type) (d : definition_type) (errs : typeErrors) : typeErrors = 
+    self#echoln 2 "\n[TYPING DEFINITION] finished";
+    errs 
+    
+  (* module *)
+  method moduleDef_val (m : module_type) : typingEnv = 
+    self#echoln 2 "\n[TYPING_MODULE] Low-level Typing pass started";
+    SMap.empty
+      
+  method moduleDef (m : module_type) (errs : typeErrors list) : typeErrors =
+    self#echoln 2 "\n[TYPING_MODULE] Low-level Typing pass finished";
+    let errs' = List.fold_left (fun es es' -> es@es') [] errs in
+      if empty_list errs' then  
+	(self#echoln 2 ("  ==> no low-level type error"); 
+	 errs')
+      else
+	(List.iter (fun err -> self#echoln 1 (string_of_typeError err)) errs';
+	 errs')
+	  
 end
 
-let typing_pass n = ((new typing_pass_node n) :> (typingEnv,typeErrors) ASTUtils.fold_node)
-
-
-(* let checkAndInferTypes_out m d out = *)
-(*   (let vref = d#envRef out#channel in *)
-(*    if vref = -1 then  *)
-(*      [ TypeError ("Unknown channel variable '" ^ out#channel ^ "'", (out :> ast_type)) ] *)
-(*    else out#setChannelRef vref ; []) *)
-(*   @ (checkAndInferTypes_value m d out#valueType out#value) *)
-
-(* let checkAndInferTypes_action m d act = match act with *)
-(*   | Tau -> [] *)
-(*   | Output o -> checkAndInferTypes_out m d o *)
-(*   | Input i -> checkAndInferTypes_in m d i *)
-(*   | New n -> checkAndInferTypes_new m d n *)
-(*   | Spawn s -> checkAndInferTypes_spawn m d s *)
-(*   | Prim p -> checkAndInferTypes_prim m d p *)
-(*   | Let l -> checkAndInferTypes_let m d l *)
-
-(* let checkAndInferTypes_branch m d c branch = *)
-(*   let errs =  *)
-(*     (let result = checkAndInferTypes_value m d branch#guardType branch#guard *)
-(*      in match result with *)
-(*      | Left errs -> errs *)
-(*      | Right t -> branch#setGuardType t ; []) *)
-(*     @ (checkAndInferTypes_action m d branch#action) *)
-(*     @ (checkAndInferTypes_proc m d branch#proc) *)
-(*   in errs *)
-
-(* let checkAndInferTypes_choice m d choice = *)
-(*   let rec aux branches errs = function *)
-(*     | [] -> errs *)
-(*     | b::bs -> aux bs (errs @ checkAndInferTypes_branch m d choice b) *)
-(*   in *)
-(*   aux choice#branches [] *)
-
-(* let checkAndInferTypes_callArg call ptype atype = match (ptype,atype) with *)
-(*   | (TUnknown, TUnknown) -> Left (TypeError ("Parameter and argument both have undefined types", call)) *)
-(*   | (TUnknown, t) -> Right t *)
-(*   | (t,TUnknown) -> Right t *)
-(*   | (t1,t2) ->  *)
-(*     if t1=t2 then Right t1 *)
-(*     else Left (TypeError ("Mismatch types in call expected " ^ (string_of_valueType t1) ^ " found " ^ (string_of_valueType t2),call)) *)
-
-(* let checkAndInferTypes_callArgs call ptypes atypes =  *)
-(*   let rec aux call ptypes atypes ts errs = *)
-(*     match (ptypes,atypes) with *)
-(*     | ([], []) -> if empty_list errs then Right (List.rev ts) else Left (List.rev errs)  *)
-(*     | (ptype::ptypes',atype::atypes') -> (match checkAndInferTypes_callArg call ptype atype with *)
-(*       | Left err -> aux call ptypes' atypes' (atype::ts) (err::errs) *)
-(*       | Right t -> aux call ptypes' atypes' (t::ts) errs) *)
-(*     | _ -> Left (List.rev ((TypeError ("Arity issue (please report)", call))::errs)) *)
-(*   in aux call ptypes atypes [] [] *)
-
-(* let checkAndInferTypes_call m d call =  *)
-(*   if m#name != call#moduleName then [ TypeError ("External calls not (yet) supported", (call :> ast_type)) ] *)
-(*   else try  *)
-(* 	 let callDef = m#lookupDef call#defName *)
-(* 	 in match callDef with *)
-(* 	 | Def def -> if call#arity != def#arity then [ TypeError ("Wrong number of arguments: expected " ^ (string_of_int def#arity) ^ " given " ^ (string_of_int call#arity), (call :> ast_type)) ] *)
-(* 	   else let result : (typeErrors,valueType list) either = checkAndInferTypes_callArgs (call:>ast_type) (List.map second def#params) call#argTypes *)
-(* 		in match result with *)
-(* 		| Left errs -> errs *)
-(* 		| Right types -> call#setArgTypes types ; def#setParamTypes types ; [] (\* no error *\) *)
-(*     with Not_found -> [ TypeError ("No such definition: " ^ call#defName, (call :> ast_type)) ] *)
-  
-(* let checkAndInferTypes_proc m d proc = match proc with *)
-(*   | Term _ -> [] *)
-(*   | Call c -> checkAndInferTypes_call m d c *)
-(*   | Choice c -> checkAndInferTypes_choice m d c *)
-
-(* let checkAndInferTypes_def m def = match def with *)
-(*   | Def d ->  *)
-(*     checkAndInferTypes_proc m d d#process *)
-
-(* let checkAndInferTypes = function *)
-(*   | Module m -> List.fold_left (fun errs def -> errs @ checkAndInferTypes_def m def) [] m#definitions *)
-
-
+let typing_pass n = ((new typing_pass_node n) :> (typingEnv, typeErrors) ASTUtils.fold_node);;

@@ -127,6 +127,7 @@ val pt_fuel : varDescr
 val pt_lock : varDescr
 
 val try_result : varDescr
+val chan : varDescr
 
 (* NULL value *)
 val null:value_t
