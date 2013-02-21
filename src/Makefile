@@ -29,6 +29,8 @@ SeqASTConstC: SeqASTConstC.cmo
 SeqASTPrettyPrinter: SeqASTPrettyPrinter.cmo
 SeqASTPrettyPrinterC: SeqASTPrettyPrinterC.cmo
 Backend: Backend.cmo
+Settings: Settings.cmo
+Picc: Picc.cmo
 
 FICHIERS=$(wildcard *.ml)
 
@@ -94,6 +96,16 @@ ParseUtils.cmo: ParseUtils.ml
 
 Typing.cmo: Utils.ml Types.ml TypeRepr.ml Syntax.ml ASTRepr.ml ASTUtils.ml Typing.ml
 	$(OCAMLC) -c $(OCFLAGS) Typing.ml -o Typing.cmo
+
+Settings.cmo: Settings.ml
+	$(OCAMLC) -o $@ -c $(OCFLAGS) $<
+
+Picc.cmo: front.ml
+	$(OCAMLC) -o $@ -c $(OCFLAGS) $<
+
+Picc: Settings.cmo Utils.cmo PrintUtils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilLexer.cmo PilParser.cmo ParseUtils.cmo Typing.cmo Middleend.cmo SeqASTConstC.cmo SeqASTPrettyPrinterC.cmo SeqASTConstGen.cmo SeqASTPrettyPrinterGen.cmo Backend.cmo Picc.cmo
+	$(OCAMLC) $(OCFLAGS) $^ -o Picc
+
 
 STests.cmo: Utils.ml Types.ml Syntax.ml ASTRepr.ml TypeRepr.ml STests.ml
 	$(OCAMLC) -c $(OCFLAGS) STests.ml -o STests.cmo
