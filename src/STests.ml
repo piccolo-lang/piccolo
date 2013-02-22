@@ -105,7 +105,7 @@ let choice2 =
     [(makeVPrim "core/arith/int" "equal" [TInt; TInt] TBool [makeVVar TInt "a"; makeVInt 42], TBool, 
       (makeOutput "c" (makeVVar TInt "a") TInt),
       makeTerm "Test" "def1");
-     (makeVTrue (), TBool, 
+     (makeVTrue(), TBool, 
       makeInput "c" "x" (TChan TInt),
       (makePrefix "Test" "def1" (makeOutput "x" (makeVVar TInt "a") TInt)
          (makeTerm "Test" "def1")))];;

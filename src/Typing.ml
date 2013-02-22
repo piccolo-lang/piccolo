@@ -303,7 +303,7 @@ object(self)
 	  
   (* definitions *)
   method definition_val (env : typingEnv) (m : module_type) (d : definition_type) : typingEnv = 
-    self#echoln 2 ("-- typing pass finished in definition "^ d#name ^" [TODO] check if correct\n");
+    self#echoln 2 ("\n[TYPING DEFINITION] " ^ d#name ^ " started");
     List.fold_left 
       (fun env (name, typ) -> 
 	 SMap.add name (typ, (d :> ast_binder_type)) env) SMap.empty d#params

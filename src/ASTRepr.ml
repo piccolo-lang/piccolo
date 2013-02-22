@@ -51,7 +51,7 @@ end
 (** constructor boolean value true *)
 let makeVTrue() = VTrue(new bool_value_repr TBool true);;
 
-(** constructor boolea value false *)
+(** constructor boolean value false *)
 let makeVFalse() = VFalse(new bool_value_repr TBool false);;
 
 (** integer representation of Syntax.const_value_type *)
@@ -90,7 +90,7 @@ end
 let makeTupleRepr vt vs = new tuple_value_repr vt vs;;
 
 (** tuple value constructor *)
-let makeTuple vt vs = VTuple((makeTupleRepr vt vs):> value tuple_value_type);;
+let makeTuple vt vs = VTuple((makeTupleRepr vt vs) :> value tuple_value_type);;
 
 (** representation of Syntax.variable_type *)
 class variable_repr vt n = object(self)
@@ -311,7 +311,9 @@ class prefix_process_repr (mname:string) (dname:string) (g:value) (gt:valueType)
   method continuation = p
   method index = i
   method toString = 
-    (match g with | VTrue _ -> "" | _ -> "[" ^ (string_of_value g) ^ "] ")
+    (match g with
+       | VTrue _ -> ""
+       | _ -> "[" ^ (string_of_value g) ^ "] ")
     ^ (string_of_action a) ^ "," ^ (string_of_process p)
 end
 
@@ -343,7 +345,7 @@ let makeChoice m d bs =
     Choice(new choice_process_repr m d (makeBranches 0 bs))
 
 (** constructor 1 branch Choice process *)
-let makePrefix m d a p = makeChoice m d [(makeVTrue (), TBool, a, p)]
+let makePrefix m d a p = makeChoice m d [(makeVTrue(), TBool, a, p)]
 
 (** {2 Definitions representations } *)
 
@@ -364,7 +366,7 @@ object
   val mutable _params = ps'
   val mutable _csize = -1
   val mutable _env = List.map fst ps
-  
+    
   method name = n
   method params = List.map (fun p -> (p#name, p#ofType)) _params
   method arity = List.length ps'
@@ -375,7 +377,7 @@ object
     let rec aux n vs =
       match vs with
 	| [] -> None
-	| u::vs' -> if v=u then Some n else aux (n + 1) vs'
+	| u::vs' -> if v = u then Some n else aux (n + 1) vs'
     in
       aux 0 _env
   method csize = _csize
@@ -413,7 +415,10 @@ class module_repr (n:string) (defs:definition list) = object
   method lookupDef (n:string) = Hashtbl.find _definitions n
   method toString =
     "module " ^ n ^ "\n" ^ (Hashtbl.fold (fun _ d str -> str ^ (string_of_definition d) ^ "\n") _definitions "")
-  initializer List.iter (fun d -> match d with Def d' -> Hashtbl.add _definitions d'#name d) defs
+  initializer List.iter (fun d -> 
+			   match d with
+			       Def d' -> Hashtbl.add _definitions d'#name d)
+    defs
 end
 
 (** constructor Module *)
