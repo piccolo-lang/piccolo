@@ -6,7 +6,7 @@ open SeqAST
 let rec print_piccType fmt = function 
   | Sty s -> fprintf fmt "%s" s
   | Pty ("*",t) -> fprintf fmt "%a*" print_piccType t
-  | Pty (s,t) -> fprintf fmt "%s_%a" s print_piccType t
+  | Pty (s,t) -> fprintf fmt "%s%a" s print_piccType t
   | Fun (t, tl) -> 
     fprintf fmt "%a (@[ %a @])" print_piccType t 
       (print_list print_piccType ", ") tl
@@ -104,6 +104,13 @@ let rec print_instr fmt = function
     (print_list_eol' print_instr "") il
     print_expr e
       
+
+let print_main nb_th entry_point fmt i =
+  Format.fprintf fmt
+    "#include <runtime.h>@\n#include <pi_thread_repr.h>@\n%a@\n@\nvoid main(){ PICC_main(%d, %s); }"
+    print_instr i nb_th entry_point
+    
+
 let print_instr_list_std il =
   set_margin 150;
   List.iter (fun i -> Format.printf "%a@\n" print_instr i) il

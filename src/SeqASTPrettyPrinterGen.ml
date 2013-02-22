@@ -72,6 +72,11 @@ let rec print_instr fmt = function
   | DoWhile (il, e) -> fprintf fmt "do{@\n%a}while(%a);" 
     (print_list_eol' print_instr "") il
     print_expr e
-      
+
+let print_main nb_th entry_point fmt i =
+  Format.fprintf fmt
+    "%a@\n@\nvoid main(){ PICC_main(%d, %s); }"
+    print_instr i nb_th entry_point
+
 let print_instr_list_std il =
   List.iter (fun i -> Format.printf "%a@\n" print_instr i) il
