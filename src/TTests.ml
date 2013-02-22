@@ -18,32 +18,29 @@ let env_printer def =
     Printf.printf "%s env :[ %s ]\n " def#name (String.concat ", " def#env )
 ;;
 
-(* OK
+let test_module = "def End() = end";; (* ok *)
 
-let ppstr = "def ErrPingPong(i:chan<string>,o:chan<string>,i2:chan<int>,msg:string) = i2?(m), o!m, PingPong(i,o,msg)";;
+let test_call1 = "def Call1() = Test/Test1:test()";; (* passage call *)
 
-let pp = ParseUtils.parseFromString ("module Test/PingPong \n" ^ ppstr ^ "\n def Main() = new(c1:chan<string>),new(c2:chan<string>),spawn{PingPong(c1,c2,\"<PING>\")}, end") ;;*)
+let test_call2 = "def Call2() = Test/Test1:test(true)";; (* ok *)
 
+let test_call3 = "def Call3() = test()";; (* passage call *)
 
+let test_call4 = "def Call4() = test(false)";; (* ok *)
 
-let ppstr = "def ErrPingPong(i2:chan<string>,msg:string) = i2?(msg), ErrPingPong(i2,msg)";;
+let test_choice1 = "def ActionTau() = tau, end";; (* ok *)
 
-let pp = ParseUtils.parseFromString ("module Test/PingPong \n" ^ ppstr ^ "\n def Main() = new(c1:chan<string>),spawn{ErrPingPong(c1,\"<PING>\")}, end") ;;
+let test_choice2 = "def Out() = c!toto, end";; (* non tuple *)
 
+let test_choice3 = "def In() = in?(42), end";; (* parse error *)
 
-let check_pp () = Middleend.first_pass pp 2 ;;
+let test_branch1 = "def Branch() = [42]tau, end";; (* ok *)
+
+let test = ParseUtils.parseFromString("module Test/Test1 \n" ^ test_choice2 );;
+
+let check_pp () = Middleend.first_pass test 5;;
 
 check_pp ();; 
 
 
 
-(*
-let check_pp = checkAndInferTypes pp ;;
-
-let ppstr1 = "def PingPong(i:chan<string>,o:chan<string>,msg:string) = i?(m), o!msg, PingPong(i,o,msg)";;
-let ppstr = "def ErrPingPong(i:chan<string>,o:chan<string>,i2:chan<int>,msg:string) = i2?(m), o!m, PingPong(i,o,msg)";;
-
-env_printer (List.hd (module_type_of_module pp)#definitions);;
-
-print_endline (string_of_module pp) ;;
-*)
