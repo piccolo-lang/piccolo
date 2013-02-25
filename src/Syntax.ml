@@ -22,7 +22,7 @@ end
 (** interface representing a bound ast with a valueType, extends ast_type *)
 class type virtual ast_binder_type = object
   inherit ast_type
-  method fetchBinderType: string -> valueType option
+  method fetchBinderType : string -> valueType option
 end
 
 (* classes that are ast_binder_type:  

@@ -14,11 +14,11 @@ open Typing;;
     Compute esize and attribute De Bruijn index *)
 
 (* [TODO] attribuer les indices aux paramètres *)
-class env_compute_pass (n:int) : [string list, int] ASTUtils.fold_node = 
+class env_compute_pass (n : int) : [string list, int] ASTUtils.fold_node = 
   let lookup env v = 
     let rec aux env n = match env with
       | [] -> None
-      | w::env' -> if v=w then Some n else aux env' (n+1)
+      | w::env' -> if v = w then Some n else aux env' (n + 1)
     in aux env 0
   in
 object(self)
@@ -30,8 +30,8 @@ object(self)
 
   (* config *)
   method verbosity = n
-  method echo vn str = if vn<=n then print_string str
-  method echoln vn str = if vn<=n then print_endline str
+  method echo vn str = if vn <= n then print_string str
+  method echoln vn str = if vn <= n then print_endline str
       
   (* module *)
   method moduleDef_val m = []

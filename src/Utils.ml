@@ -11,7 +11,7 @@ module SMap = Map.Make(String)
 (* printing functions *)
 
 (** convert a collection to a string. *)
-let string_of_collection (op:string) (cl:string) (sep:string) (tostr: 'a -> string) (lst: 'a list) = 
+let string_of_collection (op : string) (cl : string) (sep : string) (tostr : 'a -> string) (lst : 'a list) = 
   let rec str = function
     | [] -> ""
     | e::[] -> tostr e
@@ -54,21 +54,23 @@ type ('a, 'b) either =
       
 (** variant of iter passing the index of the current element in the list. *)
 let list_iter_n f es = 
-  let rec aux n es = match es with
-    | [] -> ()
-    | e::es' -> (f n e) ; aux (n+1) es'
+  let rec aux n es =
+    match es with
+      | [] -> ()
+      | e::es' -> (f n e); aux (n + 1) es'
   in aux 0 es
        
 (** variant of fold passing the index of the current element in the list. *)
-let list_fold_n (f:'a -> int -> 'b -> 'a) (e:'a) (es:'b list) =
-  let rec aux index es rs = match es with
-    | [] -> rs
-    | e'::es' -> (aux (index + 1) es' (f rs index e'))
+let list_fold_n (f : 'a -> int -> 'b -> 'a) (e : 'a) (es : 'b list) =
+  let rec aux index es rs =
+    match es with
+      | [] -> rs
+      | e'::es' -> (aux (index + 1) es' (f rs index e'))
   in
     aux 0 es e
       
 (** get the maximum integer of the specified list. *)
-let list_max ns = List.fold_left (fun m n -> if m>n then m else n) min_int ns
+let list_max ns = List.fold_left (fun m n -> if m > n then m else n) min_int ns
   
   
   

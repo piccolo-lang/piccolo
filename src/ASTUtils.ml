@@ -591,7 +591,7 @@ and value_fold (w:'a) (m:module_type) (d:definition_type) (p:process_type) (t:va
     | VInt v -> n#intValue_val w m d p t v ; n#intValue w m d p t v
     | VString v -> n#stringValue_val w m d p t v ; n#stringValue w m d p t v
     | VTuple v -> tuple_value_fold w m d p t v n
-    | VVar v -> n#varValue_val w m d p t v ; n#varValue w m d p t v
+    | VVar v -> n#varValue_val w m d p t v; n#varValue w m d p t v
     | VPrim v -> prim_value_fold w m d p t v n
 and tuple_value_fold (w:'a) (m:module_type) (d:definition_type) (p:process_type) (t:valueType) (v:value tuple_value_type) (n:('a,'b) fold_node) =
   n#tupleValue w m d p t v (List.fold_left (fun vs (t',v') -> (value_fold (n#tupleValue_val w m d p t v) m d (p:>process_type) t' v' n)::vs) [] (List.combine v#types v#elements))
