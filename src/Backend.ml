@@ -2,14 +2,37 @@
 
 module Make (Consts : SeqAST.Consts) (Printer: SeqAST.PrettyPrinter) =
 struct
-
+  
   open Types
   open Syntax
   open SeqAST
   open Consts
   open Printer
+
+  (* This module ref is used by the spawn action to retrieve the corresponding
+     definition and some values like esize.
+     Another solution would be to add the required fields in spawn_action_type
+     => if we have another pass after the esize calculation we could switch to
+     this solution
+  *)
     
+  let compiled_module = ref None
+   
+  let lookup d =
+    match !compiled_module with
+    | None -> failwith "No module compiled"
+    | Some m -> let (Def d) = m#lookupDef d in d
+
+
+  let eval_funs = ref []    
   
+  let add_eval_def d = eval_funs := d :: !eval_funs
+
+  let get_eval_name =
+    let cpt = ref 0 in
+    (fun () -> cpt := succ !cpt;
+      "eval_" ^ (string_of_int !cpt))
+		
   let make_label, init_label =
     let cpt = ref 0 in
     (fun () -> 
@@ -17,16 +40,12 @@ struct
       !cpt),
     (fun () -> cpt := 0)
 
+
   let def_label_pattern m d = (Printf.sprintf "%s_%s_begin" m d)
     
-  let simple_desc name typ = SimpleName name, typ
-
   let make_ite e i1 i2 = Ite (e, i1, i2) (* nicer declaration and indentation *)
   let make_it e i = Ite (e, i, [])
 
-  let d_entry = Val ("0", pint)
-
-    
   let compile_value = function
     | VTrue _ -> Assign (pt_val, Val ("true", pbool))
     | VFalse _ -> Assign (pt_val, Val ("false", pbool))
@@ -35,7 +54,7 @@ struct
     | VTuple _ -> failwith "TODO compile_value VTuple"
     | VVar vt -> Assign (pt_val, Var (pt_env vt#index) )
     | VPrim _ -> failwith "TODO compile_value VPrim"
-
+      
   and compile_end status =
     Seq [
       Foreach (chan,
@@ -183,6 +202,7 @@ struct
       Assign (try_result, try_enabled)]
       
   let compile_try_spawn (action:spawn_action_type) chans = 
+    let d = lookup action#defName in
     let args i= (ArrayName (SimpleName "args", Val (string_of_int i, pint)), pvalue) in
     let child = SimpleName "child", pi_thread in
     
@@ -204,7 +224,10 @@ struct
     Bloc[
       Declare (args action#arity);
       Declare child;
-      Assign (child, CallFun (generate_pi_thread, []));
+      Assign (child, CallFun (generate_pi_thread, [Val (string_of_int (d#esize), pint);
+						   Val (string_of_int (d#esize), pint)]));
+      (*[TODO] use a more precise value for the second argument the knowsSet size which
+	is smaller or equal than esize *)
       
       Seq (List.mapi args_mapper action#args);
       
@@ -217,10 +240,13 @@ struct
 
   let compile_try_prim (action:prim_action_type) chans = failwith "TODO"
 
-  let compile_try_let (action:let_action_type) chans = failwith "TODO"
+  let compile_try_let (action:let_action_type) chans = 
+    Seq 
+      [compile_value action#value;
+       Assign (pt_env action#variableIndex, Var pt_val)]
 
   let compile_try_action (action:action) (chans:varDescr) = 
-           (* est il nécessaire de passer chans en arguments ?? *)
+    (* est il nécessaire de passer chans en arguments ?? *)
     match action with
     | Tau action -> compile_try_tau
     | Output action -> compile_try_out action chans
@@ -229,8 +255,7 @@ struct
     | Spawn action -> compile_try_spawn action chans
     | Prim action -> compile_try_prim action chans
     | Let action -> compile_try_let action chans
-      
-
+    
   let rec compile_process m d proc =
     match proc with
     | Term p -> compile_end status_ended
@@ -238,8 +263,8 @@ struct
     | Choice p -> compile_choice m d p
 
   and compile_choice m d p = 
-    let nb_disabled = simple_desc "nbdisabled" pint
-    and chans = simple_desc "chans" (pset channel)
+    let nb_disabled = SimpleName "nbdisabled", pint
+    and chans = SimpleName "chans", (pset channel)
     and def_label = def_label_pattern m#name d#name
     and choice_cont = Array.make p#arity 0
     in 
@@ -276,9 +301,12 @@ struct
       let if_body = 
 	match b#action with
 	| Output a ->
-	  let eval = (simple_desc "eval" eval_ty) in
-	  [DeclareFun (eval, ["pt"] ,[compile_value a#value; Return (Var pt_val)]);
-	   CallProc (register_output_commitment, 
+	  
+	  let eval = SimpleName (get_eval_name ()), eval_ty in
+	  
+	  add_eval_def (DeclareFun (eval, ["pt"] ,[compile_value a#value; Return (Var pt_val)]));
+	  
+	  [CallProc (register_output_commitment, 
 		     [Var pt; Var (pt_env a#channelIndex); Var eval; pc])]
 	    
 	| Input a -> 
@@ -354,7 +382,10 @@ struct
 				    ])])
 
   let compile_module (Module m) =
-    Seq (List.map (compile_def m) m#definitions)
+    let defs = m#definitions in 
+    compiled_module := Some m;
+    let (Def d) = List.(nth defs ( (length defs) - 1) ) in
+    m#name ^ "_" ^ d#name, Seq [Seq !eval_funs; Seq (List.map (compile_def m) defs)]
       
 
   let print_piccType  = Printer.print_piccType
@@ -368,5 +399,7 @@ struct
   let print_instr = Printer.print_instr 
 
   let print_instr_list_std = Printer.print_instr_list_std 
+
+  let print_main = Printer.print_main
 
 end

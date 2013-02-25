@@ -37,7 +37,7 @@ let commit_list = Sty "PICC_CommitList"
 
 let knows_set = pointer (Sty "PICC_KnownsSet")
 
-let pset a = Pty ("set", a)
+let pset a = Pty ("", a)
 
 (* let queue a = Pty ("Queue", a) *)
 let queue _ = Sty "PICC_Queue" (* PiThread queue *)
@@ -104,36 +104,29 @@ let register_input_commitment = makeFun "PICC_register_input_commitment"
 let register_output_commitment = makeFun "PICC_register_output_commitment" 
   void [pi_thread; channel; pointer (Fun (pvalue, [pi_thread])); pc_label ]
 
-let set_add = makeFun "PICC_set_add" pbool [pointer (pset channel); channel] 
-(*[MISSING] or [TO CORRECT]*)
-let commit_list_is_empty = makeFun "IsEmpty" pbool [commit_list] (* [MISSING] *)
+let set_add = makeFun "PICC_SET_ADD" pbool [pointer (pset channel); channel] 
+let commit_list_is_empty = makeFun "PICC_commit_list_is_empty" pbool [commit_list]
 
 (* Thread Synchronization function *)
 let wait_queue_push = makeFun "PICC_wait_queue_push" void [pointer wait_queue; pi_thread]
 let ready_queue_push = makeFun "PICC_ready_queue_push" void [queue pi_thread; pi_thread]
 let ready_queue_add = makeFun "PICC_ready_queue_add" void [pointer ready_queue; pi_thread] 
-let release_all_channels = makeFun "PICC_release_all_channels" void [pointer channel(*; int nb_chans ??*)]
-  (* [TOCHECK] *)
+let release_all_channels = makeFun "PICC_release_all_channels" void [pointer channel]
+
   (* channel = pointer so pointer channel is indeed an ** *)
 let acquire = makeFun "PICC_acquire" void [pointer mutex]
 let release = makeFun "PICC_release" void [pointer mutex]
 let low_level_yield = makeFun "PICC_low_level_yield" void []
 
 
-let generate_channel = makeFun "PICC_create_channel" channel [] 
-let generate_pi_thread = makeFun "PICC_create_pithread" pi_thread [] 
+let generate_channel = makeFun "PICC_create_channel" channel []
+let generate_pi_thread = makeFun "PICC_create_pithread" pi_thread [pint; pint] (*env_length, knows_length*) 
 
 
 (* Misc *)
-let emptySet = makeFun "PICC_set_make" (pointer (pset channel)) [] 
-(*[TODO] do we use generic set or knowns_set in the later case, the fonction is PICC_create_knowns_set
-  in the case of a generic set, i don't think the type should be passed as argument
-*)
+let emptySet = makeFun "PICC_CHANNEL_SET_MAKE" (pointer (pset channel)) [] 
 
-let p_inc v = Assign (v, (Op (Sum, Var v, Val ("1", pint))))
-let p_dec v = Assign (v, (Op (Minus, Var v, Val ("1", pint))))
-
-let return_void = Return (Val ("", void))
+(* Variables *)
 
 (* SchedPool fields *)
 let scheduler = SimpleName "scheduler", pointer sched_pool
@@ -159,5 +152,13 @@ let pt_lock = (RecordName (pt, "lock"), mutex)
 let try_result = SimpleName "tryresult", try_result_enum
 let chan = SimpleName "chan", channel
 
+let d_entry = Val ("0", pint)
+
 (* NULL value *)
 let null:value_t = "NULL", Sty "NULL"
+
+(* Utils *)
+let p_inc v = Assign (v, (Op (Sum, Var v, Val ("1", pint))))
+let p_dec v = Assign (v, (Op (Minus, Var v, Val ("1", pint))))
+
+let return_void = Return (Val ("", void))

@@ -10,7 +10,7 @@ OCFLAGS = -g -annot
 YACC = ocamlyacc
 LEX = ocamllex
 
-all: stests ctests ttests
+all: stests ctests ttests pcc
 
 Utils: Utils.cmo
 PrintUtils: PrintUtils.cmo
@@ -30,7 +30,7 @@ SeqASTPrettyPrinter: SeqASTPrettyPrinter.cmo
 SeqASTPrettyPrinterC: SeqASTPrettyPrinterC.cmo
 Backend: Backend.cmo
 Settings: Settings.cmo
-Picc: Picc.cmo
+pcc: pcc.cmo
 
 FICHIERS=$(wildcard *.ml)
 
@@ -100,11 +100,11 @@ Typing.cmo: Utils.ml Types.ml TypeRepr.ml Syntax.ml ASTRepr.ml ASTUtils.ml Typin
 Settings.cmo: Settings.ml
 	$(OCAMLC) -o $@ -c $(OCFLAGS) $<
 
-Picc.cmo: front.ml
+pcc.cmo: front.ml
 	$(OCAMLC) -o $@ -c $(OCFLAGS) $<
 
-Picc: Settings.cmo Utils.cmo PrintUtils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilLexer.cmo PilParser.cmo ParseUtils.cmo Typing.cmo Middleend.cmo SeqASTConstC.cmo SeqASTPrettyPrinterC.cmo SeqASTConstGen.cmo SeqASTPrettyPrinterGen.cmo Backend.cmo Picc.cmo
-	$(OCAMLC) $(OCFLAGS) $^ -o Picc
+pcc: Settings.cmo Utils.cmo PrintUtils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilLexer.cmo PilParser.cmo ParseUtils.cmo Typing.cmo Middleend.cmo SeqASTConstC.cmo SeqASTPrettyPrinterC.cmo Backend.cmo pcc.cmo
+	$(OCAMLC) $(OCFLAGS) $^ -o pcc
 
 
 STests.cmo: Utils.ml Types.ml Syntax.ml ASTRepr.ml TypeRepr.ml STests.ml
@@ -145,7 +145,5 @@ clean:
 cleanall: clean
 	rm -f STests
 	rm -f TTests
-
 	rm -f CTests
-	rm -f CCTests
-
+	rm -f pcc

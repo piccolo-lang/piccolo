@@ -168,8 +168,11 @@ sig
   val pt_fuel : varDescr
   val pt_lock : varDescr
 
+
   val try_result : varDescr
   val chan : varDescr
+    
+  val d_entry : expr (* value of the definition entry point*)
 
 (* NULL value *)
   val null:value_t
@@ -189,5 +192,6 @@ sig
   val print_instr : Format.formatter -> instr -> unit
 
   val print_instr_list_std : instr list -> unit
-
+    
+  val print_main : int -> string -> Format.formatter -> instr -> unit
 end
