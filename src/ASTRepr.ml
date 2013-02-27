@@ -81,7 +81,7 @@ class tuple_value_repr (vt : valueType list) (vs : value list) = object(self)
   method arity = List.length vs
   method types = 
     match self#ofType with
-      | TTuple(t) -> Printf.printf "%s\n" "enfin!!!!"; t#elements
+      | TTuple(t) -> t#elements
       | _ -> failwith "wrong tuple type, please report (maybe tuple type has not been setted)"
   method elements = vs
   method toString = (string_of_collection "(" ")" "," string_of_value vs) ^ " of types : " ^ (string_of_collection "(" ")" "," string_of_valueType vt) 
@@ -286,11 +286,11 @@ class call_process_repr m d (mname : string) (dname : string) (vts : valueType l
   
   method moduleName = mname
   method defName = dname
-  method args = vs
   method arity = List.length vs
+  method args = vs
   method argTypes = _argTypes
   method setArgTypes vts = _argTypes <- vts
-  method toString = mname ^ ":" ^ dname ^ (string_of_collection "(" ")" "," string_of_value vs)
+  method toString = mname ^ ":" ^ dname ^ (string_of_collection "(" ")" "," string_of_value vs) ^ (string_of_collection "r" "r" "," string_of_valueType vts)
 end
 
 (** constructor Call process *)
