@@ -74,7 +74,9 @@ let test_in2 = "def In2(i:chan<chan<bool>>, toto:string) = i?(toto), end";;
 
 let test_in3 = "def In3(i:chan<string>, toto:string) = i?(toto), In3(toto)";;
 
-let test_in4 = "def In4(i:chan<string>, toto:int) = i?(toto), In4(toto)";;
+let test_in4 = "def In4(toto:int) = In4(toto)";;
+
+let test_in5 = "def In5(i:chan<string>, toto:int) = i?(toto), In5(i, toto)";;
 
 let test_in34 = "def In3(i:chan<string>, toto:string) = i?(toto), In4(toto) \n def In4(i:chan<string>, toto:int) = i?(toto), In3(toto)";;
 
@@ -84,7 +86,7 @@ let ppstr1 = "def ErrPingPongr(i2:chan<string>,msg:string) = i2?(msg), ErrPingPo
 
 let ppstr2 = "def ErrPingPongr(i2:chan<string>,msg:int) = i2?(msg), ErrPingPong(i2,msg)";;
 
-let test = ParseUtils.parseFromString("module Test/Test1 \n" ^ test_in4 );;
+let test = ParseUtils.parseFromString("module Test/Test1 \n" ^ test_in5 );;
 
 let check_pp () = Middleend.first_pass test 5;;
 
