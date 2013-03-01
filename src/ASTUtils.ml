@@ -530,7 +530,7 @@ let rec fold_seq_all ns n = match ns with
   | n'::ns' -> fold_seq n' (fold_seq_all ns' n)
 
 (** fold_node "handler", apply the fold_node methods on a moduleDef and his definition list *)
-let rec fold_module (m:moduleDef) (n:('a,'b) fold_node) : 'b =
+let rec module_fold (m:moduleDef) (n:('a,'b) fold_node) : 'b =
   match m with
     | Module m' -> 
       n#moduleDef m' (List.fold_left (fun ds d -> (definition_fold (n#moduleDef_val m') m' d n)::ds) [] m'#definitions)
@@ -599,16 +599,16 @@ and tuple_value_fold (w:'a) (m:module_type) (d:definition_type) (p:process_type)
 and prim_value_fold (w:'a) (m:module_type) (d:definition_type) (p:process_type) (t:valueType) (v:value prim_value_type) (n:('a,'b) fold_node) =
   n#primValue w m d p t v (List.fold_left (fun vs (t',v') -> (value_fold (n#primValue_val w m d p t v) m d (p:>process_type) t' v' n)::vs) [] (List.combine v#argTypes v#args))
 
-let fold_module_3 (m:moduleDef) (n1:('a,'b) fold_node) (n2:('c,'d) fold_node) (n3:('e,'f) fold_node) : ('b * 'd * 'f) =
-  let (r1, (r2,r3)) = fold_module m (fold_compose n1 (fold_compose n2 n3))
+let module_fold_3 (m:moduleDef) (n1:('a,'b) fold_node) (n2:('c,'d) fold_node) (n3:('e,'f) fold_node) : ('b * 'd * 'f) =
+  let (r1, (r2,r3)) = module_fold m (fold_compose n1 (fold_compose n2 n3))
   in (r1,r2,r3)
 
-let fold_module_4 m n1 n2 n3 n4 =
-  let ((r1,r2), (r3,r4)) = fold_module m (fold_compose (fold_compose n1 n2) (fold_compose n3 n4))
+let module_fold_4 m n1 n2 n3 n4 =
+  let ((r1,r2), (r3,r4)) = module_fold m (fold_compose (fold_compose n1 n2) (fold_compose n3 n4))
   in (r1,r2,r3,r4)
 
-let fold_module_iter_all m ns n =
-  fold_module m (fold_seq_all ns n)
+let module_fold_iter_all m ns n =
+  module_fold m (fold_seq_all ns n)
 
 
 

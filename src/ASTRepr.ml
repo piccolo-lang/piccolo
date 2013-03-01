@@ -365,8 +365,9 @@ class definition_repr (n : string) (ps : (string * valueType) list) (p : process
 object
   inherit ast_repr
   val mutable _params = ps'
-  val mutable _csize = -1
   val mutable _env = List.map fst ps
+  val mutable _csize = -1
+  val mutable _esize = -1
   
   method name = n
   method params = List.map (fun p -> (p#name, p#ofType)) _params
@@ -382,7 +383,9 @@ object
     in
       aux 0 _env
   method csize = _csize
-  method esize = List.length _env
+  method setCsize c = _csize <- c
+  method esize = _esize
+  method setEsize e = _esize <- e
   method process = p
   method fetchBinderType (b:string) =
     let rec search = function
