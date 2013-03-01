@@ -45,12 +45,21 @@ type instr =
 module type Consts =
 sig
   val void: piccType
-  val pbool: piccType
-  val pint: piccType
+    (* primitive int the sense that it's a primitive type of the target language
+     * for instance in C it's just the plain int
+     *)
 
-  val pstring: piccType
+  val prim_bool: piccType
+  val prim_int: piccType
+  val prim_string: piccType
 
-  val pvalue: piccType
+    (* représentation of the types in the runtime library *)
+
+  val pt_value: piccType
+  val pt_bool: piccType
+  val pt_int: piccType
+  val pt_string: piccType
+
   val sched_pool: piccType
 
   val pi_thread: piccType
@@ -104,8 +113,15 @@ sig
   val fuel_init: expr
   val invalid_pc: expr
 
-(* Runtime functions *)
+(* value creation *)
+  val create_bool: bool -> expr
+  val create_int: int -> expr
+  val create_string: string -> expr
+  (* val create_tuple *)
 
+  val copy_value: varDescr
+
+(* Runtime functions *)
   val awake : varDescr
   val can_awake : varDescr
   val channel_dec_ref_count : varDescr
@@ -141,7 +157,7 @@ sig
 
 (* Misc *)
   val emptySet : varDescr
-
+    
   val p_inc : varDescr -> instr 
   val p_dec : varDescr -> instr
 
