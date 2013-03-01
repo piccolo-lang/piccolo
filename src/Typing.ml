@@ -235,12 +235,14 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
   method newAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : new_action_type) : unit =
     self#echoln 2 "\n[TYPING NEW ACTION] started";
     ()
-      
+
   method newAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : new_action_type) : typeErrors =
     self#echoln 2 "\n[TYPING NEW ACTION] finished";
     (*enrichir un environnement local ??*)
-    []
-      
+    match a#variableType with
+      | TChan(t) -> []
+      | _ -> [TypeError("Mismatch type for " ^ a#variable ^ " this is not a Channel, expecting Channel type : ", (a :> ast_type))]
+	  
   (* spawn action *)
   method spawnAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : spawn_action_type) : typingEnv =
     self#echoln 4 "\n[TYPING SPAWN ACTION] started";

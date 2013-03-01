@@ -54,7 +54,7 @@ let test_branch4 = "def Branch4(c:chan<(int * string)>) = tau, end";; (* ok *)
 let test_action1 = "def Def1() = spawn{PingPong(true, false, true)}, spawn{PongPing((true, false, true))}, end";; (* multiple spawn in *)
 
 (* TODO *)
-let test_action2 = "def Def2() = new(id1:bool), end";; (* ToDO *)
+let test_action2 = "def New() = new(id1:bool), end";; (* ToDO *)
 
 (* TODO *)
 let test_action3 = "def Def3() = let(id1:int=42), end";;
@@ -83,6 +83,8 @@ let test_in4 = "def In4(toto:int) = In4(toto)";; (* ok *)
 
 let test_in5 = "def In5(i:chan<string>, toto:int) = i?(toto), In5(i, toto)";; (* ok, finally ! *)
 
+let test_in6 = "def In6(i:chan<int>) = i?(toto), end";; (* WRONG *)
+
 let test_in34 = "def In3(i:chan<string>, toto:string) = i?(toto), In4(i, toto) \n def In4(i:chan<string>, toto:string) = i?(toto), In4(i, toto)";; (* ok *)
 
 let test_in4 = "def In4(toto:int) = In4(toto)";;
@@ -90,6 +92,10 @@ let test_in4 = "def In4(toto:int) = In4(toto)";;
 let test_in5 = "def In5(i:chan<string>, toto:int) = i?(toto), In5(i, toto)";;
 
 let test_in43 = "def In43(i:chan<string>, toto:string) = i?(toto), In443(i, toto) \n def In443(i:chan<string>, toto:int) = i?(toto), In443(i, toto)";; (* ok *)
+
+let test_new1 = "def New1() = new(id:bool), end";; (* OK? *)
+
+let test_new2 = "def New2() = new(c:chan<int>), end";; (* OK? *)
 
 let ppstr1 = "def ErrPingPong(i2:chan<string>,msg:string) = i2?(msg), ErrPingPong(i2,msg)";;
 
