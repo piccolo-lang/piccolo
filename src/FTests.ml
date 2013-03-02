@@ -13,10 +13,10 @@ open ASTRepr;;
 
 let env_printer def = 
   let def = definition_type_of_definition def in
-  Printf.printf "\n\n%s env :[ %s ], esize : %d , csize : %d \n " def#name (String.concat ", " def#env ) def#esize def#csize
+  Printf.printf "\n%s env :[ %s ], esize : %d , csize : %d  " def#name (String.concat ", " def#env ) def#esize def#csize
 
 
-let ppstr2 = "def PingPong2(o:chan<string>,i:chan<string>,msg:string) = o!msg, i?(m), PingPong2(i,o,m)";;
+let ppstr2 = "def PingPong2(o:chan<string>,i:chan<string>,msg:string) = o!msg, new(a:chan<string>), i?(m), PingPong(i,o,m)";;
 
 let ppstr = "def PingPong(i:chan<string>,o:chan<string>,msg:string) =  i?(m), o!msg, PingPong(i,o,m)";;
 
@@ -33,6 +33,6 @@ let check_pp () = Middleend.first_pass pp 2;;
 
 check_pp ();;
 
-env_printer (List.hd (module_type_of_module pp)#definitions);;
+(List.iter (fun def -> env_printer def) (module_type_of_module pp)#definitions);;
 Printf.printf "\n\n";;
 print_endline (string_of_module pp) ;;

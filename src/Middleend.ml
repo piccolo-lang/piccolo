@@ -13,21 +13,6 @@ open Typing;;
 (** Representation of a [string list,int] fold_node. 
     Compute esize and attribute index *)
 
-(* modification de definition_repr pour ajouter un set_esize?
-   pour l'instant le esize renvoyé n'est pas correct (nb de param)...
-   Si c'est ok, on peut supprimer la map ref et set/get directement la val
-   dans def_repr.*)
-
-
-
-(* deprecated -> use esize / setEsize instead *)
-(* module DefMap = Map.Make( *)
-(*   struct *)
-(*     type t = definition_type *)
-(*     let compare = compare *)
-(* end) *)
-
-
 class env_compute_pass (n:int) : [string list, int] ASTUtils.fold_node =
   let lookup env v =
     let rec aux env n = match env with
@@ -37,8 +22,7 @@ class env_compute_pass (n:int) : [string list, int] ASTUtils.fold_node =
   in
 object(self)
   
-  (* This list contains the new variables we might run into while walking through the tree. It doesn't contain 
-     the variables given as parameters of definitions, only the ones met in Let, In, and New. *)
+  (* This list contains the new variables we might run into while walking through the tree. It doesn't contain the variables given as parameters of definitions, only the ones met in Let, In, and New. *)
   val mutable newVar = []
 
   (* config *)
@@ -51,6 +35,7 @@ object(self)
   method moduleDef m esizes =
     self#echoln 2 ("\n[ESIZE_MODULE] env pass finished in Module: " ^ m#name);
     self#echoln 2 (string_of_int (list_max esizes));
+    self#echoln 2 ("\nmodule esize ---->>> " ^ (String.concat " , " newVar));
     list_max esizes 
 
   (* definitions *)
@@ -79,22 +64,19 @@ object(self)
 		 newVar <- (a#variable)::newVar; (* we add a in the list of new variables *)
 		 env @ [a#variable]
 	     | Some n -> a#setVariableIndex n ; env)
-	    
       | Output a ->
 	  (match (lookup env a#channel) with
 	    | None -> () (* an error will be return by the typing pass *)
 	    | Some n ->  
 	      a#setChannelIndex n);
 	   env
-	    
       | New a ->
 	  (match (lookup env a#variable) with
 	     | None -> a#setVariableIndex (List.length env) ;
 		 d#extendEnv a#variable; 
 		 newVar <- (a#variable)::newVar; 
 		 env @ [a#variable]
-	     | Some n -> a#setVariableIndex n ; env)
-	    
+	     | Some n -> a#setVariableIndex n ; env)	    
       | Let a ->  (match (lookup env a#variable) with
 		     | None -> a#setVariableIndex (List.length env) ;
 		       newVar <- (a#variable)::newVar;
@@ -103,9 +85,8 @@ object(self)
 		     | Some n -> a#setVariableIndex n ; env)
       | _ -> env
   method branch env m d p i b s1 s2 s3 = 
-    (* self#echoln 2 ("\nBRANCH : " ^ (string_of_int (s1)) ^  (string_of_int (s2)) ^ (string_of_int (s3))); *)
+    self#echoln 2 ("\nBRANCH : " ^ (string_of_int (s1)) ^  (string_of_int (s2)) ^ (string_of_int (s3)));
     s1+s2+s3
-
   method call_val env m d p = env
   method call env m d p _ = 
     let Def(def_called) = try
@@ -115,18 +96,15 @@ object(self)
     let esize_called = def_called#esize in
     if (esize_called > (List.length env)) then (esize_called - (List.length newVar))
     else ((List.length env) - (List.length newVar)) 
-  (* On soustrait les variables qu'on a rencontré ors de la descente, elle seront ajoutées lors de la remontée *)
   (* We remove the variables met through the top->bottom , they will be added int the bottom->top *)
-
-  method term_val env m d p =  ()
-  method term env m d p = 0
+  method term_val env m d p = ()
+  method term env m d p = ((List.length env) - (List.length newVar))
 
   (* actions *)
   method outAction_val env m d p a = env
   method outAction env m d p a r = 0
   method inAction_val env m d p a = ()
   method inAction env m d p a = 
-    (* on regarde si on a ajouté une nouvelle variable. si oui on ajoute 1 à esize *)
     (* If the variable is one of the new variables met in the top->bottom, we add it *)
     if (List.mem a#variable newVar) then ( 
       newVar <- List.filter (fun v -> v != a#variable) newVar;
@@ -167,22 +145,16 @@ object(self)
   method tupleValue env m d p t v rs = 0
   method varValue_val env m d p t v =
     match (lookup env v#name) with
-      | None -> (* generate an error and save in module errors ??? *) ()
-      | Some n -> v#setIndex n (* or in a further pass, just test if index is still -1 *)
+      | None -> ()
+	  (* generate an error and save in module errors ??? *)
+      | Some n -> v#setIndex n 
+	  (* or in a further pass, just test if index is still -1 *)
   method varValue env m d p t v = 0
   method primValue_val env m d p t v = env
   method primValue env m d p t v rs = 0
 end
 
 
-
-
-(* This map is used to store the csize of each branch of a choice process p *)
-(* module ProcessMap = Map.Make( *)
-(*   struct *)
-(*     type t = (process, int) *)
-(*     let compare = compare *)
-(* end)  *)
 
 (** Representation of a iter_fold_node. Compute and set the Csize value in
     each definition. *)
@@ -194,11 +166,17 @@ object(self)
   (* val mutable _csize_def_map = DefMap.empty (\* deprecated *\) *)
   (* val mutable _csize = -1 *)
   val mutable _current_choice_pile = []
-    
+
+  (* config *)
+  method verbosity = n
+  method echo vn str = if vn<=n then print_string str
+  method echoln vn str = if vn<=n then print_endline str
+
+  (* modules *)    
   method moduleDef m rs = self#moduleDef_post m
-  method moduleDef_val m = self#moduleDef_pre m
-  method moduleDef_pre m = self#echoln n ("\n[CSIZE_MODULE_START] csize pass in Module: " ^ m#name)
-  method moduleDef_post m = self#echoln n ("\n[CSIZE_MODULE_END] csize pass in Module: " ^ m#name)
+  method moduleDef_val m = self#moduleDef_pre m 
+  method moduleDef_pre m = self#echoln 2 ("\n[CSIZE_MODULE_START] csize pass in Module: " ^ m#name)
+  method moduleDef_post m = self#echoln 2 ("\n[CSIZE_MODULE_END] csize pass in Module: " ^ m#name)
     
   (* definition *)
   method definition v m d r = self#definition_post m d
@@ -354,10 +332,10 @@ object(self)
   method primValue_val w m d p t v = self#primValue_pre m d p t v
   method primValue_pre m d p t v = ()
   method primValue_post m d p t v = ()
-
 end
 
-(**  *)
+
+(** Computing passes *)
 
 (* Debuggage de esize et csize *)
 let print_sizes m nbpass =
@@ -382,7 +360,7 @@ let fixpoint_sizes m esize_pass csize_pass =
   let rec fix_rec esizes csizes continue =
     if continue then (
       incr nb_pass;
-      ignore (ASTUtils.fold_module m (ASTUtils.fold_seq csize_pass esize_pass));
+      ignore (ASTUtils.module_fold m (ASTUtils.fold_seq csize_pass esize_pass));
       let Module(m') = m in
       print_sizes m' !nb_pass;
       let defs = List.map (fun (Def (def)) -> def) m'#definitions in
@@ -404,21 +382,15 @@ let fixpoint_sizes m esize_pass csize_pass =
   fix_rec esizes csizes true
 
 
-(* une fois esize et csize calculées, on peut passer a typing *)
-
-(* on utilise des fold node pour typing et esize pour récupérer leur valeur globale 
-   dans le module. En revanche on utilise un iter pour csize car on veux la valeur de
-   csize pour chaque definition *)
-
 let first_pass m verbosity = 
   let esize_pass = new env_compute_pass verbosity in
-  let csize_pass = new csize_compute_pass verbosity in
+  let csize_pass = new csize_compute_pass 0 in
   (* fixpoint_sizes m esize_pass csize_pass; (\* recuperer esize? *\) *)
-  (* ignore (ASTUtils.fold_module m (ASTUtils.fold_seq csize_pass esize_pass)); *)
+  ignore (ASTUtils.module_fold m (ASTUtils.fold_seq csize_pass esize_pass));
   ASTUtils.module_fold m
-    (ASTUtils.fold_seq csize_pass (* inutile *)
+    (ASTUtils.fold_seq csize_pass (* utilité ? *)
        (ASTUtils.fold_compose
-          (esize_pass) (* utilisé pour retourner esize du module *)
+          (esize_pass) (* utilité ? *)
           (typing_pass 0)))
 
 
