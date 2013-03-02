@@ -553,7 +553,7 @@ and term_process_fold (v:'a) (m:module_type) (d:definition_type) (p:term_process
 
 and call_process_fold (v:'a) (m:module_type) (d:definition_type) (p:call_process_type) (n:('a,'b) fold_node) =
   let call_val_computed = n#call_val v m d p in
-    n#call v m d p (List.fold_left (fun vs (t',v') -> (value_fold call_val_computed m d (p:>process_type) t' v' n)::vs) [] (List.combine p#argTypes p#args))
+  n#call v m d p (List.fold_left (fun vs (t',v') -> (value_fold call_val_computed m d (p:>process_type) t' v' n)::vs) [] (List.combine p#argTypes p#args))
 
 and choice_process_fold (v:'a) (m:module_type) (d:definition_type) (p:process choice_process_type) (n:('a,'b) fold_node) =
   n#choice v m d p (list_fold_n (fun bs index branch -> (branch_process_fold (n#choice_val v m d p) m d p index branch n)::bs) [] p#branches)

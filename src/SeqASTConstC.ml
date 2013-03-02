@@ -51,7 +51,7 @@ let ready_queue = Sty "PICC_ReadyQueue"
 let wait_queue = Sty "PICC_WaitQueue" 
 
 (* let parray a = Pty ("array", a) *)
-let eval_ty = Fun (pointer pt_value, [pi_thread]) 
+let eval_ty = Fun (pt_value, [pi_thread]) 
 let pdef = Fun (void, [pointer sched_pool; pi_thread]) (*PICC_PiThreadProc*)
 
 (* enum types and their values *)
@@ -99,6 +99,13 @@ let create_string = fun str -> CallFun (make_string, [Val (str, prim_string) ])
 
 let copy_value = makeFun "PICC_copy_value" pt_bool [pt_value; pt_value]
 
+let bool_of_boolval = makeFun "PICC_bool_of_bool_value" prim_bool [pt_value]
+
+let pt_channel_of_channel = makeFun "PICC_create_channel_value" pt_channel [channel]
+let channel_of_pt_channel = makeFun "PICC_channel_of_channel_value" channel [pt_value]
+
+let acquire_channel = makeFun "PICC_channel_value_acquire" void [pt_value]
+let channel_globalrc = makeFun "PICC_channel_value_global_rc" prim_int [pt_value]
 (* Runtime functions *)
 
 let awake = makeFun "PICC_awake" void [pointer sched_pool; pi_thread] 
@@ -157,7 +164,6 @@ let pt_status =(RecordName (pt, "status"), status_enum)
 let pt_enabled i = (ArrayName ((RecordName (pt,"enabled") ), Val (string_of_int i, prim_int)), pt_bool)
 let pt_knows = (RecordName (pt, "knowns"), knows_set)
 let pt_env i = (ArrayName ((RecordName (pt,"env") ), Val (string_of_int i, prim_int)), pt_value)
-let pt_env_lock i = (RecordName (pt_env i ,"lock") , mutex)
 let pt_commit = (RecordName (pt, "commit"), commit)
 let pt_commits = (RecordName (pt, "commits"), (pset commit))
 let pt_proc = (RecordName (pt, "proc"), pdef)

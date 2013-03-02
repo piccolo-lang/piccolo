@@ -27,6 +27,7 @@ and binop =
 | Equal
 
 type instr =
+| Comment of string
 | Switch of expr * (instr list)
 | Case of expr
 | Bloc of instr list (* real bloc semantic *)
@@ -59,12 +60,13 @@ sig
   val pt_bool: piccType
   val pt_int: piccType
   val pt_string: piccType
+  val pt_channel: piccType
 
   val sched_pool: piccType
-
   val pi_thread: piccType
 
   val channel: piccType
+
   val mutex: piccType
   val clock: piccType
 
@@ -120,7 +122,12 @@ sig
   (* val create_tuple *)
 
   val copy_value: varDescr
+  val bool_of_boolval: varDescr
 
+  val pt_channel_of_channel: varDescr
+  val channel_of_pt_channel: varDescr
+  val acquire_channel: varDescr
+  val channel_globalrc: varDescr
 (* Runtime functions *)
   val awake : varDescr
   val can_awake : varDescr
@@ -174,7 +181,6 @@ sig
   val pt_enabled : int -> varDescr
   val pt_knows : varDescr
   val pt_env : int -> varDescr
-  val pt_env_lock : int -> varDescr
   val pt_commit : varDescr
   val pt_commits : varDescr
   val pt_proc : varDescr

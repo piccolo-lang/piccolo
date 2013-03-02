@@ -505,7 +505,7 @@ let first_pass m verbosity =
 
 (* let pass_esize m verbosity =  *)
 (*   let rec pass_recursive e_c_p = *)
-(*     ASTUtils.fold_module m (e_c_p verbosity)  *)
+(*     ASTUtils.module_fold m (e_c_p verbosity)  *)
 (*   in  *)
 (*   pass_recursive (new env_compute_pass verbosity) *)
 
@@ -513,7 +513,7 @@ let first_pass m verbosity =
 
 
 (* let print_pass m verbosity =  *)
-(*   ASTUtils.fold_module m *)
+(*   ASTUtils.module_fold m *)
 (*     (new astCheck_pass 2)  *)
 
 (* let compute_pass m verbosity =  *)
@@ -521,7 +521,7 @@ let first_pass m verbosity =
 
 
 (* let first_pass m verbosity =   *)
-(*   ASTUtils.fold_module m  *)
+(*   ASTUtils.module_fold m  *)
 (*     (ASTUtils.fold_seq (new csize_compute_pass verbosity)   *)
 (*        (ASTUtils.fold_compose  *)
 (*           (new env_compute_pass verbosity)  *)

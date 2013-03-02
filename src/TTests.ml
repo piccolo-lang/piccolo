@@ -87,6 +87,10 @@ let test_in6 = "def In6(i:chan<int>) = i?(toto), end";; (* WRONG *)
 
 let test_in34 = "def In3(i:chan<string>, toto:string) = i?(toto), In4(i, toto) \n def In4(i:chan<string>, toto:string) = i?(toto), In4(i, toto)";; (* ok *)
 
+let test_in4 = "def In4(toto:int) = In4(toto)";;
+
+let test_in5 = "def In5(i:chan<string>, toto:int) = i?(toto), In5(i, toto)";;
+
 let test_in43 = "def In43(i:chan<string>, toto:string) = i?(toto), In443(i, toto) \n def In443(i:chan<string>, toto:int) = i?(toto), In443(i, toto)";; (* ok *)
 
 let test_new1 = "def New1() = new(id:bool), end";; (* OK? *)
@@ -105,10 +109,12 @@ let ppstr4 = "def PingPong(i:chan<string>,o:chan<string>,msg:string) = i?(m), o!
 let ppstr5 = "def ErrPingPong(i:chan<string>,o:chan<string>,i2:chan<int>,msg:string) = i2?(m), o!m, ErrPingPong(i,o,i2,msg)";; (* NON *)
 
 let fibStr = "def Fib(n:int,m:int,p:int,r:chan<int>)=[n]r!m,end+tau,Fib(n,m,m,r)";;
- (*
+
+(*
 let fibStr = "def Fib(n:int,m:int,p:int,r:chan<int>)=[n=0]r!m,end+tau,Fib(n-1,m+p,m,r)";; 
 *)
-let test = ParseUtils.parseFromString("module Test/Test1 \n" ^ test_new2 );;
+
+let test = ParseUtils.parseFromString("module Test/Test1 \n" ^ test_in5 );;
 
 let check_pp () = Middleend.first_pass test 5;;
 

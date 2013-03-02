@@ -73,6 +73,7 @@ struct
 	C guys -> gestion d'un assert ??
     *)
     Seq [
+      Comment "------compile_wait---------\n";
       Assign (pt_pc, invalid_pc);
       Assign (pt_fuel, fuel_init);
       Foreach (chan,
@@ -109,9 +110,11 @@ struct
     let pt_env_c = pt_env action#channelIndex in
     let label_end_of_try = eot_label () in
     Bloc [
-      make_it (CallFun (set_add, [Var chans; Var (pt_env_c)]))
-	[CallProc (acquire, [Var (pt_env_lock action#channelIndex)])];
-      make_it (Op (Equal, Var (RecordName (pt_env_c,"globalrc"), prim_int), Val ("1", prim_int)))
+      Comment "------compile_try_in---------\n";
+      make_it (CallFun (set_add, [Var chans; CallFun (channel_of_pt_channel, [Var (pt_env_c)]) ]))
+	[CallProc (acquire_channel, [Var (pt_env action#channelIndex)])];
+     
+      make_it (Op (Equal, CallFun (channel_globalrc, [Var pt_env_c]), Val ("1", prim_int)))
 	[Assign (try_result, try_disabled);
 	 Goto label_end_of_try];
       Declare commit;
@@ -163,9 +166,10 @@ struct
     let pt_env_c = pt_env action#channelIndex in
 
     Bloc [
+      Comment "------compile_try_out---------\n";
       make_it (CallFun (set_add, [Var chans; Var (pt_env_c)]))
-	[CallProc (acquire, [Var (pt_env_lock action#channelIndex)])];
-      make_it (Op (Equal, Var (RecordName (pt_env_c,"globalrc"), prim_int), Val ("1", prim_int)))
+	[CallProc (acquire_channel, [Var (pt_env action#channelIndex)])];
+      make_it (Op (Equal, CallFun (channel_globalrc, [Var pt_env_c]), Val ("1", prim_int)))
 	[Assign (try_result, try_disabled);
 	 Goto label_end_of_try];
       Declare commit;
@@ -278,9 +282,10 @@ struct
       let cont_pc = Val ((string_of_int choice_cont.(i)), pc_label) in
       Seq[
 	compile_value b#guard; 
-	Assign ((pt_enabled i), Var pt_val);
+	
+	Assign ((pt_enabled i), CallFun (bool_of_boolval,[Var pt_val]));
 	make_ite (Var (pt_enabled i))
-	  [ compile_try_action b#action chan;
+	  [ compile_try_action b#action chans;
 	    make_ite 
 	      (Op (Equal, Var try_result, try_disabled))
 	      
