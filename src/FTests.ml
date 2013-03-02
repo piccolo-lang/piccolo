@@ -18,7 +18,7 @@ let env_printer def =
 
 let ppstr2 = "def PingPong2(o:chan<string>,i:chan<string>,msg:string) = o!msg, new(a:chan<string>), i?(m), PingPong(i,o,m)";;
 
-let ppstr = "def PingPong(i:chan<string>,o:chan<string>,msg:string) =  i?(m), o!msg, PingPong(i,o,m)";;
+let ppstr = "def PingPong(i:chan<string>,o:chan<string>,msg:string) =  i?(m), o!msg, PingPong2(i,o,m)";;
 
 let mainstr = "def Main() = new(c1:chan<string>),new(c2:chan<string>),spawn{PingPong(c1,c2,\"<PING>\")},spawn{PingPong2(c1,c2,\"<PONG>\")},end";;
 

@@ -33,9 +33,7 @@ object(self)
   (* module *)
   method moduleDef_val m = []
   method moduleDef m esizes =
-    self#echoln 2 ("\n[ESIZE_MODULE] env pass finished in Module: " ^ m#name);
-    self#echoln 2 (string_of_int (list_max esizes));
-    self#echoln 2 ("\nmodule esize ---->>> " ^ (String.concat " , " newVar));
+    self#echoln 1 ("\n[ESIZE_MODULE] env pass finished in Module: " ^ m#name);
     list_max esizes 
 
   (* definitions *)
@@ -85,7 +83,7 @@ object(self)
 		     | Some n -> a#setVariableIndex n ; env)
       | _ -> env
   method branch env m d p i b s1 s2 s3 = 
-    self#echoln 2 ("\nBRANCH : " ^ (string_of_int (s1)) ^  (string_of_int (s2)) ^ (string_of_int (s3)));
+    self#echoln 3 ("\nBRANCH : " ^ (string_of_int (s1)) ^  (string_of_int (s2)) ^ (string_of_int (s3)));
     s1+s2+s3
   method call_val env m d p = env
   method call env m d p _ = 
@@ -166,6 +164,7 @@ object(self)
   (* val mutable _csize_def_map = DefMap.empty (\* deprecated *\) *)
   (* val mutable _csize = -1 *)
   val mutable _current_choice_pile = []
+  val mutable _call_breaker = (false, 0)
 
   (* config *)
   method verbosity = n
@@ -181,15 +180,16 @@ object(self)
   (* definition *)
   method definition v m d r = self#definition_post m d
   method definition_val v m d = self#definition_pre m d
-  method definition_pre m d = _current_choice_pile <- []
-  method definition_post m d = 
+  method definition_pre m d = _call_breaker <- (false, 0); _current_choice_pile <- []
+  method definition_post m d =
     let csize =
-      match _current_choice_pile with
-	|[] -> failwith "probleme pile csize1"
-	|v::[] -> v
-	|v::v2::l -> 
-	   Printf.printf "\nCSIZE %d %d" v v2;
-	   failwith "probleme pile csize2"
+      if (fst _call_breaker) then (snd _call_breaker) else(
+	match _current_choice_pile with
+	  |[] -> failwith "probleme pile csize1"
+	  |v::[] -> v
+	  |v::v2::l -> 
+	     Printf.printf "\nCSIZE %d %d" v v2;
+	      failwith "probleme pile csize2")
     in
     d#setCsize csize
     
@@ -213,8 +213,13 @@ object(self)
       m#lookupDef (p#defName)
     with Not_found -> failwith "undefined definition called...(calcul csize)"
     in (* should never happen *)
-    if ((def_called#csize > 0) && (d#csize < def_called#csize)) then
-      _current_choice_pile <- (def_called#csize)::_current_choice_pile
+    Printf.printf "CSIZE CALL in %s = current : %d , called : %d" 
+      d#name d#csize def_called#csize;
+    if ((def_called#csize > 0) && (d#csize < def_called#csize)) then(
+      if ((fst _call_breaker) && ((snd _call_breaker) < def_called#csize)) then 
+	_call_breaker <- (true, def_called#csize)
+      else
+	_current_choice_pile <- 0::_current_choice_pile)
     else
       _current_choice_pile <- 0::_current_choice_pile
       
@@ -381,12 +386,11 @@ let fixpoint_sizes m esize_pass csize_pass =
     List.fold_left ( fun (e, c) def -> (e+ (def#esize), c + (def#csize))) (0,0) defs in
   fix_rec esizes csizes true
 
-
 let first_pass m verbosity = 
   let esize_pass = new env_compute_pass verbosity in
   let csize_pass = new csize_compute_pass 0 in
-  (* fixpoint_sizes m esize_pass csize_pass; (\* recuperer esize? *\) *)
-  ignore (ASTUtils.module_fold m (ASTUtils.fold_seq csize_pass esize_pass));
+  fixpoint_sizes m esize_pass csize_pass; (* recuperer esize? *)
+  (* ignore (ASTUtils.module_fold m (ASTUtils.fold_seq csize_pass esize_pass)); *)
   ASTUtils.module_fold m
     (ASTUtils.fold_seq csize_pass (* utilité ? *)
        (ASTUtils.fold_compose
