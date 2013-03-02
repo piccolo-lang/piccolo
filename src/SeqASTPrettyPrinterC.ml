@@ -107,7 +107,7 @@ let rec print_instr fmt = function
 
 let print_main nb_th entry_point fmt i =
   Format.fprintf fmt
-    "#include <runtime.h>@\n#include <pi_thread_repr.h>@\n%a@\n@\nvoid main(){ PICC_main(%d, %s); }"
+    "#include <runtime.h>@\n#include <pi_thread_repr.h>@\n#include <value.h>@\n%a@\n@\nvoid main(){ PICC_main(%d, %s); }"
     print_instr i nb_th entry_point
     
 

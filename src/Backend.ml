@@ -46,13 +46,14 @@ struct
   let make_ite e i1 i2 = Ite (e, i1, i2) (* nicer declaration and indentation *)
   let make_it e i = Ite (e, i, [])
 
-  let compile_value = function
-    | VTrue _ -> Assign (pt_val, Val ("true", pbool))
-    | VFalse _ -> Assign (pt_val, Val ("false", pbool))
-    | VInt vt -> Assign (pt_val, Val (vt#toString, pint))
-    | VString vt -> Assign (pt_val, Val (vt#toString, pstring))
+  let compile_value = function 
+      (* copy_value is here used as a procedure, but it returns a bool that can be tested *)
+    | VTrue _ -> CallProc (copy_value, [Var pt_val; create_bool true])
+    | VFalse _ -> CallProc (copy_value, [Var pt_val; create_bool false])
+    | VInt vt -> CallProc (copy_value, [Var pt_val; create_int vt#toVal])
+    | VString vt -> CallProc (copy_value, [Var pt_val; create_string vt#toString])
     | VTuple _ -> failwith "TODO compile_value VTuple"
-    | VVar vt -> Assign (pt_val, Var (pt_env vt#index) )
+    | VVar vt -> CallProc (copy_value, [Var pt_val; Var (pt_env vt#index)])
     | VPrim _ -> failwith "TODO compile_value VPrim"
       
   and compile_end status =
@@ -103,14 +104,14 @@ struct
     let commit_thread = RecordName (commit, "thread"), pi_thread in
     let commit_eval = RecordName(commit, "evalfunc"), eval_ty in
     let ok = SimpleName "ok", commit_status_enum in
-    let vl = SimpleName "val", pvalue in
+    let vl = SimpleName "val", pt_value in
     let pt_env_x = pt_env action#variableIndex in
     let pt_env_c = pt_env action#channelIndex in
     let label_end_of_try = eot_label () in
     Bloc [
       make_it (CallFun (set_add, [Var chans; Var (pt_env_c)]))
 	[CallProc (acquire, [Var (pt_env_lock action#channelIndex)])];
-      make_it (Op (Equal, Var (RecordName (pt_env_c,"globalrc"), pint), Val ("1", pint)))
+      make_it (Op (Equal, Var (RecordName (pt_env_c,"globalrc"), prim_int), Val ("1", prim_int)))
 	[Assign (try_result, try_disabled);
 	 Goto label_end_of_try];
       Declare commit;
@@ -154,9 +155,9 @@ struct
   let compile_try_out (action:out_action_type) chans = 
     let commit = SimpleName "commit", in_commit in
     let commit_thread = RecordName (commit, "thread"), pi_thread in
-    let commit_refvar = RecordName (commit, "refvar"), pint in
+    let commit_refvar = RecordName (commit, "refvar"), prim_int in
     let commit_thread_env_rv = ArrayName (RecordName (commit, "env"), 
-					  Var commit_refvar), pvalue in
+					  Var commit_refvar), pt_value in
     let ok = SimpleName "ok", commit_status_enum in
     let label_end_of_try = eot_label () in
     let pt_env_c = pt_env action#channelIndex in
@@ -164,7 +165,7 @@ struct
     Bloc [
       make_it (CallFun (set_add, [Var chans; Var (pt_env_c)]))
 	[CallProc (acquire, [Var (pt_env_lock action#channelIndex)])];
-      make_it (Op (Equal, Var (RecordName (pt_env_c,"globalrc"), pint), Val ("1", pint)))
+      make_it (Op (Equal, Var (RecordName (pt_env_c,"globalrc"), prim_int), Val ("1", prim_int)))
 	[Assign (try_result, try_disabled);
 	 Goto label_end_of_try];
       Declare commit;
@@ -203,14 +204,14 @@ struct
       
   let compile_try_spawn (action:spawn_action_type) chans = 
     let d = lookup action#defName in
-    let args i= (ArrayName (SimpleName "args", Val (string_of_int i, pint)), pvalue) in
+    let args i= (ArrayName (SimpleName "args", Val (string_of_int i, prim_int)), pt_value) in
     let child = SimpleName "child", pi_thread in
     
     let child_proc = (RecordName (child, "proc"), pdef) in
     let child_pc = (RecordName (child, "pc"), pc_label) in
     let child_status =(RecordName (child, "status"), status_enum) in
     let child_knows = (RecordName (child, "knows"), knows_set) in
-    let child_env i = (ArrayName ((RecordName (child,"env") ), Val (string_of_int i, pint)), pvalue) in
+    let child_env i = (ArrayName ((RecordName (child,"env") ), Val (string_of_int i, prim_int)), pt_value) in
 
     let args_mapper i arg =
       Seq [ compile_value arg;
@@ -224,8 +225,8 @@ struct
     Bloc[
       Declare (args action#arity);
       Declare child;
-      Assign (child, CallFun (generate_pi_thread, [Val (string_of_int (d#esize), pint);
-						   Val (string_of_int (d#esize), pint)]));
+      Assign (child, CallFun (generate_pi_thread, [Val (string_of_int (d#esize), prim_int);
+						   Val (string_of_int (d#esize), prim_int)]));
       (*[TODO] use a more precise value for the second argument the knowsSet size which
 	is smaller or equal than esize *)
       
@@ -263,7 +264,7 @@ struct
     | Choice p -> compile_choice m d p
 
   and compile_choice m d p = 
-    let nb_disabled = SimpleName "nbdisabled", pint
+    let nb_disabled = SimpleName "nbdisabled", prim_int
     and chans = SimpleName "chans", (pset channel)
     and def_label = def_label_pattern m#name d#name
     and choice_cont = Array.make p#arity 0
@@ -279,15 +280,16 @@ struct
 	compile_value b#guard; 
 	Assign ((pt_enabled i), Var pt_val);
 	make_ite (Var (pt_enabled i))
-	  [ make_ite 
+	  [ compile_try_action b#action chan;
+	    make_ite 
 	      (Op (Equal, Var try_result, try_disabled))
 	      
-	      [Assign ((pt_enabled i), Val ("false", pbool));
+	      [Assign ((pt_enabled i), Val ("false", prim_bool));
 	       p_inc nb_disabled ]
 	      
 	      [make_it (Op (Equal, Var try_result, try_enabled))
 		  [p_dec pt_fuel;
-		   make_it (Op (Equal, Var pt_fuel, Val ("0", pint) ))
+		   make_it (Op (Equal, Var pt_fuel, Val ("0", prim_int) ))
 		     [CallProc (release_all_channels, [Var chans]);
 		      compile_yield cont_pc];
 		   
@@ -312,7 +314,7 @@ struct
 	| Input a -> 
 	  [CallProc (register_input_commitment, 
 		     [Var pt; Var (pt_env a#channelIndex);
-		      Val (string_of_int a#variableIndex, pint); pc])]
+		      Val (string_of_int a#variableIndex, prim_int); pc])]
 	| _ -> []
       in
       make_it (Var (pt_enabled i)) if_body
@@ -321,12 +323,12 @@ struct
     Bloc (* cvar after_wait_fuel : label *)
       [Declare try_result ;
        Declare nb_disabled ;
-       Assign (nb_disabled, Val ("0", pint));
+       Assign (nb_disabled, Val ("0", prim_int));
        Declare chans;
        
        Seq (List.mapi guard_mapper p#branches);
        
-       make_it ( Op (Equal, Var nb_disabled, Val (string_of_int p#arity, pint) ))
+       make_it ( Op (Equal, Var nb_disabled, Val (string_of_int p#arity, prim_int) ))
 	 [ CallProc (release_all_channels, [Var chans]);
 	   compile_end status_blocked ];
        
@@ -337,13 +339,13 @@ struct
        compile_wait chans; (* /!\ unused parameter !! -> assert  cf compile_wait *)
        
        Seq (List.mapi (fun i prefix -> 
-	 Seq [ Case (Val (string_of_int choice_cont.(i), pint));
+	 Seq [ Case (Val (string_of_int choice_cont.(i), prim_int));
 	       compile_process m d prefix#continuation]
        ) p#branches)]
 
   and compile_call m d p =
     
-    let args i= (ArrayName (SimpleName "args", Val (string_of_int i, pint)), pvalue) in
+    let args i= (ArrayName (SimpleName "args", Val (string_of_int i, prim_int)), pt_value) in
     
     let rec init_env acc i argsTypes =
       match argsTypes with
