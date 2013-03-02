@@ -382,7 +382,7 @@ let fixpoint_sizes m esize_pass csize_pass =
   let rec fix_rec esizes csizes continue =
     if continue then (
       incr nb_pass;
-      ignore (ASTUtils.fold_module m (ASTUtils.fold_seq csize_pass esize_pass));
+      ignore (ASTUtils.module_fold m (ASTUtils.fold_seq csize_pass esize_pass));
       let Module(m') = m in
       print_sizes m' !nb_pass;
       let defs = List.map (fun (Def (def)) -> def) m'#definitions in
@@ -414,7 +414,7 @@ let first_pass m verbosity =
   let esize_pass = new env_compute_pass verbosity in
   let csize_pass = new csize_compute_pass verbosity in
   (* fixpoint_sizes m esize_pass csize_pass; (\* recuperer esize? *\) *)
-  (* ignore (ASTUtils.fold_module m (ASTUtils.fold_seq csize_pass esize_pass)); *)
+  (* ignore (ASTUtils.module_fold m (ASTUtils.fold_seq csize_pass esize_pass)); *)
   ASTUtils.module_fold m
     (ASTUtils.fold_seq csize_pass (* inutile *)
        (ASTUtils.fold_compose
@@ -529,7 +529,7 @@ let first_pass m verbosity =
 
 (* let pass_esize m verbosity =  *)
 (*   let rec pass_recursive e_c_p = *)
-(*     ASTUtils.fold_module m (e_c_p verbosity)  *)
+(*     ASTUtils.module_fold m (e_c_p verbosity)  *)
 (*   in  *)
 (*   pass_recursive (new env_compute_pass verbosity) *)
 
@@ -537,7 +537,7 @@ let first_pass m verbosity =
 
 
 (* let print_pass m verbosity =  *)
-(*   ASTUtils.fold_module m *)
+(*   ASTUtils.module_fold m *)
 (*     (new astCheck_pass 2)  *)
 
 (* let compute_pass m verbosity =  *)
@@ -545,7 +545,7 @@ let first_pass m verbosity =
 
 
 (* let first_pass m verbosity =   *)
-(*   ASTUtils.fold_module m  *)
+(*   ASTUtils.module_fold m  *)
 (*     (ASTUtils.fold_seq (new csize_compute_pass verbosity)   *)
 (*        (ASTUtils.fold_compose  *)
 (*           (new env_compute_pass verbosity)  *)

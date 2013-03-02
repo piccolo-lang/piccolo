@@ -38,6 +38,8 @@ and print_expr fmt = function
       (print_list print_expr ", ") args
 
 let rec print_instr fmt = function
+  | Comment str ->
+      fprintf fmt "/* %s */@\n" str
   | Switch (e, il) -> 
     fprintf fmt "switch(%a){@\n@[<hov 3>%a@]@\n}" 
       print_expr e (print_list_eol print_instr "") il
@@ -106,8 +108,15 @@ let rec print_instr fmt = function
       
 
 let print_main nb_th entry_point fmt i =
+  let inc_list = 
+    ["#include <runtime.h>";
+     "#include <pi_thread_repr.h>";
+     "#include <commit_repr.h>";
+     "#include <value.h>"]
+  in
   Format.fprintf fmt
-    "#include <runtime.h>@\n#include <pi_thread_repr.h>@\n#include <value.h>@\n%a@\n@\nvoid main(){ PICC_main(%d, %s); }"
+    "%a@\n@\n@\n@\n%a@\n@\n@\n@\nvoid main(){ PICC_main(%d, %s); }"
+    PrintUtils.(print_list_eol print_string "") inc_list
     print_instr i nb_th entry_point
     
 
