@@ -22,7 +22,7 @@ end
 (** interface representing a bound ast with a valueType, extends ast_type *)
 class type virtual ast_binder_type = object
   inherit ast_type
-  method fetchBinderType: string -> valueType option
+  method fetchBinderType : string -> valueType option
 end
 
 (* classes that are ast_binder_type:  
@@ -288,7 +288,9 @@ class type definition_type = object
   method extendEnv : string -> unit
   method lookupEnv : string -> int option
   method esize : int
+  method setEsize : int -> unit
   method csize : int
+  method setCsize : int -> unit
   method process : process
   method fetchBinderType : string -> valueType option
   method toString : string
