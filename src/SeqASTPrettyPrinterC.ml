@@ -112,6 +112,7 @@ let print_main nb_th entry_point fmt i =
     ["#include <runtime.h>";
      "#include <pi_thread_repr.h>";
      "#include <commit_repr.h>";
+     "#include <set.h>";
      "#include <value.h>"]
   in
   Format.fprintf fmt

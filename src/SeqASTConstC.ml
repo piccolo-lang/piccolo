@@ -29,7 +29,7 @@ let pi_thread = pointer (Sty "PICC_PiThread")
 let mutex = Sty "PICC_Mutex"
 let clock = Sty "PICC_Clock"
 
-let commit = Sty "PICC_Commit"
+let commit = pointer (Sty "PICC_Commit")
 (* in the C code the in_commit and out_commit are in fact just a field of the PICC_Commit structure*)
 (* let in_commit = Sty "PICC_InCommit" *)
 (* let out_commit = Sty "PICC_OutCommit" *)
@@ -51,7 +51,18 @@ let ready_queue = Sty "PICC_ReadyQueue"
 let wait_queue = Sty "PICC_WaitQueue" 
 
 (* let parray a = Pty ("array", a) *)
+
+(* we need both eval_ty and eval_tyDef 
+ * for the pretty printer to declare a function, we need a real function signature
+ * to declare in the code a variable with the pointer type we need the second one
+ * 
+*)
 let eval_ty = Fun (pt_value, [pi_thread]) 
+let eval_tyDef = Sty "PICC_EvalFunction"
+
+let eval_asvar = SimpleName "evalfunc", eval_tyDef
+
+
 let pdef = Fun (void, [pointer sched_pool; pi_thread]) (*PICC_PiThreadProc*)
 
 (* enum types and their values *)
@@ -97,7 +108,7 @@ let create_bool = fun b -> CallFun (make_false, [Val (string_of_bool b, prim_boo
 let create_int = fun n -> CallFun (make_int, [Val (string_of_int n, prim_int) ])
 let create_string = fun str -> CallFun (make_string, [Val (str, prim_string) ])
 
-let copy_value = makeFun "PICC_copy_value" pt_bool [pt_value; pt_value]
+let copy_value = makeFun "PICC_copy_value" prim_bool [pt_value; pt_value]
 
 let bool_of_boolval = makeFun "PICC_bool_of_bool_value" prim_bool [pt_value]
 
@@ -106,15 +117,18 @@ let channel_of_pt_channel = makeFun "PICC_channel_of_channel_value" channel [pt_
 
 let acquire_channel = makeFun "PICC_channel_value_acquire" void [pt_value]
 let channel_globalrc = makeFun "PICC_channel_value_global_rc" prim_int [pt_value]
+
+let eval_fun_of_out_commit = makeFun "PICC_eval_func_of_output_commitment" eval_ty [commit]
+
 (* Runtime functions *)
 
-let awake = makeFun "PICC_awake" void [pointer sched_pool; pi_thread] 
-let can_awake = makeFun "PICC_can_awake" commit_status_enum [pi_thread; pointer commit]
+let awake = makeFun "PICC_awake" void [pointer sched_pool; pi_thread; commit] 
+let can_awake = makeFun "PICC_can_awake" commit_status_enum [pi_thread; commit]
 let channel_dec_ref_count = makeFun "PICC_channel_dec_ref_count" void [ channel]
 let channel_incr_ref_count = makeFun "PICC_channel_incr_ref_count" void [ channel]
 
-let fetch_input_commitment = makeFun "PICC_fetch_commitment" (pointer commit) [channel]
-let fetch_output_commitment = fetch_input_commitment (* in the C code these functions are the same*)
+let fetch_input_commitment = makeFun "PICC_fetch_input_commitment" commit [channel]
+let fetch_output_commitment = makeFun "PICC_fetch_output_commitment" commit [channel]
 
 let knows_register = makeFun "PICC_knowns_register" pt_bool [knows_set; channel]
 let knows_set_forget_all = makeFun "PICC_knowns_set_forget_all" void [knows_set]

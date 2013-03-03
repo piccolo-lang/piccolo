@@ -103,55 +103,59 @@ struct
   let compile_try_in (action:in_action_type) chans = 
     let commit = SimpleName "commit", out_commit in
     let commit_thread = RecordName (commit, "thread"), pi_thread in
-    let commit_eval = RecordName(commit, "evalfunc"), eval_ty in
+    let in_chan = SimpleName "in_chan", channel in
     let ok = SimpleName "ok", commit_status_enum in
     let vl = SimpleName "val", pt_value in
     let pt_env_x = pt_env action#variableIndex in
     let pt_env_c = pt_env action#channelIndex in
     let label_end_of_try = eot_label () in
-    Bloc [
-      Comment "------compile_try_in---------\n";
-      make_it (CallFun (set_add, [Var chans; CallFun (channel_of_pt_channel, [Var (pt_env_c)]) ]))
-	[CallProc (acquire_channel, [Var (pt_env action#channelIndex)])];
-     
-      make_it (Op (Equal, CallFun (channel_globalrc, [Var pt_env_c]), Val ("1", prim_int)))
-	[Assign (try_result, try_disabled);
-	 Goto label_end_of_try];
-      Declare commit;
-      Declare ok;
-      
-      DoWhile begin [
-	Assign (commit, CallFun (fetch_output_commitment, [Var pt_env_c] ));
+    Seq [
+      Bloc [
+	Comment "------compile_try_in---------";
+	Declare in_chan;
+	Assign (in_chan, CallFun (channel_of_pt_channel, [Var pt_env_c]));
+	make_it (CallFun (set_add, [Var chans;  Var in_chan]))
+	  [CallProc (acquire_channel, [Var (pt_env action#channelIndex)])];
 	
-	make_it (Op (Equal, Var commit, Val null))
-      	  [Assign (try_result, try_commit);
-      	   Goto label_end_of_try];
+	make_it (Op (Equal, CallFun (channel_globalrc, [Var pt_env_c]), Val ("1", prim_int)))
+	  [Assign (try_result, try_disabled);
+	   Goto label_end_of_try];
+	Declare commit;
+	Declare ok;
 	
-	DoWhile begin 
-	  [Assign (ok, CallFun (can_awake, [Var commit_thread; Var commit]));
-      	   make_it (Op (Equal, Var ok, commit_cannot_acquire))
-      	     [CallProc (low_level_yield,[])]],
-      	  (Op (Equal, Var ok, commit_cannot_acquire)) end;
-	
-	make_it (Op (Equal, Var ok, commit_valid))
-      	  [ Declare vl;
-	    Assign (vl, CallFun (commit_eval, [Var commit_thread]));
-	    Assign (pt_env_x, Var vl);
-	    (match action#variableType with
-	    | TChan _ -> 
-	      make_it (CallFun (knows_register, [Var pt_knows; Var pt_env_x]))
-		[CallProc (channel_incr_ref_count, [Var pt_env_x])]
-	    | _ -> Seq []);
-	    CallProc (awake, [Var scheduler; Var commit_thread(* ; commit *)]); 
-	    (* [TOASK] incohérence au niveau des arguements dans la spec, 
-	       vérifier qu'il suffit de scheduler et commit_thread*)
-      	    Assign (try_result, try_enabled);
-      	    Goto label_end_of_try]],
-	
-	(CallFun (commit_list_is_empty, 
-		  [Var (RecordName (pt_env_c, "outcommits"), commit_list)])) 
-      end;
-      Label label_end_of_try]
+	DoWhile begin [
+	  Assign (commit, CallFun (fetch_output_commitment, [Var in_chan] ));
+	  
+	  make_it (Op (Equal, Var commit, Val null))
+      	    [Assign (try_result, try_commit);
+      	     Goto label_end_of_try];
+	  
+	  DoWhile begin 
+	    [Assign (ok, CallFun (can_awake, [Var commit_thread; Var commit]));
+      	     make_it (Op (Equal, Var ok, commit_cannot_acquire))
+      	       [CallProc (low_level_yield,[])]],
+      	    (Op (Equal, Var ok, commit_cannot_acquire)) end;
+	  
+	  make_it (Op (Equal, Var ok, commit_valid))
+      	    [ Declare vl;
+	      Declare eval_asvar;
+	      Assign (eval_asvar, CallFun (eval_fun_of_out_commit, [Var commit]));
+	      Assign (vl, CallFun (eval_asvar, [Var commit_thread]));
+	      Assign (pt_env_x, Var vl);
+	      (match action#variableType with
+	      | TChan _ -> 
+		make_it (CallFun (knows_register, [Var pt_knows; Var pt_env_x]))
+		  [CallProc (channel_incr_ref_count, [Var pt_env_x])]
+	      | _ -> Seq []);
+	      CallProc (awake, [Var scheduler; Var commit_thread; Var commit]); 
+      	      Assign (try_result, try_enabled);
+      	      Goto label_end_of_try]],
+	  
+	  (CallFun (commit_list_is_empty, 
+		    [Var (RecordName (in_chan, "outcommits"), commit_list)])) 
+	end];
+      Label label_end_of_try] 
+  (* Label must be out of the bloc to make the c code compile*)
       
 
 
@@ -165,37 +169,38 @@ struct
     let label_end_of_try = eot_label () in
     let pt_env_c = pt_env action#channelIndex in
 
-    Bloc [
-      Comment "------compile_try_out---------\n";
-      make_it (CallFun (set_add, [Var chans; Var (pt_env_c)]))
-	[CallProc (acquire_channel, [Var (pt_env action#channelIndex)])];
-      make_it (Op (Equal, CallFun (channel_globalrc, [Var pt_env_c]), Val ("1", prim_int)))
-	[Assign (try_result, try_disabled);
-	 Goto label_end_of_try];
-      Declare commit;
-      Declare ok;
-      DoWhile begin [
-	Assign (commit, CallFun (fetch_input_commitment, [Var pt_env_c] ));
-	
-	make_it (Op (Equal, Var commit, Val null))
-      	  [Assign (try_result, try_commit);
-      	   Goto label_end_of_try];
-	
-	DoWhile begin 
-	  [Assign (ok, CallFun (can_awake, [Var commit_thread; Var commit]));
-      	   make_it (Op (Equal, Var ok, commit_cannot_acquire))
-      	     [CallProc (low_level_yield,[])]],
-      	  (Op (Equal, Var ok, commit_cannot_acquire)) end;
-	
-	make_it (Op (Equal, Var ok, commit_valid))
-      	  [ compile_value action#value;
-      	    Assign (commit_thread_env_rv, Var pt_val);
-      	    CallProc (awake, [Var scheduler; Var commit_thread(* ; commit *)]);
-      	    Assign (try_result, try_enabled);
-      	    Goto label_end_of_try]],
-	(CallFun (commit_list_is_empty, 
-		  [Var (RecordName (pt_env_c,"incommits"), commit_list)])) end;
-      Label label_end_of_try]
+    Seq[
+      Bloc [
+	Comment "------compile_try_out---------";
+	make_it (CallFun (set_add, [Var chans; Var (pt_env_c)]))
+	  [CallProc (acquire_channel, [Var (pt_env action#channelIndex)])];
+	make_it (Op (Equal, CallFun (channel_globalrc, [Var pt_env_c]), Val ("1", prim_int)))
+	  [Assign (try_result, try_disabled);
+	   Goto label_end_of_try];
+	Declare commit;
+	Declare ok;
+	DoWhile begin [
+	  Assign (commit, CallFun (fetch_input_commitment, [Var pt_env_c] ));
+	  
+	  make_it (Op (Equal, Var commit, Val null))
+      	    [Assign (try_result, try_commit);
+      	     Goto label_end_of_try];
+	  
+	  DoWhile begin 
+	    [Assign (ok, CallFun (can_awake, [Var commit_thread; Var commit]));
+      	     make_it (Op (Equal, Var ok, commit_cannot_acquire))
+      	       [CallProc (low_level_yield,[])]],
+      	    (Op (Equal, Var ok, commit_cannot_acquire)) end;
+	  
+	  make_it (Op (Equal, Var ok, commit_valid))
+      	    [ compile_value action#value;
+      	      Assign (commit_thread_env_rv, Var pt_val);
+      	      CallProc (awake, [Var scheduler; Var commit_thread(* ; commit *)]);
+      	      Assign (try_result, try_enabled);
+      	      Goto label_end_of_try]],
+	  (CallFun (commit_list_is_empty, 
+		    [Var (RecordName (pt_env_c,"incommits"), commit_list)])) end];
+	Label label_end_of_try]
 
   let compile_try_new (action:new_action_type) chans = 
     let newchan = SimpleName "newchan", channel in

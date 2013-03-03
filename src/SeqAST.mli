@@ -83,10 +83,11 @@ sig
 
   val queue: piccType -> piccType
 
-  val eval_ty: piccType
-
   val pdef: piccType
 
+  val eval_ty: piccType
+
+  val eval_asvar : varDescr
 (* enum types and their values *)
 (* the values are given as expr since they're only use in assignenment *)
   val status_enum: piccType
@@ -128,6 +129,8 @@ sig
   val channel_of_pt_channel: varDescr
   val acquire_channel: varDescr
   val channel_globalrc: varDescr
+  val eval_fun_of_out_commit: varDescr
+
 (* Runtime functions *)
   val awake : varDescr
   val can_awake : varDescr
