@@ -195,9 +195,30 @@ sig
 
 
   val try_result : varDescr
-  val chan : varDescr
+  val chan : varDescr (* tmp var used in foreach loops *) 
+  val chans: varDescr (* channel set*)
+  val chans_init_value: value_t
+
     
   val d_entry : expr (* value of the definition entry point*)
+
+  val ocommit_var : varDescr
+  val ocommit_thread : varDescr
+    
+  val icommit_var : varDescr
+  val icommit_thread : varDescr
+  val icommit_refvar : varDescr
+  val icommit_thread_env_rv : varDescr
+
+  val args : int -> varDescr
+  val child : varDescr
+
+  val child_proc : varDescr
+  val child_pc : varDescr
+  val child_status : varDescr
+  val child_knows : varDescr
+  val child_env : int -> varDescr
+
 
 (* NULL value *)
   val null:value_t
@@ -218,5 +239,5 @@ sig
 
   val print_instr_list_std : instr list -> unit
     
-  val print_main : int -> string -> Format.formatter -> instr -> unit
+  val print_main : int -> string -> int -> int -> int -> Format.formatter -> instr -> unit
 end

@@ -287,10 +287,12 @@ class type definition_type = object
   method env : string list
   method extendEnv : string -> unit
   method lookupEnv : string -> int option
+
   method esize : int
   method setEsize : int -> unit
   method csize : int
   method setCsize : int -> unit
+
   method process : process
   method fetchBinderType : string -> valueType option
   method toString : string

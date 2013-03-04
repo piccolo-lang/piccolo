@@ -31,19 +31,20 @@ let clock = Sty "PICC_Clock"
 
 let commit = pointer (Sty "PICC_Commit")
 (* in the C code the in_commit and out_commit are in fact just a field of the PICC_Commit structure*)
-(* let in_commit = Sty "PICC_InCommit" *)
-(* let out_commit = Sty "PICC_OutCommit" *)
-let in_commit = commit
-let out_commit = commit
-
+let in_commit = pointer (Sty "PICC_InCommit")
+let out_commit = pointer (Sty "PICC_OutCommit")
 
 let pc_label = Sty "PICC_Label"
 
 let commit_list = Sty "PICC_CommitList"
 
-let knows_set = pointer (Sty "PICC_KnownsSet")
+let knows_set = (Sty "PICC_KnownSet")
+(* typedef struct _KnownSet* PICC_KnownSet; -> knownset already a pointer *)
 
-let pset a = Pty ("", a)
+
+(* the knows_set is implemented as a generic set*)
+let pset _ = knows_set
+(* let pset a = Pty ("", a) *)
 
 (* let queue a = Pty ("Queue", a) *)
 let queue _ = Sty "PICC_Queue" (* PiThread queue *)
@@ -143,7 +144,7 @@ let register_input_commitment = makeFun "PICC_register_input_commitment"
 let register_output_commitment = makeFun "PICC_register_output_commitment" 
   void [pi_thread; channel; pointer (Fun (pt_value, [pi_thread])); pc_label ]
 
-let set_add = makeFun "PICC_SET_ADD" pt_bool [pointer (pset channel); channel] 
+let set_add = makeFun "PICC_known_set_add_channel" prim_bool [knows_set; channel] 
 let commit_list_is_empty = makeFun "PICC_commit_list_is_empty" pt_bool [commit_list]
 
 (* Thread Synchronization function *)
@@ -159,11 +160,15 @@ let low_level_yield = makeFun "PICC_low_level_yield" void []
 
 
 let generate_channel = makeFun "PICC_create_channel" channel []
-let generate_pi_thread = makeFun "PICC_create_pithread" pi_thread [prim_int; prim_int] (*env_length, knows_length*) 
+let generate_pi_thread = makeFun "PICC_create_pithread" pi_thread [prim_int; prim_int; prim_int] 
+(*env_length, knows_length, nb_enabled*) 
 
 
 (* Misc *)
 let emptySet = makeFun "PICC_CHANNEL_SET_MAKE" (pointer (pset channel)) [] 
+
+(* NULL value *)
+let null = "NULL", Sty "NULL"
 
 (* Variables *)
 
@@ -185,15 +190,39 @@ let pt_pc = (RecordName (pt, "pc"), pc_label)
 let pt_val = (RecordName (pt, "val"), pt_value)
 let pt_clock = (RecordName (pt, "clock"), clock)
 let pt_fuel = (RecordName (pt, "fuel"), prim_int)
-let pt_lock = (RecordName (pt, "lock"), mutex)
+
+(* /!\ hack, check if there is no problem ...*)
+let pt_lock = (SimpleName ("&pt->lock"), mutex)
+(* let pt_lock = (RecordName (pt, "lock"), mutex) *)
 
 let try_result = SimpleName "tryresult", try_result_enum
 let chan = SimpleName "chan", channel
 
+let chans = SimpleName "chans", (pset channel)
+let chans_init_value = null
+
 let d_entry = Val ("0", prim_int)
 
-(* NULL value *)
-let null:value_t = "NULL", Sty "NULL"
+let ocommit_var = SimpleName "commit", commit
+let ocommit_thread = RecordName (ocommit_var, "thread"), pi_thread
+  
+let icommit_var = SimpleName "commit", commit 
+let icommit_thread = RecordName (icommit_var, "thread"), pi_thread 
+let icommit_in = RecordName (icommit_var, "content.in"), in_commit
+let icommit_refvar = RecordName (icommit_in, "refvar"), prim_int 
+let icommit_thread_env_rv = 
+  ArrayName (RecordName (icommit_thread, "env"), Var icommit_refvar), pt_value 
+
+
+let args i= (ArrayName (SimpleName "args", Val (string_of_int i, prim_int)), pt_value)
+let child = SimpleName "child", pi_thread
+
+let child_proc = (RecordName (child, "proc"), pdef)
+let child_pc = (RecordName (child, "pc"), pc_label)
+let child_status =(RecordName (child, "status"), status_enum)
+let child_knows = (RecordName (child, "knowns"), knows_set)
+let child_env i = (ArrayName ((RecordName (child,"env") ), Val (string_of_int i, prim_int)), pt_value)
+
 
 (* Utils *)
 let p_inc v = Assign (v, (Op (Sum, Var v, Val ("1", prim_int))))

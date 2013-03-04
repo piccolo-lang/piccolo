@@ -17,13 +17,18 @@ struct
   *)
     
   let compiled_module = ref None
-   
+
   let lookup d =
     match !compiled_module with
     | None -> failwith "No module compiled"
     | Some m -> let (Def d) = m#lookupDef d in d
+					    
+  let module_name () =
+    match !compiled_module with
+    | None -> failwith "No module compiled"
+    | Some m -> m#name
 
-
+					    
   let eval_funs = ref []    
   
   let add_eval_def d = eval_funs := d :: !eval_funs
@@ -58,6 +63,7 @@ struct
       
   and compile_end status =
     Seq [
+      Comment "------compile_end---------";
       Foreach (chan,
 	       (CallFun (knows_set_knows, [Var pt_knows])),
 	       [CallProc (channel_dec_ref_count, [Var chan]) ]);
@@ -73,7 +79,7 @@ struct
 	C guys -> gestion d'un assert ??
     *)
     Seq [
-      Comment "------compile_wait---------\n";
+      Comment "------compile_wait---------";
       Assign (pt_pc, invalid_pc);
       Assign (pt_fuel, fuel_init);
       Foreach (chan,
@@ -84,8 +90,10 @@ struct
       CallProc (wait_queue_push, [Var sched_wait; Var pt]);
       CallProc (release, [Var pt_lock]);
       return_void]
+
   and compile_yield label =
     Seq [
+      Comment "------compile_yield---------";
       Assign (pt_pc, label);
       Assign (pt_fuel, fuel_init);
       Foreach (chan,
@@ -101,9 +109,8 @@ struct
   let compile_try_tau = Assign (try_result, try_enabled)
     
   let compile_try_in (action:in_action_type) chans = 
-    let commit = SimpleName "commit", out_commit in
-    let commit_thread = RecordName (commit, "thread"), pi_thread in
     let in_chan = SimpleName "in_chan", channel in
+    let in_chanx = SimpleName "in_chanx", channel in
     let ok = SimpleName "ok", commit_status_enum in
     let vl = SimpleName "val", pt_value in
     let pt_env_x = pt_env action#variableIndex in
@@ -120,18 +127,18 @@ struct
 	make_it (Op (Equal, CallFun (channel_globalrc, [Var pt_env_c]), Val ("1", prim_int)))
 	  [Assign (try_result, try_disabled);
 	   Goto label_end_of_try];
-	Declare commit;
+	Declare ocommit_var;
 	Declare ok;
 	
 	DoWhile begin [
-	  Assign (commit, CallFun (fetch_output_commitment, [Var in_chan] ));
+	  Assign (ocommit_var, CallFun (fetch_output_commitment, [Var in_chan] ));
 	  
-	  make_it (Op (Equal, Var commit, Val null))
+	  make_it (Op (Equal, Var ocommit_var, Val null))
       	    [Assign (try_result, try_commit);
       	     Goto label_end_of_try];
 	  
 	  DoWhile begin 
-	    [Assign (ok, CallFun (can_awake, [Var commit_thread; Var commit]));
+	    [Assign (ok, CallFun (can_awake, [Var ocommit_thread; Var ocommit_var]));
       	     make_it (Op (Equal, Var ok, commit_cannot_acquire))
       	       [CallProc (low_level_yield,[])]],
       	    (Op (Equal, Var ok, commit_cannot_acquire)) end;
@@ -139,15 +146,18 @@ struct
 	  make_it (Op (Equal, Var ok, commit_valid))
       	    [ Declare vl;
 	      Declare eval_asvar;
-	      Assign (eval_asvar, CallFun (eval_fun_of_out_commit, [Var commit]));
-	      Assign (vl, CallFun (eval_asvar, [Var commit_thread]));
+	      Assign (eval_asvar, CallFun (eval_fun_of_out_commit, [Var ocommit_var]));
+	      Assign (vl, CallFun (eval_asvar, [Var ocommit_thread]));
 	      Assign (pt_env_x, Var vl);
 	      (match action#variableType with
 	      | TChan _ -> 
-		make_it (CallFun (knows_register, [Var pt_knows; Var pt_env_x]))
-		  [CallProc (channel_incr_ref_count, [Var pt_env_x])]
+		Seq [
+		  Declare in_chanx;
+		  Assign (in_chanx, CallFun (channel_of_pt_channel, [Var pt_env_x]));
+		  make_it (CallFun (knows_register, [Var pt_knows; Var in_chanx]))
+		    [CallProc (channel_incr_ref_count, [Var in_chanx])]]
 	      | _ -> Seq []);
-	      CallProc (awake, [Var scheduler; Var commit_thread; Var commit]); 
+	      CallProc (awake, [Var scheduler; Var ocommit_thread; Var ocommit_var]); 
       	      Assign (try_result, try_enabled);
       	      Goto label_end_of_try]],
 	  
@@ -160,84 +170,82 @@ struct
 
 
   let compile_try_out (action:out_action_type) chans = 
-    let commit = SimpleName "commit", in_commit in
-    let commit_thread = RecordName (commit, "thread"), pi_thread in
-    let commit_refvar = RecordName (commit, "refvar"), prim_int in
-    let commit_thread_env_rv = ArrayName (RecordName (commit, "env"), 
-					  Var commit_refvar), pt_value in
+    let out_chan = SimpleName "out_chan", channel in
     let ok = SimpleName "ok", commit_status_enum in
     let label_end_of_try = eot_label () in
     let pt_env_c = pt_env action#channelIndex in
-
     Seq[
       Bloc [
 	Comment "------compile_try_out---------";
-	make_it (CallFun (set_add, [Var chans; Var (pt_env_c)]))
+	Declare out_chan;
+	Assign (out_chan, CallFun (channel_of_pt_channel, [Var pt_env_c]));
+	
+	make_it (CallFun (set_add, [Var chans; Var out_chan]))
 	  [CallProc (acquire_channel, [Var (pt_env action#channelIndex)])];
 	make_it (Op (Equal, CallFun (channel_globalrc, [Var pt_env_c]), Val ("1", prim_int)))
 	  [Assign (try_result, try_disabled);
 	   Goto label_end_of_try];
-	Declare commit;
+	Declare icommit_var;
 	Declare ok;
 	DoWhile begin [
-	  Assign (commit, CallFun (fetch_input_commitment, [Var pt_env_c] ));
+	  Assign (icommit_var, CallFun (fetch_input_commitment, [Var out_chan] ));
 	  
-	  make_it (Op (Equal, Var commit, Val null))
+	  make_it (Op (Equal, Var icommit_var, Val null))
       	    [Assign (try_result, try_commit);
       	     Goto label_end_of_try];
 	  
 	  DoWhile begin 
-	    [Assign (ok, CallFun (can_awake, [Var commit_thread; Var commit]));
+	    [Assign (ok, CallFun (can_awake, [Var icommit_thread; Var icommit_var]));
       	     make_it (Op (Equal, Var ok, commit_cannot_acquire))
       	       [CallProc (low_level_yield,[])]],
       	    (Op (Equal, Var ok, commit_cannot_acquire)) end;
 	  
 	  make_it (Op (Equal, Var ok, commit_valid))
       	    [ compile_value action#value;
-      	      Assign (commit_thread_env_rv, Var pt_val);
-      	      CallProc (awake, [Var scheduler; Var commit_thread(* ; commit *)]);
+      	      Assign (icommit_thread_env_rv, Var pt_val);
+      	      CallProc (awake, [Var scheduler; Var icommit_thread; Var icommit_var]);
       	      Assign (try_result, try_enabled);
       	      Goto label_end_of_try]],
 	  (CallFun (commit_list_is_empty, 
-		    [Var (RecordName (pt_env_c,"incommits"), commit_list)])) end];
+		    [Var (RecordName (out_chan,"incommits"), commit_list)])) end];
 	Label label_end_of_try]
 
   let compile_try_new (action:new_action_type) chans = 
     let newchan = SimpleName "newchan", channel in
     Bloc [
+      Comment "------compile_try_new---------";
       Declare newchan;
       Assign (newchan, CallFun (generate_channel, []));
-      Assign (pt_env action#variableIndex, Var newchan);
+      Assign (pt_env action#variableIndex, CallFun (pt_channel_of_channel, [Var newchan]));
       CallProc (knows_register, [Var pt_knows; Var newchan]);
       Assign (try_result, try_enabled)]
       
   let compile_try_spawn (action:spawn_action_type) chans = 
     let d = lookup action#defName in
-    let args i= (ArrayName (SimpleName "args", Val (string_of_int i, prim_int)), pt_value) in
-    let child = SimpleName "child", pi_thread in
-    
-    let child_proc = (RecordName (child, "proc"), pdef) in
-    let child_pc = (RecordName (child, "pc"), pc_label) in
-    let child_status =(RecordName (child, "status"), status_enum) in
-    let child_knows = (RecordName (child, "knows"), knows_set) in
-    let child_env i = (ArrayName ((RecordName (child,"env") ), Val (string_of_int i, prim_int)), pt_value) in
 
     let args_mapper i arg =
       Seq [ compile_value arg;
 	    Assign (args i, Var pt_val);
 	    (match (value_type_of_value arg)#ofType with
-	    | TChan _ -> CallProc (knows_register, [Var child_knows; Var (args i)])
+	    | TChan _ -> 
+	      CallProc (knows_register, [Var child_knows; 
+					 CallFun (channel_of_pt_channel, [Var (args i)])])
 	    | _ -> Seq []);
 	    Assign ((child_env i), Var (args i));
 	  ]
     in
     Bloc[
+      Comment "------compile_try_spawn---------";
       Declare (args action#arity);
       Declare child;
       Assign (child, CallFun (generate_pi_thread, [Val (string_of_int (d#esize), prim_int);
+						   Val (string_of_int (d#esize), prim_int);
 						   Val (string_of_int (d#esize), prim_int)]));
       (*[TODO] use a more precise value for the second argument the knowsSet size which
-	is smaller or equal than esize *)
+	is smaller or equal than esize 
+	the third argument is suposed to be the size (in number of choices) of the biggest
+	guarded choice in the definition
+      *)
       
       Seq (List.mapi args_mapper action#args);
       
@@ -274,10 +282,9 @@ struct
 
   and compile_choice m d p = 
     let nb_disabled = SimpleName "nbdisabled", prim_int
-    and chans = SimpleName "chans", (pset channel)
     and def_label = def_label_pattern m#name d#name
     and choice_cont = Array.make p#arity 0
-    in 
+    and tmp_chan = SimpleName "tmp_chan", channel in
     
     for i = 0 to (p#arity - 1) do 
       choice_cont.(i) <- make_label ()
@@ -318,13 +325,17 @@ struct
 	  
 	  add_eval_def (DeclareFun (eval, ["pt"] ,[compile_value a#value; Return (Var pt_val)]));
 	  
-	  [CallProc (register_output_commitment, 
-		     [Var pt; Var (pt_env a#channelIndex); Var eval; pc])]
+	  [Bloc [Declare tmp_chan;
+		 Assign (tmp_chan, CallFun (channel_of_pt_channel, [Var (pt_env a#channelIndex)]));
+		 CallProc (register_output_commitment, 
+		     [Var pt; Var tmp_chan; Var eval; pc])]]
 	    
 	| Input a -> 
-	  [CallProc (register_input_commitment, 
-		     [Var pt; Var (pt_env a#channelIndex);
-		      Val (string_of_int a#variableIndex, prim_int); pc])]
+	  [Bloc [Declare tmp_chan;
+		 Assign (tmp_chan, CallFun (channel_of_pt_channel, [Var (pt_env a#channelIndex)]));
+		 CallProc (register_input_commitment, 
+			   [Var pt; Var tmp_chan;
+			    Val (string_of_int a#variableIndex, prim_int); pc])]]
 	| _ -> []
       in
       make_it (Var (pt_enabled i)) if_body
@@ -335,6 +346,7 @@ struct
        Declare nb_disabled ;
        Assign (nb_disabled, Val ("0", prim_int));
        Declare chans;
+       Assign (chans, Val chans_init_value);
        
        Seq (List.mapi guard_mapper p#branches);
        
@@ -355,8 +367,6 @@ struct
 
   and compile_call m d p =
     
-    let args i= (ArrayName (SimpleName "args", Val (string_of_int i, prim_int)), pt_value) in
-    
     let rec init_env acc i argsTypes =
       match argsTypes with
       | [] -> acc
@@ -364,13 +374,15 @@ struct
 	let assign = Assign ((pt_env i), Var (args i)) in
 	let acc' = acc@
 	  [ match arg with
-	  | TChan _ -> Seq [ assign; CallProc (knows_register, [Var pt_knows; Var (args i)]) ]
+	  | TChan _ -> Seq [ assign; CallProc (knows_register, [Var pt_knows; 
+								CallFun (channel_of_pt_channel, [Var (args i)])]) ]
 	  | _ -> assign ]
 	in
 	init_env acc' (i+1) tl
     in	      
     
     Bloc [
+      Comment "------compile_call---------";
       Declare (args p#arity);
       CallProc (knows_set_forget_all, [ Var pt_knows ]);
 
@@ -397,7 +409,7 @@ struct
     let defs = m#definitions in 
     compiled_module := Some m;
     let (Def d) = List.(nth defs ( (length defs) - 1) ) in
-    m#name ^ "_" ^ d#name, Seq [Seq !eval_funs; Seq (List.map (compile_def m) defs)]
+    d, Seq [Seq !eval_funs; Seq (List.map (compile_def m) defs)]
       
 
   let print_piccType  = Printer.print_piccType
