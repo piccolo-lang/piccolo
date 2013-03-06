@@ -13,6 +13,7 @@ open TypeRepr ;;
 open Syntax ;; 
 open ASTRepr ;;
 
+module CBackend = Backend.Make (SeqASTConstC) (SeqASTPrettyPrinterC)
 
 let env_printer def = 
   let def = definition_type_of_definition def in
@@ -39,10 +40,11 @@ print_endline (string_of_module pp) ;;
 
 (* let _ = Backend.pass pp ;; *)
 
+
 let _ =
   Printexc.record_backtrace true;
-  let c_code = Backend.compile_module pp in
-  SeqASTPrettyPrinter.print_instr_list_std [c_code]
+  let _,c_code = CBackend.compile_module pp in
+  CBackend.print_instr_list_std [c_code]
 (*
 let check_pp = checkAndInferTypes pp ;;
 

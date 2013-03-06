@@ -132,7 +132,8 @@ let pt_lock = (RecordName (pt, "lock"), mutex)
 
 let try_result = SimpleName "tryresult", try_result_enum
 let chan = SimpleName "chan", channel
-  
+
+let d_entry = Val ("0", pint)
 
 (* NULL value *)
 let null:value_t = "NULL", Sty "NULL"

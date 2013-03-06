@@ -6,7 +6,7 @@ open SeqAST
 let rec print_piccType fmt = function 
   | Sty s -> fprintf fmt "%s" s
   | Pty ("*",t) -> fprintf fmt "%a*" print_piccType t
-  | Pty (s,t) -> fprintf fmt "%s_%a" s print_piccType t
+  | Pty (s,t) -> fprintf fmt "%s%a" s print_piccType t
   | Fun (t, tl) -> 
     fprintf fmt "%a (@[ %a @])" print_piccType t 
       (print_list print_piccType ", ") tl
@@ -38,6 +38,8 @@ and print_expr fmt = function
       (print_list print_expr ", ") args
 
 let rec print_instr fmt = function
+  | Comment str ->
+      fprintf fmt "/* %s */@\n" str
   | Switch (e, il) -> 
     fprintf fmt "switch(%a){@\n@[<hov 3>%a@]@\n}" 
       print_expr e (print_list_eol print_instr "") il
@@ -104,6 +106,20 @@ let rec print_instr fmt = function
     (print_list_eol' print_instr "") il
     print_expr e
       
+
+let print_main nb_th entry_point fmt i =
+  let inc_list = 
+    ["#include <runtime.h>";
+     "#include <pi_thread_repr.h>";
+     "#include <commit_repr.h>";
+     "#include <value.h>"]
+  in
+  Format.fprintf fmt
+    "%a@\n@\n@\n@\n%a@\n@\n@\n@\nvoid main(){ PICC_main(%d, %s); }"
+    PrintUtils.(print_list_eol print_string "") inc_list
+    print_instr i nb_th entry_point
+    
+
 let print_instr_list_std il =
   set_margin 150;
   List.iter (fun i -> Format.printf "%a@\n" print_instr i) il
