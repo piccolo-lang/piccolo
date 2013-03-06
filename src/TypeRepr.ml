@@ -4,7 +4,7 @@
   Representation of types
 
 *)
-(** This module defines representation of types interfaces defined in Types *)
+(** This module defines representation of types interfaces defined in Types. *)
 
 open Utils;; 
 open Types;;

@@ -57,7 +57,7 @@
 moduleDef: moduleDeclaration definitions EOF { makeModule $1 $2 }
 
 moduleDeclaration :
- | MODULE moduleID { current_module := $2; $2 }
+| MODULE moduleID { current_module := $2; $2 }
 
 moduleID: 
 | IDENT { $1 }

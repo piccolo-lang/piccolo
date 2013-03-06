@@ -1,4 +1,10 @@
+(* module Backend
+   ---------------
 
+   Backend
+
+*)
+(** This module defines the back end part of the compiler. *)
 
 module Make (Consts : SeqAST.Consts) (Printer: SeqAST.PrettyPrinter) =
 struct

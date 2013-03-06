@@ -4,7 +4,7 @@
    Type checking and (simple) inference
 
 *)
-(** this module executes a type checking pass used in MiddleEnd *)
+(** this module executes a type checking pass used in MiddleEnd. *)
 
 open Utils;;
 open Types;;

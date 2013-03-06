@@ -4,7 +4,7 @@
    Tests of Typing module
 
 *)
-(** Various tests for the Typing module *)
+(** Various tests for the Typing module. *)
 
 open Types;;  
 open TypeRepr;; 

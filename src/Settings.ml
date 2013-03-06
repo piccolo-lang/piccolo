@@ -1,4 +1,10 @@
-(* Prepare for parsing the command line. *)
+(* module Settings
+   -------------
+
+  Various possible settings for the command line
+
+*)
+(** Prepare the option and filename for parsing the command line. *)
 
 let filename = ref None
 let insert name = filename := Some name
@@ -17,11 +23,9 @@ let usage =
   Printf.sprintf "Usage: %s <options> <pithread filename>" Sys.argv.(0)
 
 (* Parse the command line. *)
-
 let () = Arg.parse options insert usage
 
 (* Export the settings. *)
-
 let filename =
   match !filename with
   | None ->
