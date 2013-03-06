@@ -38,7 +38,7 @@ let pc_label = Sty "PICC_Label"
 
 let commit_list = Sty "PICC_CommitList"
 
-let knows_set = (Sty "PICC_KnownSet")
+let knows_set = pointer (Sty "PICC_KnownSet")
 (* typedef struct _KnownSet* PICC_KnownSet; -> knownset already a pointer *)
 
 
