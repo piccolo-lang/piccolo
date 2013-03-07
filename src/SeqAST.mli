@@ -118,7 +118,8 @@ sig
   val create_bool: bool -> expr
   val create_int: int -> expr
   val create_string : string -> expr
-    (* val create_tuple *)
+  (* val create_tuple *)
+  val create_prim: Syntax.value Syntax.prim_value_type -> expr
     
   val copy_value: varDescr
   val bool_of_boolval: varDescr

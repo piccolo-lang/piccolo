@@ -65,7 +65,7 @@ struct
     | VString vt -> CallProc (copy_value, [Var pt_val; create_string vt#toString])
     | VTuple _ -> failwith "TODO compile_value VTuple"
     | VVar vt -> CallProc (copy_value, [Var pt_val; Var (pt_env vt#index)])
-    | VPrim _ -> failwith "TODO compile_value VPrim"
+    | VPrim v -> CallProc (copy_value, [Var pt_val; create_prim v])
       
   and compile_end status =
     Seq [

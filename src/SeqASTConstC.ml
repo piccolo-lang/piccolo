@@ -105,9 +105,32 @@ let make_false  = makeFun "PICC_create_bool_value" pt_bool [prim_bool]
 let make_int    = makeFun "PICC_create_int_value" pt_int [prim_int]
 let make_string = makeFun "PICC_create_string_value" pt_string [prim_string]
 
+let rec make_list_n el n = 
+  if n = 0 then 
+    []
+  else 
+    el::(make_list_n el (n - 1)) 
+let procprim = Hashtbl.create 2;;
+
+(*Hashtbl.add procprim "#core/io:print" "print_value_infos"*)
+Hashtbl.add procprim "#core/arith:add" "PICC_Int_add"
+
+let make_prim p = makeFun (Hashtbl.find procprim ("#" ^ p#moduleName ^ ":" ^ p#primName)) 
+  pt_value (make_list_n pt_value p#arity) 
+
 let create_bool = fun b -> CallFun (make_false, [Val (string_of_bool b, prim_bool)])
 let create_int = fun n -> CallFun (make_int, [Val (string_of_int n, prim_int) ])
 let create_string = fun str -> CallFun (make_string, [Val (str, prim_string) ])
+
+let expr_of_value v = 
+  match v with
+    | Syntax.VTrue _ -> Val ("true", prim_bool)
+    | Syntax.VFalse _ -> Val ("false", prim_bool)
+    | Syntax.VInt i -> Val (string_of_int i#toVal, prim_int)
+    | Syntax.VString s -> Val (s#toString, prim_string)
+    | _ -> failwith "expr_of_value rest not yet implemented"
+
+let create_prim = fun p -> CallFun ((make_prim p), List.map expr_of_value p#args)
 
 let copy_value = makeFun "PICC_copy_value" prim_bool [pt_value; pt_value]
 
@@ -229,3 +252,9 @@ let p_inc v = Assign (v, (Op (Sum, Var v, Val ("1", prim_int))))
 let p_dec v = Assign (v, (Op (Minus, Var v, Val ("1", prim_int))))
 
 let return_void = Return (Val ("", void))
+
+let rec make_list_n el n = 
+  if n = 0 then 
+    []
+  else 
+    el::(make_list_n el (n - 1)) 
