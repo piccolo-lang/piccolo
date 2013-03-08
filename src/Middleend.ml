@@ -104,6 +104,7 @@ object(self)
 		    | None -> d#extendEnv a#variable;
 		    | Some _ -> ()
 		 );
+		 Printf.printf "\nesize new : %s "a#variable ;
 		 newVar <- (a#variable)::newVar; 
 		 (* we add a in the list of new variables *)
 		 env @ [a#variable]
@@ -141,7 +142,7 @@ object(self)
   method inAction env m d p a = 
     (* If the variable is one of the new variables met in the top->bottom, we add it *)
     if (List.mem a#variable newVar) then ( 
-      newVar <- List.filter (fun v -> v != a#variable) newVar;
+      newVar <- List.filter (fun v -> v <> a#variable) newVar;
       1)
     else (
       0) 
@@ -150,9 +151,9 @@ object(self)
   method newAction_val env m d p a = ()
   method newAction env m d p a = 
     if (List.mem a#variable newVar) then ( 
-      newVar <- List.filter (fun v -> v != a#variable) newVar;
+      newVar <- List.filter (fun v -> v <> a#variable) newVar;
       1 )
-    else (
+    else ( 
       0)
   method spawnAction_val env m d p a = env
   method spawnAction env m d p a rs = 0
@@ -161,7 +162,7 @@ object(self)
   method letAction_val env m d p a = env
   method letAction env m d p a r =
     if (List.mem a#variable newVar) then ( 
-      newVar <- List.filter (fun v -> v != a#variable) newVar;
+      newVar <- List.filter (fun v -> v <> a#variable) newVar;
       1 )
     else (
       0)
@@ -279,23 +280,27 @@ end
 
 (** Pass computing the max number of channels. The value is stored in each definitions. *) 
 class channel_pass (n:int) : [string list, int] ASTUtils.fold_node = 
+  let lookup env v =
+    let rec aux env n = match env with
+      | [] -> None
+      | w::env' -> if v=w then Some n else aux env' (n+1)
+    in aux env 0
+  in
 object(self)
-  
   val mutable calledDefs = []
-
+  val mutable newChan = []
   (* config *)
   method verbosity = n
   method echo vn str = if vn<=n then print_string str
   method echoln vn str = if vn<=n then print_endline str
-    
   (* module *)
   method moduleDef_val m = []
   method moduleDef m nbchans =
     list_max nbchans 
-
   (* definitions *)
   method definition_val _ m (d:definition_type) =
     calledDefs <- [];
+    newChan <- [];
     self#echoln 3 ("\n[Channel_pass_DEF] Start : " ^ (d#name));
     let chans = List.fold_left (fun acc (name, typ) -> 
 				  match typ with
@@ -322,15 +327,21 @@ object(self)
     self#echoln 3 ("\n[Channel_pass_DEF] finished in Definition: " ^
 		     d#name ^ " ==> computed channel size = " ^ (string_of_int res)) ;
     res
-
   (* processes *)
   method choice_val chan_env m d p = chan_env
   method choice chan_env m d p nbchans = list_max nbchans
-
-  method branch_val chan_env (m:module_type) (d:definition_type) (p:process choice_process_type) (i:int) (b:process prefix_process_type) = chan_env
+  method branch_val chan_env (m:module_type) (d:definition_type) (p:process choice_process_type) (i:int) (b:process prefix_process_type) = 
+    match b#action with
+      | New a ->
+	  (match (lookup chan_env a#variable) with
+	     | None -> 
+		 newChan <- a#variable::newChan;
+		 chan_env @ [a#variable]
+	     | Some n -> chan_env)
+      | _ -> chan_env
+	    
   method branch chan_env m d p i b s1 s2 s3 = 
     s1+s2+s3
-
   method call_val chan_env m d p = chan_env
   method call chan_env m d p _ = 
     let Def(def_called) = try
@@ -340,10 +351,8 @@ object(self)
     let nbchan_called = def_called#nbChannels in
     calledDefs <- nbchan_called::calledDefs;
     0
-
   method term_val chan_env m d p = ()
   method term chan_env m d p = 0
-
   (* actions *)
   method outAction_val chan_env m d p a = chan_env
   method outAction chan_env m d p a r = 0
@@ -353,8 +362,11 @@ object(self)
   method tauAction chan_env m d p a = 0
   method newAction_val chan_env m d p a = ()
   method newAction chan_env m d p a = 
-    if (List.mem a#variable chan_env) then 0 
-    else 1
+    if (List.mem a#variable newChan) then ( 
+      newChan <- List.filter (fun v -> v <> a#variable) newChan;
+      1 )
+    else (
+      0)
   method spawnAction_val chan_env m d p a = chan_env
   method spawnAction chan_env m d p a rs = 0
   method primAction_val chan_env m d p a = chan_env
@@ -382,21 +394,18 @@ end
 (** Pass computing the max number of branchs in a choice. The value is stored in each definitions. *) 
 class choice_pass (n:int) : [unit, int] ASTUtils.fold_node = 
 object(self)
-  
   (* This list contains the new variables we might run into while walking through the tree. It doesn't contain the variables given as parameters of definitions, only the ones met in Let, In, and New. *)
   val mutable calledDefs = []
+  (* Contains the maximum choice. *)
   val mutable currentMax = 0
-
   (* config *)
   method verbosity = n
   method echo vn str = if vn<=n then print_string str
   method echoln vn str = if vn<=n then print_endline str
-    
   (* module *)
   method moduleDef_val m = ()
   method moduleDef m nbchoice =
     list_max nbchoice
-
   (* definitions *)
   method definition_val _ m (d:definition_type) =
     self#echoln 2 ("\n[Choix_pass_DEF] Start : " ^ (d#name));
@@ -413,7 +422,6 @@ object(self)
     self#echoln 2 (d#name ^ " => computed max choice = " ^ (string_of_int res)) ;
     d#setNbChoiceMax res;
     res
-
   (* processes *)
   method choice_val _ m d p = ()
   method choice _ m d p nbchoice = 
@@ -421,7 +429,6 @@ object(self)
       currentMax <- List.length nbchoice;
       List.length nbchoice)
     else currentMax
-
   method branch_val _ (m:module_type) (d:definition_type) (p:process choice_process_type) (i:int) (b:process prefix_process_type) =
     ()
   method branch _ m d p i b s1 s2 s3 = 
@@ -437,7 +444,6 @@ object(self)
     0
   method term_val _ m d p = () 
   method term _ m d p = 0
-
   (* actions *)
   method outAction_val _ m d p a = ()
   method outAction _ m d p a r = 0
@@ -453,7 +459,6 @@ object(self)
   method primAction _ m d p a rs = 0
   method letAction_val _ m d p a = ()
   method letAction _ m d p a r = 0
-
   (* value *)
   method trueValue_val _ m d p t v = ()
   method trueValue _ m d p t v = 0
