@@ -4,16 +4,22 @@
    Middleend passes
 
 *)
-(** This module defines the middle end part of the compiler. *)
+
+(** This module defines the middle end part of the compiler. Four passes are computed :
+    - esize -> compute the maximum environment size
+    - csize -> compute the maximum commitment size
+    - channel_max -> compute the maximum number of channels
+    - choice_max -> compute the maximum number of branches in each choice process and return the maximum value
+*)
 
 open Utils;;
 open Syntax;;
 open Typing;;
 
 (** Representation of a [string list,int] fold_node. 
-    Compute esize and attribute index *)
+    Compute esize and attribute index to each variable. *)
 
-class env_compute_pass (n:int) : [string list, int] ASTUtils.fold_node =
+class env_size_pass (n:int) : [string list, int] ASTUtils.fold_node =
   let lookup env v =
     let rec aux env n = match env with
       | [] -> None
@@ -24,6 +30,8 @@ object(self)
   
   (* This list contains the new variables we might run into while walking through the tree. It doesn't contain the variables given as parameters of definitions, only the ones met in Let, In, and New. *)
   val mutable newVar = []
+  (* This list contains the esizes of the called definitions. *)
+  val mutable calledDefs = []
 
   (* config *)
   method verbosity = n
@@ -33,18 +41,34 @@ object(self)
   (* module *)
   method moduleDef_val m = []
   method moduleDef m esizes =
-    self#echoln 1 ("\n[ESIZE_MODULE] env pass finished in Module: " ^ m#name);
+    self#echoln 2 ("\n[ESIZE_MODULE] env pass finished in Module: " ^ m#name);
     list_max esizes 
 
   (* definitions *)
   method definition_val _ m (d:definition_type) =
     self#echoln 2 ("\n[ESIZE_DEF] Start : " ^ (d#name) ^ " env start : " );
-    d#env
+    calledDefs <- [];
+    newVar <- [];
+    let (env, _) = List.split d#params in (* the start env contains only the parameters of the def *)
+    env
   method definition _ m d esize =
-    self#echoln 2 ("\n[ESIZE_DEF] env pass finished in Definition: " ) ;
-    self#echoln 2 (d#name ^ " ==> computed env size = " ^ (string_of_int esize)) ;
-    d#setEsize esize;
-    esize
+    (* Retrieve the maximum esize of the defs called *)
+    let max_called = 
+      List.fold_left (fun max esize_def -> 
+	if esize_def > max then esize_def else max)
+	0 calledDefs in
+    let esize' = d#arity + esize in
+    let res = if (max_called > esize')
+      then max_called
+      else esize'
+    in
+    self#echoln 1 ("\n[ESIZE_DEF] env pass finished in Definition: " ^
+		      d#name ^ " ==> computed env size = " ^ (string_of_int res) ^
+		      "\nmax_called = " ^ (string_of_int max_called) ^ 
+		      "\nesize' = " ^ (string_of_int esize') ^
+		      "\nmax_called = " ^ (string_of_int max_called)) ;
+    d#setEsize res;
+    res
 
   (* processes *)
   method choice_val env m d p = env
@@ -57,9 +81,14 @@ object(self)
 	     | None -> () (* an error will be return by the typing pass *)
 	     | Some n -> a#setChannelIndex n);
 	  (match (lookup env a#variable) with
-	     | None -> (a#setVariableIndex (List.length env)) ;
-		 d#extendEnv a#variable;
-		 newVar <- (a#variable)::newVar; (* we add a in the list of new variables *)
+	     | None -> 
+		 (match (lookup d#env a#variable) with
+		    | None -> (a#setVariableIndex (List.length d#env)) ;
+			d#extendEnv a#variable
+		    | Some _ -> ()
+		 );
+		 newVar <- (a#variable)::newVar; 
+		 (* we add a in the list of new variables *)
 		 env @ [a#variable]
 	     | Some n -> a#setVariableIndex n ; env)
       | Output a ->
@@ -71,19 +100,26 @@ object(self)
       | New a ->
 	  (match (lookup env a#variable) with
 	     | None -> a#setVariableIndex (List.length env) ;
-		 d#extendEnv a#variable; 
+		 (match (lookup d#env a#variable) with
+		    | None -> d#extendEnv a#variable;
+		    | Some _ -> ()
+		 );
 		 newVar <- (a#variable)::newVar; 
+		 (* we add a in the list of new variables *)
 		 env @ [a#variable]
 	     | Some n -> a#setVariableIndex n ; env)	    
       | Let a ->  (match (lookup env a#variable) with
 		     | None -> a#setVariableIndex (List.length env) ;
 		       newVar <- (a#variable)::newVar;
-		       d#extendEnv a#variable;
+		       (match (lookup d#env a#variable) with
+			  | None -> d#extendEnv a#variable;
+			  | Some _ -> ()
+		       );
 		       env @ [a#variable]
 		     | Some n -> a#setVariableIndex n ; env)
       | _ -> env
   method branch env m d p i b s1 s2 s3 = 
-    self#echoln 3 ("\nBRANCH : " ^ (string_of_int (s1)) ^  (string_of_int (s2)) ^ (string_of_int (s3)));
+    self#echoln 4 ("\nBRANCH : " ^ (string_of_int (s1)) ^  (string_of_int (s2)) ^ (string_of_int (s3)));
     s1+s2+s3
   method call_val env m d p = env
   method call env m d p _ = 
@@ -92,12 +128,12 @@ object(self)
     with Not_found -> failwith "undefined definition called...(calcul esize)"
     in (* sould never happen *)
     let esize_called = def_called#esize in
-    if (esize_called > (List.length env)) then (esize_called - (List.length newVar))
-    else ((List.length env) - (List.length newVar)) 
-  (* We remove the variables met through the top->bottom , they will be added int the bottom->top *)
-  method term_val env m d p = ()
-  method term env m d p = ((List.length env) - (List.length newVar))
+    calledDefs <- esize_called::calledDefs;
+    0
 
+  method term_val env m d p = ()
+  method term env m d p = 0
+  
   (* actions *)
   method outAction_val env m d p a = env
   method outAction env m d p a r = 0
@@ -153,9 +189,387 @@ object(self)
 end
 
 
+(** Pass computing the max number of commitments. The value is stored in each definitions. *)
+class commitment_size_pass (n:int) : [unit, int] ASTUtils.fold_node = 
+object(self)
+  
+  (* This list contains the new variables we might run into while walking through the tree. It doesn't contain the variables given as parameters of definitions, only the ones met in Let, In, and New. *)
+  val mutable calledDefs = []
+    
+  (* config *)
+  method verbosity = n
+  method echo vn str = if vn<=n then print_string str
+  method echoln vn str = if vn<=n then print_endline str
+    
+  (* module *)
+  method moduleDef_val m = ()
+  method moduleDef m nbCommits =
+    list_max nbCommits
+
+  (* definitions *)
+  method definition_val _ m (d:definition_type) =
+    calledDefs <- [];
+    self#echoln 2 ("\n[Commits_pass_DEF] Start : " ^ (d#name));
+    ()
+  method definition _ m d nbcommits=
+    let max_of_called_defs = 
+      List.fold_left (fun acc nbcommits_def -> max nbcommits_def acc) 0 calledDefs in
+    let res = max max_of_called_defs nbcommits in 
+    self#echoln 2 ("\n[Commits_pass_DEF] pass finished in Definition: " ^
+		     d#name ^ " => computed csize = " ^ (string_of_int res)) ;
+    d#setCsize res;
+    res
+
+  (* processes *)
+  method choice_val _ m d p = ()
+  method choice _ m d p csizes = list_max csizes
+
+  method branch_val _ (m:module_type) (d:definition_type) (p:process choice_process_type) (i:int) (b:process prefix_process_type) = ()
+  method branch _ m d p i b s1 s2 s3 = 
+    s1+s2+s3
+
+  method call_val _ m d p = ()
+  method call _ m d p _ = 
+    let Def(def_called) = try
+      m#lookupDef (p#defName)
+    with Not_found -> failwith "undefined definition called...(calcul csize)"
+    in (* sould never happen *)
+    let csize_called = def_called#csize in
+    calledDefs <- csize_called::calledDefs;
+    0
+  method term_val _ m d p = ()
+  method term _ m d p = 0
+
+  (* actions *)
+  method outAction_val _ m d p a = ()
+  method outAction _ m d p a r = 1
+  method inAction_val _ m d p a = ()
+  method inAction _ m d p a = 1
+  method tauAction_val _ m d p a =  ()
+  method tauAction _ m d p a = 0
+  method newAction_val _ m d p a = ()
+  method newAction _ m d p a = 0
+  method spawnAction_val _ m d p a = ()
+  method spawnAction _ m d p a rs = 0
+  method primAction_val _ m d p a = ()
+  method primAction _ m d p a rs = 0
+  method letAction_val _ m d p a = ()
+  method letAction _ m d p a r = 0
+
+  (* value *)
+  method trueValue_val _ m d p t v = ()
+  method trueValue _ m d p t v = 0
+  method falseValue_val _ m d p t v = ()
+  method falseValue _ m d p t v = 0
+  method intValue_val _ m d p t v = ()
+  method intValue _ m d p t v = 0
+  method stringValue_val _ m d p t v = ()
+  method stringValue _ m d p t v = 0
+  method tupleValue_val _ m d p t v = ()
+  method tupleValue _ m d p t v rs = 0
+  method varValue_val _ m d p t v = ()
+  method varValue _ m d p t v = 0
+  method primValue_val _ m d p t v = ()
+  method primValue _ m d p t v rs = 0
+end
+
+
+
+
+
+(** Pass computing the max number of channels. The value is stored in each definitions. *) 
+class channel_pass (n:int) : [string list, int] ASTUtils.fold_node = 
+object(self)
+  
+  val mutable calledDefs = []
+
+  (* config *)
+  method verbosity = n
+  method echo vn str = if vn<=n then print_string str
+  method echoln vn str = if vn<=n then print_endline str
+    
+  (* module *)
+  method moduleDef_val m = []
+  method moduleDef m nbchans =
+    list_max nbchans 
+
+  (* definitions *)
+  method definition_val _ m (d:definition_type) =
+    calledDefs <- [];
+    self#echoln 3 ("\n[Channel_pass_DEF] Start : " ^ (d#name));
+    let chans = List.fold_left (fun acc (name, typ) -> 
+				  match typ with
+				    | Types.TChan(a) -> name::acc
+				    | _ -> acc 
+    ) [] d#params in
+    chans
+  method definition _ m d nbchan =
+    let nbchanTotal = (List.length 
+			(List.fold_left (fun acc (name, typ) -> 
+			  match typ with
+			    |Types.TChan (a) -> name::acc
+			    |_ -> acc) [] d#params) 
+		      + nbchan) in
+    let max_called = 
+      List.fold_left (fun max nbchan_def -> 
+	if nbchan_def > max then nbchan_def else max) 
+	0 calledDefs in
+    let res = if (max_called > nbchanTotal) 
+      then max_called
+      else nbchanTotal
+    in
+    d#setNbChannels res;
+    self#echoln 3 ("\n[Channel_pass_DEF] finished in Definition: " ^
+		     d#name ^ " ==> computed channel size = " ^ (string_of_int res)) ;
+    res
+
+  (* processes *)
+  method choice_val chan_env m d p = chan_env
+  method choice chan_env m d p nbchans = list_max nbchans
+
+  method branch_val chan_env (m:module_type) (d:definition_type) (p:process choice_process_type) (i:int) (b:process prefix_process_type) = chan_env
+  method branch chan_env m d p i b s1 s2 s3 = 
+    s1+s2+s3
+
+  method call_val chan_env m d p = chan_env
+  method call chan_env m d p _ = 
+    let Def(def_called) = try
+      m#lookupDef (p#defName)
+    with Not_found -> failwith "undefined definition called...(calcul nbchan)"
+    in (* sould never happen *)
+    let nbchan_called = def_called#nbChannels in
+    calledDefs <- nbchan_called::calledDefs;
+    0
+
+  method term_val chan_env m d p = ()
+  method term chan_env m d p = 0
+
+  (* actions *)
+  method outAction_val chan_env m d p a = chan_env
+  method outAction chan_env m d p a r = 0
+  method inAction_val chan_env m d p a = ()
+  method inAction chan_env m d p a = 0
+  method tauAction_val chan_env m d p a =  ()
+  method tauAction chan_env m d p a = 0
+  method newAction_val chan_env m d p a = ()
+  method newAction chan_env m d p a = 
+    if (List.mem a#variable chan_env) then 0 
+    else 1
+  method spawnAction_val chan_env m d p a = chan_env
+  method spawnAction chan_env m d p a rs = 0
+  method primAction_val chan_env m d p a = chan_env
+  method primAction chan_env m d p a rs = 0
+  method letAction_val chan_env m d p a = chan_env
+  method letAction chan_env m d p a r = 0
+  (* value *)
+  method trueValue_val chan_env m d p t v = ()
+  method trueValue chan_env m d p t v = 0
+  method falseValue_val chan_env m d p t v = ()
+  method falseValue chan_env m d p t v = 0
+  method intValue_val chan_env m d p t v = ()
+  method intValue chan_env m d p t v = 0
+  method stringValue_val chan_env m d p t v = ()
+  method stringValue chan_env m d p t v = 0
+  method tupleValue_val chan_env m d p t v = chan_env
+  method tupleValue chan_env m d p t v rs = 0
+  method varValue_val chan_env m d p t v = ()
+  method varValue chan_env m d p t v = 0
+  method primValue_val chan_env m d p t v = chan_env
+  method primValue chan_env m d p t v rs = 0
+end
+
+
+(** Pass computing the max number of branchs in a choice. The value is stored in each definitions. *) 
+class choice_pass (n:int) : [unit, int] ASTUtils.fold_node = 
+object(self)
+  
+  (* This list contains the new variables we might run into while walking through the tree. It doesn't contain the variables given as parameters of definitions, only the ones met in Let, In, and New. *)
+  val mutable calledDefs = []
+  val mutable currentMax = 0
+
+  (* config *)
+  method verbosity = n
+  method echo vn str = if vn<=n then print_string str
+  method echoln vn str = if vn<=n then print_endline str
+    
+  (* module *)
+  method moduleDef_val m = ()
+  method moduleDef m nbchoice =
+    list_max nbchoice
+
+  (* definitions *)
+  method definition_val _ m (d:definition_type) =
+    self#echoln 2 ("\n[Choix_pass_DEF] Start : " ^ (d#name));
+    calledDefs <- [];
+    currentMax <- 0;
+    ()
+  method definition _ m d nbchoice =
+    let max_called = 
+      List.fold_left (fun max nbchoice_def -> 
+			if nbchoice_def > max then nbchoice_def else max) 
+	0 calledDefs in
+    let res = if max_called > currentMax then max_called else currentMax in
+    self#echoln 2 ("\n[Choice_pass_DEF] pass finished in Definition: " ) ;
+    self#echoln 2 (d#name ^ " => computed max choice = " ^ (string_of_int res)) ;
+    d#setNbChoiceMax res;
+    res
+
+  (* processes *)
+  method choice_val _ m d p = ()
+  method choice _ m d p nbchoice = 
+    if (List.length nbchoice > currentMax) then (
+      currentMax <- List.length nbchoice;
+      List.length nbchoice)
+    else currentMax
+
+  method branch_val _ (m:module_type) (d:definition_type) (p:process choice_process_type) (i:int) (b:process prefix_process_type) =
+    ()
+  method branch _ m d p i b s1 s2 s3 = 
+    1 (*histoire de retourner une valeur pour la liste *)
+  method call_val _ m d p = ()
+  method call _ m d p _ = 
+    let Def(def_called) = try
+      m#lookupDef (p#defName)
+    with Not_found -> failwith "undefined definition called...(calcul nbchan)"
+    in (* sould never happen *)
+    let nbchoice_called = def_called#nbChoiceMax in
+    calledDefs <- nbchoice_called::calledDefs;
+    0
+  method term_val _ m d p = () 
+  method term _ m d p = 0
+
+  (* actions *)
+  method outAction_val _ m d p a = ()
+  method outAction _ m d p a r = 0
+  method inAction_val _ m d p a = ()
+  method inAction _ m d p a = 0
+  method tauAction_val _ m d p a =  ()
+  method tauAction _ m d p a = 0
+  method newAction_val _ m d p a = ()
+  method newAction _ m d p a = 0
+  method spawnAction_val _ m d p a = ()
+  method spawnAction _ m d p a rs = 0
+  method primAction_val _ m d p a = ()
+  method primAction _ m d p a rs = 0
+  method letAction_val _ m d p a = ()
+  method letAction _ m d p a r = 0
+
+  (* value *)
+  method trueValue_val _ m d p t v = ()
+  method trueValue _ m d p t v = 0
+  method falseValue_val _ m d p t v = ()
+  method falseValue _ m d p t v = 0
+  method intValue_val _ m d p t v = ()
+  method intValue _ m d p t v = 0
+  method stringValue_val _ m d p t v = ()
+  method stringValue _ m d p t v = 0
+  method tupleValue_val _ m d p t v = ()
+  method tupleValue _ m d p t v rs = 0
+  method varValue_val _ m d p t v = ()
+  method varValue _ m d p t v = 0
+  method primValue_val _ m d p t v = ()
+  method primValue _ m d p t v rs = 0
+end
+
+
+
+(** Computing passes *)
+
+(* Debuggage de esize et csize *)
+let print_sizes m nbpass =
+  print_string ("\n passe : " ^ (string_of_int nbpass));
+  let defs = List.map (fun (Def (def)) -> def) m#definitions in
+  List.iter (fun def -> print_string (
+	       "\n def: " ^ (def#name) ^ 
+		 " esize : " ^ (string_of_int (def#esize)) ^ 
+		 " csize : " ^ (string_of_int (def#csize)) ^ 
+		 " nbchannels : " ^ (string_of_int (def#nbChannels)) ^
+		 " nbchoices : " ^ (string_of_int (def#nbChoiceMax)))) defs
+
+(* If a def called has a higher value for esize or csize,
+   the calling def must take this value. Thus, we must find a fixpoint for the sizes
+   of each definition first. *)
+
+(* In order to reduce the number of passes, we could order the defs in module in a 
+   topological order -> then if there is no recursive call, one pass is enough. 
+   If there are recursive calls two passes are enough.
+   The defs are currently in a Hashtbl, so ... ? *)
+
+(* fixpoint : if definition are called at the end of a definition, we must check if the definition
+   has a higher value for esize, csize, nbchannel and nbchoicemax. 
+   Thus, we compute the passes until the esize, csize, channel and choice compute the same value twice in a row. *)
+
+let fixpoint m esize_pass csize_pass channel_pass choice_pass verbosity =
+  let nb_pass = ref 0 in
+  let rec fix_rec esizes csizes channels choices continue =
+    if continue then (
+      incr nb_pass;
+      ignore (ASTUtils.module_fold m 
+		(ASTUtils.fold_compose channel_pass 
+		   (ASTUtils.fold_compose choice_pass
+		      (ASTUtils.fold_compose csize_pass esize_pass))));
+      let Module(m') = m in
+      if (verbosity > 0) then print_sizes m' !nb_pass;
+      let defs = List.map (fun (Def (def)) -> def) m'#definitions in
+      let (esizes', csizes', channels', choices') = 
+	List.fold_left (fun (e, c, chan, choice) def -> 
+	  (e + def#esize, c + def#csize, chan + def#nbChannels , choice + def#nbChoiceMax))
+	  (0, 0, 0, 0) defs in
+      let continue = not((esizes = esizes') && (csizes = csizes') && 
+	  (channels = channels') && (choices = choices')) in
+      fix_rec esizes' csizes' channels' choices' continue
+    )
+    else
+      ()
+  in
+  let Module(m') = m in
+  let defs = List.map (fun (Def (def)) -> def) m'#definitions in
+  let (esizes, csizes, channels, choices) = 
+    List.fold_left ( fun (e, c, chan, choice) def -> 
+      (e + def#esize, c + def#csize, chan + def#nbChannels, choice + def#nbChoiceMax)) 
+      (0, 0, 0, 0) defs in
+  fix_rec esizes csizes channels choices true
+
+
+let first_pass m verbosity = 
+  let esize_pass = new env_size_pass verbosity in
+  let csize_pass = new commitment_size_pass verbosity in
+  let channel_pass = new channel_pass verbosity in
+  let choice_pass = new choice_pass verbosity in
+  fixpoint m esize_pass csize_pass channel_pass choice_pass verbosity;
+  ASTUtils.module_fold m
+    (ASTUtils.fold_compose csize_pass
+       (ASTUtils.fold_compose
+          (esize_pass) 
+          (typing_pass 0)))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 (** Representation of a iter_fold_node. Compute and set the Csize value in
     each definition. *)
+
+(* DEPRECATED! now use commitment_size_pass. *)
 class csize_compute_pass (n:int) : ASTUtils.iter_fold_node =
 object(self)
   inherit ASTUtils.abstract_iter_fold_node_repr n
@@ -174,8 +588,8 @@ object(self)
   (* modules *)    
   method moduleDef m rs = self#moduleDef_post m
   method moduleDef_val m = self#moduleDef_pre m 
-  method moduleDef_pre m = self#echoln 2 ("\n[CSIZE_MODULE_START] csize pass in Module: " ^ m#name)
-  method moduleDef_post m = self#echoln 2 ("\n[CSIZE_MODULE_END] csize pass in Module: " ^ m#name)
+  method moduleDef_pre m = ()
+  method moduleDef_post m = ()
     
   (* definition *)
   method definition v m d r = self#definition_post m d
@@ -185,11 +599,9 @@ object(self)
     let csize =
       if (fst _call_breaker) then (snd _call_breaker) else(
 	match _current_choice_pile with
-	  |[] -> failwith "probleme pile csize1"
 	  |v::[] -> v
-	  |v::v2::l -> 
-	     Printf.printf "\nCSIZE %d %d" v v2;
-	      failwith "probleme pile csize2")
+	  | _ -> failwith "csize issue!" (*shouldn't happen*)
+      )
     in
     d#setCsize csize
     
@@ -213,8 +625,6 @@ object(self)
       m#lookupDef (p#defName)
     with Not_found -> failwith "undefined definition called...(calcul csize)"
     in (* should never happen *)
-    Printf.printf "CSIZE CALL in %s = current : %d , called : %d" 
-      d#name d#csize def_called#csize;
     if ((def_called#csize > 0) && (d#csize < def_called#csize)) then(
       if ((fst _call_breaker) && ((snd _call_breaker) < def_called#csize)) then 
 	_call_breaker <- (true, def_called#csize)
@@ -340,189 +750,8 @@ object(self)
 end
 
 
-(** Computing passes *)
-
-(* Debuggage de esize et csize *)
-let print_sizes m nbpass =
-  print_string ("\n passe : " ^ (string_of_int nbpass));
-  let defs = List.map (fun (Def (def)) -> def) m#definitions in
-  List.iter (fun def -> print_string (
-	       "\n def: " ^ (def#name) ^ 
-		 " esize : " ^ (string_of_int (def#esize)) ^ 
-		 " csize : " ^ (string_of_int (def#csize)))) defs
-
-(* If a def called has a higher value for esize or csize,
-   the calling def must take this value. Thus, we must find a fixpoint for the sizes
-   of each definition first. *)
-
-(* In order to reduce the number of passes, we could order the defs in module in a 
-   topological order -> then if there is no recursive call, one pass is enough. 
-   If there are recursive calls two passes are enough.
-   The defs are currently in a Hashtbl, so ... ? *)
-
-let fixpoint_sizes m esize_pass csize_pass =
-  let nb_pass = ref 0 in
-  let rec fix_rec esizes csizes continue =
-    if continue then (
-      incr nb_pass;
-      ignore (ASTUtils.module_fold m (ASTUtils.fold_seq csize_pass esize_pass));
-      let Module(m') = m in
-      print_sizes m' !nb_pass;
-      let defs = List.map (fun (Def (def)) -> def) m'#definitions in
-      let (esizes', csizes') = 
-	List.fold_left ( fun (e, c) def -> (e + (def#esize), c + (def#csize))) 
-	  (0,0) defs in
-      Printf.printf "\n INFO : esize = %d, csize = %d, esize' = %d, csize' = %d" esizes csizes esizes' csizes';
-      let continue = not((esizes = esizes') && (csizes = csizes')) in
-      fix_rec esizes' csizes' continue
-      (* the defs don't changes, and neither do the sizes*)
-    )
-    else
-      ()
-  in
-  let Module(m') = m in
-  let defs = List.map (fun (Def (def)) -> def) m'#definitions in
-  let (esizes, csizes) = 
-    List.fold_left ( fun (e, c) def -> (e+ (def#esize), c + (def#csize))) (0,0) defs in
-  fix_rec esizes csizes true
-
-let first_pass m verbosity = 
-  let esize_pass = new env_compute_pass verbosity in
-  let csize_pass = new csize_compute_pass 0 in
-  fixpoint_sizes m esize_pass csize_pass; (* recuperer esize? *)
-  (* ignore (ASTUtils.module_fold m (ASTUtils.fold_seq csize_pass esize_pass)); *)
-  ASTUtils.module_fold m
-    (ASTUtils.fold_seq csize_pass (* utilité ? *)
-       (ASTUtils.fold_compose
-          (esize_pass) (* utilité ? *)
-          (typing_pass 0)))
-
-
-
-
-(* TESTS *)
 
 
 
 
 
-
-
-(* class astCheck_pass (n:int) : [unit, unit] ASTUtils.fold_node =  *)
-(* object(self) *)
-
-(*   (\* config *\) *)
-(*   method verbosity = n *)
-(*   method echo vn str = if vn<=n then print_string str *)
-(*   method echoln vn str = if vn<=n then print_endline str *)
-(*     (\* module *\) *)
-(*   method moduleDef_val m = self#echoln n("module_val : " ^ m#toString) *)
-(*   method moduleDef m _ = self#echoln n ("module : " ^ m#toString ) *)
-(*     (\* definitions *\) *)
-(*   method definition_val _ m d = self#echoln n ("definition_val : " ^ m#toString ^ d#toString) *)
-(*   method definition _ m d _ = self#echoln n ("definition : " ^ m#toString ^ d#toString) *)
-(*     (\* processes *\) *)
-(*   method choice_val _ m d p = self#echoln n ("choice_val :" ^ m#toString ^ d#toString ^ p#toString) *)
-(*   method choice _ m d p v = self#echoln n ("choice :" ^ m#toString ^ d#toString ^ p#toString) *)
-(*   method branch_val _ (m:module_type) (d:definition_type) (p:process choice_process_type) (i:int) (b:process prefix_process_type) =  *)
-(*     match b#action with *)
-(*       | Input a -> *)
-(* 	  (match (d#lookupEnv a#channel) with *)
-(* 	     | None -> self#echoln n ("branch_val : inputnonec " ^ m#toString ^ d#toString ^ p#toString ^ b#toString ^ a#toString) *)
-(* 	     | Some n -> self#echoln n ("branch_val : inputc " ^ m#toString ^ d#toString ^ p#toString ^ b#toString ^ a#toString)); *)
-(* 	  (match (d#lookupEnv a#variable) with *)
-(* 	     | None -> self#echoln n ("branch_val : inputnonev " ^ m#toString ^ d#toString ^ p#toString ^ b#toString ^ a#toString) *)
-(* 	     | Some n -> self#echoln n ("branch_val : inputv " ^ m#toString ^ d#toString ^ p#toString ^ b#toString ^ a#toString)) *)
-(*       | Output a -> *)
-(* 	  (match (d#lookupEnv a#channel) with *)
-(* 	     | None -> self#echoln n ("branch_val : outputnone " ^ m#toString ^ d#toString ^ p#toString ^ b#toString ^ a#toString) *)
-(* 	     | Some n -> self#echoln n ("branch_val : output " ^ m#toString ^ d#toString ^ p#toString ^ b#toString ^ a#toString)) *)
-(*       | New a ->   *)
-(* 	  (match (d#lookupEnv a#variable) with *)
-(* 	     | None -> self#echoln n ("branch_val : newnone " ^ m#toString ^ d#toString ^ p#toString ^ b#toString ^ a#toString) *)
-(* 	     | Some n -> self#echoln n ("branch_val : new " ^ m#toString ^ d#toString ^ p#toString ^ b#toString ^ a#toString))	 *)
-(*       | Let a ->  (match (d#lookupEnv a#variable) with *)
-(* 		     | None -> self#echoln n ("branch_val : letnone " ^ m#toString ^ d#toString ^ p#toString ^ b#toString ^ a#toString) *)
-(* 		     | Some n -> self#echoln n ("branch_val : let " ^ m#toString ^ d#toString ^ p#toString ^ b#toString ^ a#toString)) *)
-(*       | _ -> self#echoln n ("branch_val : autre " ^ m#toString ^ d#toString ^ p#toString ^ b#toString) *)
-(*   method branch _ m d p i b s1 s2 s3 = self#echoln n ("branch : "^ m#toString ^ d#toString ^ p#toString ^ b#toString) *)
-(*   method call_val _ m d p = self#echoln n ("") *)
-(*   method call _ m d p _ = self#echoln n ("") *)
-(*   method term_val _ m d p = self#echoln n ("") *)
-(*   method term _ m d p = self#echoln n ("") *)
-(*     (\* actions *\) *)
-(*   method outAction_val _ m d p a = self#echoln n ("") *)
-(*   method outAction _ m d p a r = self#echoln n ("") *)
-(*   method inAction_val _ m d p a = self#echoln n ("") *)
-(*   method inAction _ m d p a =  *)
-(*     match (d#lookupEnv a#variable) with *)
-(*       | None -> self#echoln n ("") *)
-(*       | Some _ -> self#echoln n ("") *)
-(*   method tauAction_val _ m d p a = self#echoln n ("") *)
-(*   method tauAction _ m d p a = self#echoln n ("") *)
-(*   method newAction_val _ m d p a = self#echoln n ("") *)
-(*   method newAction _ m d p a =  *)
-(*     match (d#lookupEnv a#variable) with *)
-(*       | None -> self#echoln n ("") *)
-(*       | Some _ -> self#echoln n ("") *)
-(*   method spawnAction_val _ m d p a = self#echoln n ("") *)
-(*   method spawnAction _ m d p a rs = self#echoln n ("") *)
-(*   method primAction_val _ m d p a = self#echoln n ("") *)
-(*   method primAction _ m d p a rs = self#echoln n ("") *)
-(*   method letAction_val _ m d p a = self#echoln n ("") *)
-(*   method letAction _ m d p a r =  *)
-(*     match (d#lookupEnv a#variable) with *)
-(*       | None -> self#echoln n ("") *)
-(*       | Some _ -> self#echoln n ("") *)
-(* 	  (\* value *\) *)
-(*   method trueValue_val _ m d p t v = self#echoln n ("") *)
-(*   method trueValue _ m d p t v = self#echoln n ("") *)
-(*   method falseValue_val _ m d p t v = self#echoln n ("") *)
-(*   method falseValue _ m d p t v = self#echoln n ("") *)
-(*   method intValue_val _ m d p t v = self#echoln n ("") *)
-(*   method intValue _ m d p t v = self#echoln n ("") *)
-(*   method stringValue_val _ m d p t v = self#echoln n ("") *)
-(*   method stringValue _ m d p t v = self#echoln n ("") *)
-(*   method tupleValue_val _ m d p t v = self#echoln n ("") *)
-(*   method tupleValue _ m d p t v rs = self#echoln n ("") *)
-(*   method varValue_val _ m d p t v =  *)
-(*     match (d#lookupEnv v#name) with *)
-(*       | None -> self#echoln n ("") *)
-(*       | Some n -> self#echoln n ("") *)
-(*   method varValue _ m d p t v = self#echoln n ("") *)
-(*   method primValue_val _ m d p t v = self#echoln n ("") *)
-(*   method primValue _ m d p t v rs = self#echoln n ("") *)
-(* end *)
-
-
-
-
-
-
-
-(* il faudrait faire e_size et c_size en parallele ici avec un fold_seq et utiliser une structure pour mémoriser les defs *)
-(* dans les methodes de call on regarde dans la structure si *)
-
-(* let pass_esize m verbosity =  *)
-(*   let rec pass_recursive e_c_p = *)
-(*     ASTUtils.module_fold m (e_c_p verbosity)  *)
-(*   in  *)
-(*   pass_recursive (new env_compute_pass verbosity) *)
-
-
-
-
-(* let print_pass m verbosity =  *)
-(*   ASTUtils.module_fold m *)
-(*     (new astCheck_pass 2)  *)
-
-(* let compute_pass m verbosity =  *)
-(*   print_pass m verbosity *)
-
-
-(* let first_pass m verbosity =   *)
-(*   ASTUtils.module_fold m  *)
-(*     (ASTUtils.fold_seq (new csize_compute_pass verbosity)   *)
-(*        (ASTUtils.fold_compose  *)
-(*           (new env_compute_pass verbosity)  *)
-(*           (typing_pass verbosity))) *)

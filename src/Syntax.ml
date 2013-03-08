@@ -292,6 +292,10 @@ class type definition_type = object
   method setEsize : int -> unit
   method csize : int
   method setCsize : int -> unit
+  method nbChannels : int
+  method setNbChannels : int -> unit
+  method nbChoiceMax : int
+  method setNbChoiceMax : int -> unit
 
   method process : process
   method fetchBinderType : string -> valueType option

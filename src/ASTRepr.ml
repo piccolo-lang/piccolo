@@ -368,7 +368,9 @@ object
   val mutable _env = List.map fst ps
   val mutable _csize = -1
   val mutable _esize = -1
-  
+  val mutable _nbchans = -1
+  val mutable _nbchoice = -1
+
   method name = n
   method params = List.map (fun p -> (p#name, p#ofType)) _params
   method arity = List.length ps'
@@ -386,6 +388,10 @@ object
   method setCsize c = _csize <- c
   method esize = _esize
   method setEsize e = _esize <- e
+  method nbChannels = _nbchans
+  method setNbChannels c = _nbchans <- c
+  method nbChoiceMax = _nbchoice
+  method setNbChoiceMax c = _nbchoice <- c
   method process = p
   method fetchBinderType (b:string) =
     let rec search = function
