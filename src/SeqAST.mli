@@ -119,8 +119,13 @@ sig
   val create_int: int -> expr
   val create_string : string -> expr
   (* val create_tuple *)
-  val create_prim: Syntax.value Syntax.prim_value_type -> expr
     
+  val make_prim: string -> string -> int -> varDescr
+    
+  (* one idea would be to refactor the code so that in SeqASTConst_.ml
+     we declare only varName and the corresponding varDescr is defined 
+     in Backend.ml : it would ensure the typing
+  *)    
   val copy_value: varDescr
   val bool_of_boolval: varDescr
     
@@ -193,10 +198,24 @@ sig
   val pt_lock : varDescr
     
   val try_result : varDescr
+  val nb_disabled_name : varName
+  val ok_name : varName
+  val vl_name : varName
+
   val chan : varDescr (* tmp var used in foreach loops *) 
   val chans : varDescr (* channel set*)
-  val chans_init_value : value_t
+  val tmp_chan_name : varName
+  
+  val in_chan_name : varName
+  val outcommits_field : string
+  val in_chanx_name : varName
 
+  val out_chan_name : varName
+  val incommits_field : string
+  val newchan_name : varName
+
+  val chans_init_value : value_t
+    
   val d_entry : expr (* value of the definition entry point*)
 
   val ocommit_var : varDescr
@@ -206,6 +225,7 @@ sig
   val icommit_thread : varDescr
   val icommit_refvar : varDescr
   val icommit_thread_env_rv : varDescr
+    
 
   val args : int -> varDescr
   val child : varDescr
@@ -216,13 +236,18 @@ sig
   val child_knows : varDescr
   val child_env : int -> varDescr  
     
-  (* NULL value *)
+  (* some key values *)
   val null:value_t
+  val zero: value_t
+  val prim_false: value_t
+  val pc_label_init: value_t
 end
   
 module type PrettyPrinter =
 sig
   
+  val string_name_of_varDescr : varDescr -> string
+
   val print_piccType : Format.formatter -> piccType -> unit
     
   val print_binop : Format.formatter -> binop -> unit

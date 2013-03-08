@@ -16,24 +16,14 @@ struct
   open Printer
 
   (* This module ref is used by the spawn action to retrieve the corresponding
-     definition and some values like esize.
-     Another solution would be to add the required fields in spawn_action_type
-     => if we have another pass after the esize calculation we could switch to
-     this solution
-  *)
-    
+     definition and some values like esize. *)
+  
   let compiled_module = ref None
 
   let lookup d =
     match !compiled_module with
     | None -> failwith "No module compiled"
     | Some m -> let (Def d) = m#lookupDef d in d
-					    
-  let module_name () =
-    match !compiled_module with
-    | None -> failwith "No module compiled"
-    | Some m -> m#name
-
 					    
   let eval_funs = ref []    
   
@@ -57,17 +47,43 @@ struct
   let make_ite e i1 i2 = Ite (e, i1, i2) (* nicer declaration and indentation *)
   let make_it e i = Ite (e, i, [])
 
-  let compile_value = function 
-      (* copy_value is here used as a procedure, but it returns a bool that can be tested *)
+  class type common_prim_type = object
+    method moduleName:string
+    method primName:string
+    method arity:int
+    method args:value list
+  end
+
+  let rec compile_prim0 destination (p: common_prim_type) =
+    let f = make_prim p#moduleName p#primName p#arity in
+    let arg_l = ref [] in
+    for i = (p#arity - 1) to 0 do
+      arg_l := Var (args i) ::!arg_l
+    done;
+    let arg_l = !arg_l in
+    Bloc[
+      Declare (args p#arity);
+      Seq (List.mapi begin fun i v ->
+	Seq [compile_value v;
+	     CallProc (copy_value, [Var (args i); Var pt_val])]
+      end p#args);
+      destination f arg_l]
+      
+
+  and compile_value = function 
+      (* copy_value is here used as a procedure, 
+	 but it returns a bool that can be tested *)
     | VTrue _ -> CallProc (copy_value, [Var pt_val; create_bool true])
     | VFalse _ -> CallProc (copy_value, [Var pt_val; create_bool false])
     | VInt vt -> CallProc (copy_value, [Var pt_val; create_int vt#toVal])
     | VString vt -> CallProc (copy_value, [Var pt_val; create_string vt#toString])
     | VTuple _ -> failwith "TODO compile_value VTuple"
     | VVar vt -> CallProc (copy_value, [Var pt_val; Var (pt_env vt#index)])
-    | VPrim v -> CallProc (copy_value, [Var pt_val; create_prim v])
+    | VPrim p -> compile_prim0 (fun f arg_l -> 
+      CallProc (copy_value, [Var pt_val; CallFun (f, arg_l)])) 
+      (p :> common_prim_type)
       
-  and compile_end status =
+  let compile_end status =
     Seq [
       Comment "------compile_end---------";
       Foreach (chan,
@@ -79,11 +95,8 @@ struct
       Assign (pt_status, status);
       return_void]
 
-  and compile_wait chans =
-    (*  property : chans \inter knows.FORGET = \emptySet  
-	[TOASK] -> Maxence, fun intersection de deux ensemble
-	C guys -> gestion d'un assert ??
-    *)
+  and compile_wait =
+    (*  property : chans \inter knows.FORGET = \emptySet *)
     Seq [
       Comment "------compile_wait---------";
       Assign (pt_pc, invalid_pc);
@@ -114,11 +127,11 @@ struct
 
   let compile_try_tau = Assign (try_result, try_enabled)
     
-  let compile_try_in (action:in_action_type) chans = 
-    let in_chan = SimpleName "in_chan", channel in
-    let in_chanx = SimpleName "in_chanx", channel in
-    let ok = SimpleName "ok", commit_status_enum in
-    let vl = SimpleName "val", pt_value in
+  let compile_try_in (action:in_action_type) = 
+    let in_chan = in_chan_name, channel in
+    let in_chanx = in_chanx_name, channel in
+    let ok = ok_name, commit_status_enum in
+    let vl = vl_name, pt_value in
     let pt_env_x = pt_env action#variableIndex in
     let pt_env_c = pt_env action#channelIndex in
     let label_end_of_try = eot_label () in
@@ -168,16 +181,16 @@ struct
       	      Goto label_end_of_try]],
 	  
 	  (CallFun (commit_list_is_empty, 
-		    [Var (RecordName (in_chan, "outcommits"), commit_list)])) 
+		    [Var (RecordName (in_chan, outcommits_field), commit_list)])) 
 	end];
       Label label_end_of_try] 
   (* Label must be out of the bloc to make the c code compile*)
       
 
 
-  let compile_try_out (action:out_action_type) chans = 
-    let out_chan = SimpleName "out_chan", channel in
-    let ok = SimpleName "ok", commit_status_enum in
+  let compile_try_out (action:out_action_type) = 
+    let out_chan = out_chan_name, channel in
+    let ok = ok_name, commit_status_enum in
     let label_end_of_try = eot_label () in
     let pt_env_c = pt_env action#channelIndex in
     Seq[
@@ -213,11 +226,11 @@ struct
       	      Assign (try_result, try_enabled);
       	      Goto label_end_of_try]],
 	  (CallFun (commit_list_is_empty, 
-		    [Var (RecordName (out_chan,"incommits"), commit_list)])) end];
+		    [Var (RecordName (out_chan, incommits_field), commit_list)])) end];
 	Label label_end_of_try]
 
-  let compile_try_new (action:new_action_type) chans = 
-    let newchan = SimpleName "newchan", channel in
+  let compile_try_new (action:new_action_type) = 
+    let newchan = newchan_name, channel in
     Bloc [
       Comment "------compile_try_new---------";
       Declare newchan;
@@ -226,7 +239,7 @@ struct
       CallProc (knows_register, [Var pt_knows; Var newchan]);
       Assign (try_result, try_enabled)]
       
-  let compile_try_spawn (action:spawn_action_type) chans = 
+  let compile_try_spawn (action:spawn_action_type) = 
     let d = lookup action#defName in
 
     let args_mapper i arg =
@@ -256,29 +269,28 @@ struct
       Seq (List.mapi args_mapper action#args);
       
       Assign (child_proc, Val (action#moduleName ^ "_" ^ action#defName, pdef));
-      Assign (child_pc, Val ("0", pc_label));
+      Assign (child_pc, Val pc_label_init);
       Assign (child_status, status_run);
       CallProc (ready_queue_push, [Var sched_ready; Var child]);
       Assign (try_result, try_enabled)
     ]
 
-  let compile_try_prim (action:prim_action_type) chans = failwith "TODO"
+  let compile_try_prim (action:prim_action_type) = 
+    compile_prim0 (fun f arg_l -> CallProc (f, arg_l)) (action :> common_prim_type)
 
-  let compile_try_let (action:let_action_type) chans = 
+  let compile_try_let (action:let_action_type) = 
     Seq 
       [compile_value action#value;
        Assign (pt_env action#variableIndex, Var pt_val)]
 
-  let compile_try_action (action:action) (chans:varDescr) = 
-    (* est il nécessaire de passer chans en arguments ?? *)
-    match action with
+  let compile_try_action = function
     | Tau action -> compile_try_tau
-    | Output action -> compile_try_out action chans
-    | Input action -> compile_try_in action chans
-    | New action -> compile_try_new action chans
-    | Spawn action -> compile_try_spawn action chans
-    | Prim action -> compile_try_prim action chans
-    | Let action -> compile_try_let action chans
+    | Output action -> compile_try_out action
+    | Input action -> compile_try_in action
+    | New action -> compile_try_new action
+    | Spawn action -> compile_try_spawn action
+    | Prim action -> compile_try_prim action
+    | Let action -> compile_try_let action
     
   let rec compile_process m d proc =
     match proc with
@@ -287,10 +299,10 @@ struct
     | Choice p -> compile_choice m d p
 
   and compile_choice m d p = 
-    let nb_disabled = SimpleName "nbdisabled", prim_int
+    let nb_disabled = nb_disabled_name, prim_int
     and def_label = def_label_pattern m#name d#name
     and choice_cont = Array.make p#arity 0
-    and tmp_chan = SimpleName "tmp_chan", channel in
+    and tmp_chan = tmp_chan_name, channel in
     
     for i = 0 to (p#arity - 1) do 
       choice_cont.(i) <- make_label ()
@@ -303,16 +315,16 @@ struct
 	
 	Assign ((pt_enabled i), CallFun (bool_of_boolval,[Var pt_val]));
 	make_ite (Var (pt_enabled i))
-	  [ compile_try_action b#action chans;
+	  [ compile_try_action b#action;
 	    make_ite 
 	      (Op (Equal, Var try_result, try_disabled))
 	      
-	      [Assign ((pt_enabled i), Val ("false", prim_bool));
+	      [Assign ((pt_enabled i), Val prim_false);
 	       p_inc nb_disabled ]
 	      
 	      [make_it (Op (Equal, Var try_result, try_enabled))
 		  [p_dec pt_fuel;
-		   make_it (Op (Equal, Var pt_fuel, Val ("0", prim_int) ))
+		   make_it (Op (Equal, Var pt_fuel, Val zero ))
 		     [CallProc (release_all_channels, [Var chans]);
 		      compile_yield cont_pc];
 		   
@@ -328,8 +340,8 @@ struct
 	| Output a ->
 	  
 	  let eval = SimpleName (get_eval_name ()), eval_ty in
-	  
-	  add_eval_def (DeclareFun (eval, ["pt"] ,[compile_value a#value; Return (Var pt_val)]));
+	  add_eval_def (DeclareFun (eval, [string_name_of_varDescr pt],
+				    [compile_value a#value; Return (Var pt_val)]));
 	  
 	  [Bloc [Declare tmp_chan;
 		 Assign (tmp_chan, CallFun (channel_of_pt_channel, [Var (pt_env a#channelIndex)]));
@@ -350,7 +362,7 @@ struct
     Bloc (* cvar after_wait_fuel : label *)
       [Declare try_result ;
        Declare nb_disabled ;
-       Assign (nb_disabled, Val ("0", prim_int));
+       Assign (nb_disabled, Val zero);
        Declare chans;
        Assign (chans, Val chans_init_value);
        
@@ -364,7 +376,7 @@ struct
        
        CallProc (acquire, [Var pt_lock]);
        CallProc (release_all_channels, [Var chans]);
-       compile_wait chans; (* /!\ unused parameter !! -> assert  cf compile_wait *)
+       compile_wait;
        
        Seq (List.mapi (fun i prefix -> 
 	 Seq [ Case (Val (string_of_int choice_cont.(i), prim_int));
@@ -380,8 +392,9 @@ struct
 	let assign = Assign ((pt_env i), Var (args i)) in
 	let acc' = acc@
 	  [ match arg with
-	  | TChan _ -> Seq [ assign; CallProc (knows_register, [Var pt_knows; 
-								CallFun (channel_of_pt_channel, [Var (args i)])]) ]
+	  | TChan _ -> Seq [ assign; CallProc (knows_register, 
+					       [Var pt_knows; 
+						CallFun (channel_of_pt_channel, [Var (args i)])]) ]
 	  | _ -> assign ]
 	in
 	init_env acc' (i+1) tl
@@ -405,7 +418,8 @@ struct
       
   let compile_def m (Def d) =
     init_label ();
-    DeclareFun ((SimpleName (m#name ^ "_" ^ d#name), pdef), ["scheduler"; "pt"],
+    DeclareFun ((SimpleName (m#name ^ "_" ^ d#name), pdef), [string_name_of_varDescr scheduler; 
+							     string_name_of_varDescr pt],
 		[Label (def_label_pattern m#name d#name);
 		 Switch (Var pt_pc, [Case d_entry;
 				     compile_process m d d#process

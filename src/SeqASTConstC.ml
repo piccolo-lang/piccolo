@@ -105,32 +105,18 @@ let make_false  = makeFun "PICC_create_bool_value" pt_bool [prim_bool]
 let make_int    = makeFun "PICC_create_int_value" pt_int [prim_int]
 let make_string = makeFun "PICC_create_string_value" pt_string [prim_string]
 
-let rec make_list_n el n = 
-  if n = 0 then 
-    []
-  else 
-    el::(make_list_n el (n - 1)) 
-let procprim = Hashtbl.create 2;;
+let make_list_n el n = 
+  let rec f n acc = 
+    if n = 0 then acc
+    else f (n - 1) (el::acc)
+  in f n []
 
-(*Hashtbl.add procprim "#core/io:print" "print_value_infos"*)
-Hashtbl.add procprim "#core/arith:add" "PICC_Int_add"
 
-let make_prim p = makeFun (Hashtbl.find procprim ("#" ^ p#moduleName ^ ":" ^ p#primName)) 
-  pt_value (make_list_n pt_value p#arity) 
+let make_prim = fun module_name prim_name arity -> makeFun (Prim.get_value_name module_name prim_name) pt_value (make_list_n pt_value arity) 
 
 let create_bool = fun b -> CallFun (make_false, [Val (string_of_bool b, prim_bool)])
 let create_int = fun n -> CallFun (make_int, [Val (string_of_int n, prim_int) ])
 let create_string = fun str -> CallFun (make_string, [Val (str, prim_string) ])
-
-let expr_of_value v = 
-  match v with
-    | Syntax.VTrue _ -> Val ("true", prim_bool)
-    | Syntax.VFalse _ -> Val ("false", prim_bool)
-    | Syntax.VInt i -> Val (string_of_int i#toVal, prim_int)
-    | Syntax.VString s -> Val (s#toString, prim_string)
-    | _ -> failwith "expr_of_value rest not yet implemented"
-
-let create_prim = fun p -> CallFun ((make_prim p), List.map expr_of_value p#args)
 
 let copy_value = makeFun "PICC_copy_value" prim_bool [pt_value; pt_value]
 
@@ -190,10 +176,18 @@ let generate_pi_thread = makeFun "PICC_create_pithread" pi_thread [prim_int; pri
 (* Misc *)
 let emptySet = makeFun "PICC_CHANNEL_SET_MAKE" (pointer (pset channel)) [] 
 
-(* NULL value *)
+(* some key values *)
 let null = "NULL", Sty "NULL"
+let zero = "0", prim_int
+let prim_false = "false", prim_bool
+let prim_true = "true", prim_bool
+let pc_label_init = "0", pc_label
 
 (* Variables *)
+
+(* we find here the description of all the variables used to generate code in the backend. 
+   (except the one that have a runtime generated name of course)
+ *)
 
 (* SchedPool fields *)
 let scheduler = SimpleName "scheduler", pointer sched_pool
@@ -214,15 +208,31 @@ let pt_val = (RecordName (pt, "val"), pt_value)
 let pt_clock = (RecordName (pt, "clock"), clock)
 let pt_fuel = (RecordName (pt, "fuel"), prim_int)
 
-(* /!\ hack, check if there is no problem ...*)
+(* /!\ "hack", would be nice to find a cleaner solution *)
 let pt_lock = (SimpleName ("&pt->lock"), mutex)
 (* let pt_lock = (RecordName (pt, "lock"), mutex) *)
 
-let try_result = SimpleName "tryresult", try_result_enum
-let chan = SimpleName "chan", channel
 
+let try_result = SimpleName "tryresult", try_result_enum
+let nb_disabled_name = SimpleName "nbdisabled"
+
+let ok_name = SimpleName "ok"
+let vl_name = SimpleName "val"
+
+
+let chan = SimpleName "chan", channel
 let chans = SimpleName "chans", (pset channel)
 let chans_init_value = null
+let tmp_chan_name = SimpleName "tmp_chan"
+
+let in_chan_name = SimpleName "in_chan"
+let outcommits_field = "outcommits"
+let in_chanx_name = SimpleName "in_chanx"
+
+let out_chan_name = SimpleName "out_chan"
+let incommits_field = "incommits"
+let newchan_name = SimpleName "newchan"
+
 
 let d_entry = Val ("0", prim_int)
 
@@ -253,8 +263,3 @@ let p_dec v = Assign (v, (Op (Minus, Var v, Val ("1", prim_int))))
 
 let return_void = Return (Val ("", void))
 
-let rec make_list_n el n = 
-  if n = 0 then 
-    []
-  else 
-    el::(make_list_n el (n - 1)) 

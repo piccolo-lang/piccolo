@@ -37,6 +37,10 @@ and print_expr fmt = function
     fprintf fmt "%a(@[ %a @])" print_varName f
       (print_list print_expr ", ") args
 
+let string_name_of_varDescr (n, _) =
+  print_varName str_formatter n;
+  flush_str_formatter ()
+
 let rec print_instr fmt = function
   | Comment str ->
       fprintf fmt "/* %s */@\n" str
