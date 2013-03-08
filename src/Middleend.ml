@@ -18,7 +18,6 @@ open Typing;;
 
 (** Representation of a [string list,int] fold_node. 
     Compute esize and attribute index to each variable. *)
-
 class env_size_pass (n:int) : [string list, int] ASTUtils.fold_node =
   let lookup env v =
     let rec aux env n = match env with
@@ -62,11 +61,8 @@ object(self)
       then max_called
       else esize'
     in
-    self#echoln 1 ("\n[ESIZE_DEF] env pass finished in Definition: " ^
-		      d#name ^ " ==> computed env size = " ^ (string_of_int res) ^
-		      "\nmax_called = " ^ (string_of_int max_called) ^ 
-		      "\nesize' = " ^ (string_of_int esize') ^
-		      "\nmax_called = " ^ (string_of_int max_called)) ;
+    self#echoln 2 ("\n[ESIZE_DEF] env pass finished in Definition: " ^
+		      d#name ^ " ==> computed env size = " ^ (string_of_int res));
     d#setEsize res;
     res
 
@@ -104,7 +100,6 @@ object(self)
 		    | None -> d#extendEnv a#variable;
 		    | Some _ -> ()
 		 );
-		 Printf.printf "\nesize new : %s "a#variable ;
 		 newVar <- (a#variable)::newVar; 
 		 (* we add a in the list of new variables *)
 		 env @ [a#variable]
@@ -120,14 +115,14 @@ object(self)
 		     | Some n -> a#setVariableIndex n ; env)
       | _ -> env
   method branch env m d p i b s1 s2 s3 = 
-    self#echoln 4 ("\nBRANCH : " ^ (string_of_int (s1)) ^  (string_of_int (s2)) ^ (string_of_int (s3)));
     s1+s2+s3
   method call_val env m d p = env
   method call env m d p _ = 
     let Def(def_called) = try
       m#lookupDef (p#defName)
     with Not_found -> failwith "undefined definition called...(calcul esize)"
-    in (* sould never happen *)
+      (* sould never happen *)
+    in
     let esize_called = def_called#esize in
     calledDefs <- esize_called::calledDefs;
     0
@@ -140,7 +135,6 @@ object(self)
   method outAction env m d p a r = 0
   method inAction_val env m d p a = ()
   method inAction env m d p a = 
-    (* If the variable is one of the new variables met in the top->bottom, we add it *)
     if (List.mem a#variable newVar) then ( 
       newVar <- List.filter (fun v -> v <> a#variable) newVar;
       1)
@@ -234,7 +228,8 @@ object(self)
     let Def(def_called) = try
       m#lookupDef (p#defName)
     with Not_found -> failwith "undefined definition called...(calcul csize)"
-    in (* sould never happen *)
+      (* sould never happen *)
+    in
     let csize_called = def_called#csize in
     calledDefs <- csize_called::calledDefs;
     0
@@ -301,7 +296,6 @@ object(self)
   method definition_val _ m (d:definition_type) =
     calledDefs <- [];
     newChan <- [];
-    self#echoln 3 ("\n[Channel_pass_DEF] Start : " ^ (d#name));
     let chans = List.fold_left (fun acc (name, typ) -> 
 				  match typ with
 				    | Types.TChan(a) -> name::acc
@@ -324,8 +318,6 @@ object(self)
       else nbchanTotal
     in
     d#setNbChannels res;
-    self#echoln 3 ("\n[Channel_pass_DEF] finished in Definition: " ^
-		     d#name ^ " ==> computed channel size = " ^ (string_of_int res)) ;
     res
   (* processes *)
   method choice_val chan_env m d p = chan_env
@@ -338,8 +330,7 @@ object(self)
 		 newChan <- a#variable::newChan;
 		 chan_env @ [a#variable]
 	     | Some n -> chan_env)
-      | _ -> chan_env
-	    
+      | _ -> chan_env	    
   method branch chan_env m d p i b s1 s2 s3 = 
     s1+s2+s3
   method call_val chan_env m d p = chan_env
@@ -347,7 +338,8 @@ object(self)
     let Def(def_called) = try
       m#lookupDef (p#defName)
     with Not_found -> failwith "undefined definition called...(calcul nbchan)"
-    in (* sould never happen *)
+      (* sould never happen *)
+    in
     let nbchan_called = def_called#nbChannels in
     calledDefs <- nbchan_called::calledDefs;
     0
@@ -408,7 +400,6 @@ object(self)
     list_max nbchoice
   (* definitions *)
   method definition_val _ m (d:definition_type) =
-    self#echoln 2 ("\n[Choix_pass_DEF] Start : " ^ (d#name));
     calledDefs <- [];
     currentMax <- 0;
     ()
@@ -418,8 +409,6 @@ object(self)
 			if nbchoice_def > max then nbchoice_def else max) 
 	0 calledDefs in
     let res = if max_called > currentMax then max_called else currentMax in
-    self#echoln 2 ("\n[Choice_pass_DEF] pass finished in Definition: " ) ;
-    self#echoln 2 (d#name ^ " => computed max choice = " ^ (string_of_int res)) ;
     d#setNbChoiceMax res;
     res
   (* processes *)
@@ -432,13 +421,14 @@ object(self)
   method branch_val _ (m:module_type) (d:definition_type) (p:process choice_process_type) (i:int) (b:process prefix_process_type) =
     ()
   method branch _ m d p i b s1 s2 s3 = 
-    1 (*histoire de retourner une valeur pour la liste *)
+    1
   method call_val _ m d p = ()
-  method call _ m d p _ = 
+  method call _ m d p _ =  
     let Def(def_called) = try
       m#lookupDef (p#defName)
     with Not_found -> failwith "undefined definition called...(calcul nbchan)"
-    in (* sould never happen *)
+      (* sould never happen *)
+    in
     let nbchoice_called = def_called#nbChoiceMax in
     calledDefs <- nbchoice_called::calledDefs;
     0
@@ -480,7 +470,8 @@ end
 
 (** Computing passes *)
 
-(* Debuggage de esize et csize *)
+(* Debug tool *)
+(** Print the values of esize, csize, nbchannelmax, nbchoicemax for each definition *)
 let print_sizes m nbpass =
   print_string ("\n passe : " ^ (string_of_int nbpass));
   let defs = List.map (fun (Def (def)) -> def) m#definitions in
@@ -489,7 +480,8 @@ let print_sizes m nbpass =
 		 " esize : " ^ (string_of_int (def#esize)) ^ 
 		 " csize : " ^ (string_of_int (def#csize)) ^ 
 		 " nbchannels : " ^ (string_of_int (def#nbChannels)) ^
-		 " nbchoices : " ^ (string_of_int (def#nbChoiceMax)))) defs
+		 " nbchoices : " ^ (string_of_int (def#nbChoiceMax)))) defs;
+  print_string ("\n")
 
 (* If a def called has a higher value for esize or csize,
    the calling def must take this value. Thus, we must find a fixpoint for the sizes
@@ -504,6 +496,7 @@ let print_sizes m nbpass =
    has a higher value for esize, csize, nbchannel and nbchoicemax. 
    Thus, we compute the passes until the esize, csize, channel and choice compute the same value twice in a row. *)
 
+(** Compute the fixpoint of esize, csize, nbchannelmax, nbchoicemax for each definition *)
 let fixpoint m esize_pass csize_pass channel_pass choice_pass verbosity =
   let nb_pass = ref 0 in
   let rec fix_rec esizes csizes channels choices continue =
@@ -535,228 +528,12 @@ let fixpoint m esize_pass csize_pass channel_pass choice_pass verbosity =
       (0, 0, 0, 0) defs in
   fix_rec esizes csizes channels choices true
 
-
-let first_pass m verbosity = 
+(** Compute middleend passes. *)
+let compute_pass m verbosity =
+  let errors = ASTUtils.module_fold m (typing_pass verbosity) in
   let esize_pass = new env_size_pass verbosity in
   let csize_pass = new commitment_size_pass verbosity in
   let channel_pass = new channel_pass verbosity in
   let choice_pass = new choice_pass verbosity in
   fixpoint m esize_pass csize_pass channel_pass choice_pass verbosity;
-  ASTUtils.module_fold m
-    (ASTUtils.fold_compose csize_pass
-       (ASTUtils.fold_compose
-          (esize_pass) 
-          (typing_pass 0)))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-(** Representation of a iter_fold_node. Compute and set the Csize value in
-    each definition. *)
-
-(* DEPRECATED! now use commitment_size_pass. *)
-class csize_compute_pass (n:int) : ASTUtils.iter_fold_node =
-object(self)
-  inherit ASTUtils.abstract_iter_fold_node_repr n
-
-  (* val mutable _csize_process_map = ProcessMap.empty *)
-  (* val mutable _csize_def_map = DefMap.empty (\* deprecated *\) *)
-  (* val mutable _csize = -1 *)
-  val mutable _current_choice_pile = []
-  val mutable _call_breaker = (false, 0)
-
-  (* config *)
-  method verbosity = n
-  method echo vn str = if vn<=n then print_string str
-  method echoln vn str = if vn<=n then print_endline str
-
-  (* modules *)    
-  method moduleDef m rs = self#moduleDef_post m
-  method moduleDef_val m = self#moduleDef_pre m 
-  method moduleDef_pre m = ()
-  method moduleDef_post m = ()
-    
-  (* definition *)
-  method definition v m d r = self#definition_post m d
-  method definition_val v m d = self#definition_pre m d
-  method definition_pre m d = _call_breaker <- (false, 0); _current_choice_pile <- []
-  method definition_post m d =
-    let csize =
-      if (fst _call_breaker) then (snd _call_breaker) else(
-	match _current_choice_pile with
-	  |v::[] -> v
-	  | _ -> failwith "csize issue!" (*shouldn't happen*)
-      )
-    in
-    d#setCsize csize
-    
-  (* process *)
-  method choice v m d p rs = self#choice_post m d p
-  method choice_val v m d p = self#choice_pre m d p
-  method choice_pre m d p =
-    _current_choice_pile <- 0::_current_choice_pile
-  method choice_post m d p = ()
-
-  method branch v m d p index b g a q = self#branch_post m d p index b
-  method branch_val v m d p index b =  self#branch_pre m d p index b
-  method branch_pre m d p index b = ()
-  method branch_post m d p index b = ()
-
-  method call v m d p rs = self#call_post m d p
-  method call_val v m d p = self#call_pre m d p
-  method call_pre m d p = ()
-  method call_post m d p =
-    let Def(def_called) = try
-      m#lookupDef (p#defName)
-    with Not_found -> failwith "undefined definition called...(calcul csize)"
-    in (* should never happen *)
-    if ((def_called#csize > 0) && (d#csize < def_called#csize)) then(
-      if ((fst _call_breaker) && ((snd _call_breaker) < def_called#csize)) then 
-	_call_breaker <- (true, def_called#csize)
-      else
-	_current_choice_pile <- 0::_current_choice_pile)
-    else
-      _current_choice_pile <- 0::_current_choice_pile
-      
-  method term v m d p = self#term_post m d p
-  method term_val v m d p = self#term_pre m d p
-  method term_pre m d p = ()
-  method term_post m d p =  _current_choice_pile <- 0::_current_choice_pile
-    
-  (* action *)
-  method outAction v m d p a r = self#outAction_post m d p a
-  method outAction_val v m d p a = self#outAction_pre m d p a
-  method outAction_pre m d p a = ()
-  method outAction_post m d p a =
-    match _current_choice_pile with
-      |[] -> () (*devrait pas arriver*)
-      |v::[] -> () (*devrait pas arriver*)
-      |v1::v2::l -> if ((v1 + 1) > v2) then
-	  _current_choice_pile <- (v1 + 1)::l
-	else
-	  _current_choice_pile <- v2::l
-  method inAction v m d p a = self#inAction_post m d p a
-  method inAction_val v m d p a = self#inAction_pre m d p a
-  method inAction_pre m d p a = ()
-  method inAction_post m d p a = 
-    match _current_choice_pile with
-      |[] -> () (*devrait pas arriver*)
-      |v::[] -> () (*devrait pas arriver*)
-      |v1::v2::l -> if ((v1 + 1) > v2) then
-	  _current_choice_pile <- (v1 + 1)::l
-	else
-	  _current_choice_pile <- v2::l
-  method tauAction v m d p a = self#tauAction_post m d p a
-  method tauAction_val v m d p a = self#tauAction_pre m d p a
-  method tauAction_pre m d p a = ()
-  method tauAction_post m d p a = 
-    match _current_choice_pile with
-      |[] -> () (*devrait pas arriver*)
-      |v::[] -> () (*devrait pas arriver*)
-      |v1::v2::l -> if ((v1 + 1) > v2) then
-	  _current_choice_pile <- (v1 + 0)::l
-	else
-	  _current_choice_pile <- v2::l
-
-  method newAction v m d p a = self#newAction_post m d p a
-  method newAction_val v m d p a = self#newAction_pre m d p a
-  method newAction_pre m d p a = ()
-  method newAction_post m d p a = 
-    match _current_choice_pile with
-      |[] -> () (*devrait pas arriver*)
-      |v::[] -> () (*devrait pas arriver*)
-      |v1::v2::l -> if ((v1 + 1) > v2) then
-	  _current_choice_pile <- (v1 + 0)::l
-	else
-	  _current_choice_pile <- v2::l
-  method spawnAction v m d p a rs = self#spawnAction_post m d p a
-  method spawnAction_val v m d p a = self#spawnAction_pre m d p a
-  method spawnAction_pre m d p a = ()
-  method spawnAction_post m d p a = 
-    match _current_choice_pile with
-      |[] -> () (*devrait pas arriver*)
-      |v::[] -> () (*devrait pas arriver*)
-      |v1::v2::l -> if ((v1 + 1) > v2) then
-	  _current_choice_pile <- (v1 + 0)::l
-	else
-	  _current_choice_pile <- v2::l
-  method primAction v m d p a rs = self#primAction_post m d p a
-  method primAction_val v m d p a = self#primAction_pre m d p a
-  method primAction_pre m d p a = ()
-  method primAction_post m d p a = 
-    match _current_choice_pile with
-      |[] -> () (*devrait pas arriver*)
-      |v::[] -> () (*devrait pas arriver*)
-      |v1::v2::l -> if ((v1 + 1) > v2) then
-	  _current_choice_pile <- (v1 + 0)::l
-	else
-	  _current_choice_pile <- v2::l
-  method letAction v m d p a r = self#letAction_post m d p a
-  method letAction_val v m d p a = self#letAction_pre m d p a
-  method letAction_pre m d p a = ()
-  method letAction_post m d p a = 
-    match _current_choice_pile with
-      |[] -> () (*devrait pas arriver*)
-      |v::[] -> () (*devrait pas arriver*)
-      |v1::v2::l -> if ((v1 + 1) > v2) then
-	  _current_choice_pile <- (v1 + 0)::l
-	else
-	  _current_choice_pile <- v2::l
-    
-  (* value *)
-  method trueValue w m d p t v = self#trueValue_post m d p t v
-  method trueValue_val w m d p t v = self#trueValue_pre m d p t v
-  method trueValue_pre m d p t v = ()
-  method trueValue_post m d p t v = ()
-  method falseValue w m d p t v = self#falseValue_post m d p t v
-  method falseValue_val w m d p t v = self#falseValue_pre m d p t v
-  method falseValue_pre m d p t v = ()
-  method falseValue_post m d p t v = ()
-  method intValue w m d p t v = self#intValue_post m d p t v
-  method intValue_val w m d p t v = self#intValue_pre m d p t v
-  method intValue_pre m d p t v = ()
-  method intValue_post m d p t v = ()
-  method stringValue w m d p t v = self#stringValue_post m d p t v
-  method stringValue_val w m d p t v = self#stringValue_pre m d p t v
-  method stringValue_pre m d p t v = ()
-  method stringValue_post m d p t v = ()
-  method tupleValue w m d p t v vs = self#tupleValue_post m d p t v
-  method tupleValue_val w m d p t v = self#tupleValue_pre m d p t v
-  method tupleValue_pre m d p t v = ()
-  method tupleValue_post m d p t v = ()
-  method varValue w m d p t v = self#varValue_post m d p t v
-  method varValue_val w m d p t v = self#varValue_pre m d p t v
-  method varValue_pre m d p t v = ()
-  method varValue_post m d p t v = ()
-  method primValue w m d p t v vs = self#primValue_post m d p t v
-  method primValue_val w m d p t v = self#primValue_pre m d p t v
-  method primValue_pre m d p t v = ()
-  method primValue_post m d p t v = ()
-end
-
-
-
-
-
-
-
+  errors

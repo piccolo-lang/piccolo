@@ -28,7 +28,7 @@ let ppstr3 = "def PingPong2(o:chan<string>,i:chan<string>,msg:string) =
 
 let pp = ParseUtils.parseFromString ("module Test/PingPong \n" ^ ppstr ^ "\n" ^ ppstr2 ^ "\n" ^ mainstr) ;;
 
-let check_pp () = Middleend.first_pass pp 1;;
+let check_pp () = Middleend.compute_pass pp 1;;
 
 check_pp ();;
 

@@ -11,11 +11,6 @@ open TypeRepr;;
 open Syntax;; 
 open ASTRepr;;
 
-let env_printer def = 
-  let def = definition_type_of_definition def in
-    Printf.printf "%s env :[ %s ]\n " def#name (String.concat ", " def#env)
-;;
-
 let test_end = "def End() = end";; (* ok *)
 
 let test_call1 = "def Call1() = Test/Test1:Call1()";; (* ok *)
@@ -116,7 +111,7 @@ let fibStr = "def Fib(n:int,m:int,p:int,r:chan<int>)=[n=0]r!m,end+tau,Fib(n-1,m+
 
 let test = ParseUtils.parseFromString("module Test/Test1 \n" ^ test_in5 );;
 
-let check_pp () = Middleend.first_pass test 5;;
+let check_pp () = Middleend.compute_pass test 5;;
 
 check_pp ();; 
 
