@@ -1,7 +1,7 @@
 type varName =
-  | SimpleName of string           (* name *)
+  | SimpleName of string            (* name *)
   | RecordName of varDescr * string (* name.subField *)
-  | ArrayName  of varName * expr    (* name[i] or name.subField[i] *)
+  | ArrayName of varName * expr     (* name[i] or name.subField[i] *)
       
 and piccType =
   | Sty of string (* Simple Type *)

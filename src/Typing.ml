@@ -107,7 +107,7 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
     let errs =
       match t with
 	| TInt -> []
-	| _ -> [TypeError ("Mismatch type '" ^ (string_of_valueType t) ^ "' for constant, expected Int", (v:>ast_type))]
+	| _ -> [TypeError ("Mismatch type '" ^ (string_of_valueType t) ^ "' for constant, expected Int", (v :> ast_type))]
     in
       errs
 	

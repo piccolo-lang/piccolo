@@ -71,6 +71,3 @@ let list_fold_n (f : 'a -> int -> 'b -> 'a) (e : 'a) (es : 'b list) =
       
 (** get the maximum integer of the specified list. *)
 let list_max ns = List.fold_left (fun m n -> if m > n then m else n) min_int ns
-  
-  
-  
