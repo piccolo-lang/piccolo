@@ -232,12 +232,6 @@ class prim_action_repr (mname : string) (pname : string) (vts : valueType list) 
   method toString = "#" ^ mname ^ ":" ^ pname ^ (string_of_collection "(" ")" "," string_of_value vs)
 end
 
-(*  [TODO] find some primitives examples, here is the syntax 
-    that generates a call to makePrim :
-    #moduleID:<ident>( values* ) 
-    exemple (?):
-    #println (cf stackless runtime environment p2)
-*)
 (** constructor Primitive action *)
 let makePrim mname pname vts vs = Prim (new prim_action_repr mname pname vts vs);;
 

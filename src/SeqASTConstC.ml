@@ -113,7 +113,7 @@ let make_list_n el n =
 
 let make_prim =
   fun module_name prim_name arity ->
-    makeFun (Prim.get_value_name module_name prim_name) pt_value (make_list_n pt_value arity) 
+    makeFun (PrimitiveUtils.get_value_name module_name prim_name) pt_value (make_list_n pt_value arity) 
 
 let create_bool = fun b -> CallFun (make_false, [Val (string_of_bool b, prim_bool)])
 let create_int = fun n -> CallFun (make_int, [Val (string_of_int n, prim_int) ])

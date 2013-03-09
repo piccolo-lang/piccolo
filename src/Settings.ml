@@ -4,7 +4,7 @@
   Various possible settings for the command line
 
 *)
-(** Prepare the option and filename for parsing the command line. *)
+(** Prepare the options and filename and parse the command line. *)
 
 let filename = ref None
 let insert name = filename := Some name

@@ -107,7 +107,7 @@ let fibStr = "def Fibonacci(n:int,m:int,p:int,r:chan<int>)=[#core/arith:compare(
 
 let main = "def Main() = new(r:chan<int>), spawn{Fibonacci(3,4,5,r)},#core/io:print(\"toto\"),Fibonacci(3,4,5,r)";;
 
-let test = ParseUtils.parseFromString("module Test/Fibonacci \n" ^ fibStr ^ "\n" ^ main );;
+let test = ParseUtils.parseFromString ("module Test/Fibonacci \n" ^ fibStr ^ "\n" ^ main );;
 
 let check_pp () = Middleend.compute_pass test 5;;
 
