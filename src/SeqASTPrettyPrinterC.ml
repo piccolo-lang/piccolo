@@ -49,6 +49,11 @@ let rec print_instr fmt = function
   | Case e -> fprintf fmt "case %a:@\n" print_expr e
   | Bloc il -> fprintf fmt "{@\n@[%a@]@\n}" (print_list_eol print_instr "") il
   | Seq il -> fprintf fmt  "%a" (print_list_eol print_instr "") il
+  
+  | CallProc ((SimpleName n,_), el) 
+      when (String.compare n "PICC_copy_value") = 0 -> fprintf fmt "PICC_copy_value( & @[ %a @]);"
+    (print_list print_expr ", ") el
+
   | CallProc ((f,_), el) -> fprintf fmt "%a(@[ %a @]);" print_varName f
     (print_list print_expr ", ") el
 
