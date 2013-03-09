@@ -364,7 +364,7 @@ struct
        Declare nb_disabled ;
        Assign (nb_disabled, Val zero);
        Declare chans;
-       Assign (chans, Val chans_init_value);
+       Assign (chans, CallFun (emptyKnownSet, []));
        
        Seq (List.mapi guard_mapper p#branches);
        

@@ -171,6 +171,7 @@ sig
     
   (* Misc *)
   val emptySet : varDescr
+  val emptyKnownSet : varDescr
     
   val p_inc : varDescr -> instr 
   val p_dec : varDescr -> instr

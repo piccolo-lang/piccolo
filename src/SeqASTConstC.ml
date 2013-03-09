@@ -175,7 +175,8 @@ let generate_pi_thread = makeFun "PICC_create_pithread" pi_thread [prim_int; pri
 
 
 (* Misc *)
-let emptySet = makeFun "PICC_CHANNEL_SET_MAKE" (pointer (pset channel)) [] 
+let emptySet = makeFun "PICC_CHANNEL_SET_MAKE" (pointer (pset channel)) []
+let emptyKnownSet = makeFun "PICC_create_empty_known_set" knows_set [] 
 
 (* some key values *)
 let null = "NULL", Sty "NULL"
