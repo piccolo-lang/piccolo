@@ -48,17 +48,17 @@ struct
   let make_it e i = Ite (e, i, [])
 
   class type common_prim_type = object
-    method moduleName:string
-    method primName:string
-    method arity:int
-    method args:value list
+    method moduleName : string
+    method primName : string
+    method arity : int
+    method args : value list
   end
 
   let rec compile_prim0 destination (p: common_prim_type) =
     let f = make_prim p#moduleName p#primName p#arity in
     let arg_l = ref [] in
-    for i = (p#arity - 1) to 0 do
-      arg_l := Var (args i) ::!arg_l
+    for i = (p#arity - 1) downto 0 do
+      arg_l := Var (args i)::!arg_l;
     done;
     let arg_l = !arg_l in
     Bloc[
@@ -68,7 +68,6 @@ struct
 	     CallProc (copy_value, [Var (args i); Var pt_val])]
       end p#args);
       destination f arg_l]
-      
 
   and compile_value = function 
       (* copy_value is here used as a procedure, 
@@ -79,9 +78,10 @@ struct
     | VString vt -> CallProc (copy_value, [Var pt_val; create_string vt#toString])
     | VTuple _ -> failwith "TODO compile_value VTuple"
     | VVar vt -> CallProc (copy_value, [Var pt_val; Var (pt_env vt#index)])
-    | VPrim p -> compile_prim0 (fun f arg_l -> 
-      CallProc (copy_value, [Var pt_val; CallFun (f, arg_l)])) 
-      (p :> common_prim_type)
+    | VPrim p -> compile_prim0 
+	(fun f arg_l -> 
+	   CallProc (copy_value, [Var pt_val; CallFun (f, arg_l)])) 
+	  (p :> common_prim_type)
       
   let compile_end status =
     Seq [

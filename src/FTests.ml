@@ -1,10 +1,10 @@
-(* module TTests 
+(* module FTests 
    -------------
 
-   Tests of Typing module
+   Tests of Middle End 
 
 *)
-(** Various tests for the Typing module *)
+(** Various tests for the Middle End passes *)
 
 open Types;;  
 open TypeRepr;; 

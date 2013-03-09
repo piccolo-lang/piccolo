@@ -4,7 +4,6 @@
    Middleend passes
 
 *)
-
 (** This module defines the middle end part of the compiler. Four passes are computed :
     - esize -> compute the maximum environment size
     - csize -> compute the maximum commitment size
@@ -480,7 +479,7 @@ let print_values m =
 		 ", csize : " ^ (string_of_int (def#csize)) ^ 
 		 ", nbchannels : " ^ (string_of_int (def#nbChannels)) ^
 		 ", nbchoices : " ^ (string_of_int (def#nbChoiceMax)))) defs;
-  print_string ("\n\n")
+    print_string ("\n\n")
 
 (* If a def called has a higher value for esize or csize,
    the calling def must take this value. Thus, we must find a fixpoint for the sizes
@@ -537,7 +536,7 @@ let compute_pass m verbosity =
   let channel_pass = new channel_pass verbosity in
   let choice_pass = new choice_pass verbosity in
   fixpoint m esize_pass csize_pass channel_pass choice_pass verbosity;
-  if verbosity >= 1 then (
-    let Module(m') = m in 
-    print_values m');
-  errors
+    if verbosity >= 1 then (
+      let Module(m') = m in 
+	print_values m');
+    errors

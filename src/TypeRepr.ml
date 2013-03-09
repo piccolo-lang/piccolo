@@ -22,7 +22,7 @@ let makeTupleTypeRepr ts = new tuple_type_repr ts;;
 
 (** return a TTuple of type valueType *)
 let makeTupleType : valueType list -> valueType = 
-  function ts -> TTuple(makeTupleTypeRepr ts) 
+  function ts -> TTuple (makeTupleTypeRepr ts) 
 ;;
 
 (** implementation of Types.prim_type *)
@@ -39,4 +39,4 @@ end
 let makePrimTypeRepr mname pname ps rt = new prim_type_repr mname pname ps rt;;
   
 (** instantiation of a TPrim of type valueType *)
-let makePrimType mname pname ps rt = TPrim(makePrimTypeRepr mname pname ps rt);;
+let makePrimType mname pname ps rt = TPrim (makePrimTypeRepr mname pname ps rt);;

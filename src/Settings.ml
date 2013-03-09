@@ -9,7 +9,7 @@
 let filename = ref None
 let insert name = filename := Some name
 
-let verbose = ref 0
+let verbose = ref 5
 let outname = ref "out.c"
 let nb_thread = ref 4
 

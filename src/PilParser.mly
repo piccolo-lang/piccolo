@@ -61,7 +61,7 @@ moduleDeclaration :
 
 moduleID: 
 | IDENT { $1 }
-| IDENT SLASH moduleID { $1 ^ $3 }
+| IDENT SLASH moduleID { $1 ^ "/" ^ $3 }
 
 definitions: 
 | definition { [$1] }
