@@ -3,12 +3,11 @@ open Format
 open PrintUtils
 open SeqAST
 
-let rec print_piccType fmt = function 
+let rec print_piccType fmt = function
   | Sty s -> fprintf fmt "%s" s
-  | Pty ("*",t) -> fprintf fmt "%a*" print_piccType t
+  | Pty ("*", t) -> fprintf fmt "%a*" print_piccType t
   | Pty (s,t) -> fprintf fmt "%s%a" s print_piccType t
-  | Fun (t, tl) -> 
-    fprintf fmt "%a (@[ %a @])" print_piccType t 
+  | Fun (t, tl) ->  fprintf fmt "%a (@[ %a @])" print_piccType t 
       (print_list print_piccType ", ") tl
       
 let print_binop fmt = function
@@ -37,6 +36,10 @@ and print_expr fmt = function
     fprintf fmt "%a(@[ %a @])" print_varName f
       (print_list print_expr ", ") args
 
+let string_name_of_varDescr (n, _) =
+  print_varName str_formatter n;
+  flush_str_formatter ()
+
 let rec print_instr fmt = function
   | Comment str ->
       fprintf fmt "/* %s */@\n" str
@@ -61,13 +64,21 @@ let rec print_instr fmt = function
 
   | DeclareFun (_,_,_) -> failwith "Must be Fun to be declared as function"
     
-  | Foreach ((v,t), e, il) -> (* !!! *)
-    fprintf fmt "foreach %a : %a in %a {@[%a@]}"
+  (* foreach (name : type) in (Fun) do () *)
+  (* | Foreach ((v,t), e, il) -> (\* !!! *\) *)
+  (*   fprintf fmt "foreach %a : %a in %a {@[%a@]}" *)
+  (*     print_varName v *)
+  (*     print_piccType t *)
+  (*     print_expr e *)
+  (*     (print_list_eol' print_instr "") il *)
+
+  | Foreach ((v,_), e, il) -> (* !!! *)
+    fprintf fmt 
+      "PICC_KNOWNSET_FOREACH(PICC_Channel, %a, @ %a, it);@\n @[%a@] @\n END_KNOWNSET_FOREACH;"
       print_varName v
-      print_piccType t
       print_expr e
       (print_list_eol' print_instr "") il
-  (* foreach (name : type) in (Fun) do () *)
+
   | Ite (e, [], []) -> fprintf fmt ""
       
   | Ite (e, il1, []) ->
@@ -80,25 +91,6 @@ let rec print_instr fmt = function
       (print_list_eol' print_instr "") il1
       (print_list_eol' print_instr "") il2
   
-  (* | Ite (e, il1, []) -> *)
-  (*   fprintf fmt "if ( %a ){@\n" print_expr e; *)
-  (*   open_tbox (); *)
-  (*   fprintf fmt "%a@\n" (print_list_eol' print_instr "") il1;  *)
-  (*   close_tbox (); *)
-  (*   fprintf fmt "}" *)
-      
-  (* | Ite (e, il1, il2) -> *)
-  (*   fprintf fmt "if ( %a ){@\n" print_expr e; *)
-  (*   open_tbox (); *)
-  (*   fprintf fmt "%a@\n" (print_list_eol' print_instr "") il1;  *)
-  (*   close_tbox (); *)
-  (*   fprintf fmt "}else{@\n"; *)
-  (*   open_tbox (); *)
-  (*   fprintf fmt "%a@\n" (print_list_eol' print_instr "") il2;  *)
-  (*   close_tbox (); *)
-  (*   fprintf fmt "}" *)
-
-
   | Label s ->fprintf fmt "%s:" s
   | Goto s -> fprintf fmt "goto %s;" s
   | Return e -> fprintf fmt "return %a;" print_expr e
@@ -107,17 +99,20 @@ let rec print_instr fmt = function
     print_expr e
       
 
-let print_main nb_th entry_point fmt i =
+let print_main nb_th entry_point eSize kSize enabled fmt i =
   let inc_list = 
     ["#include <runtime.h>";
+     "#include <value.h>";
+     "#include <queue.h>";
      "#include <pi_thread_repr.h>";
      "#include <commit_repr.h>";
-     "#include <value.h>"]
+     "#include <scheduler_repr.h>"
+     ]
   in
   Format.fprintf fmt
-    "%a@\n@\n@\n@\n%a@\n@\n@\n@\nvoid main(){ PICC_main(%d, %s); }"
+    "%a@\n@\n@\n@\n%a@\n@\n@\n@\nint main(){ PICC_main(%d, %s, %d, %d, %d); return 0;}"
     PrintUtils.(print_list_eol print_string "") inc_list
-    print_instr i nb_th entry_point
+    print_instr i nb_th entry_point eSize kSize enabled
     
 
 let print_instr_list_std il =
