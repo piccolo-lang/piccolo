@@ -209,8 +209,8 @@ let pt_clock = (RecordName (pt, "clock"), clock)
 let pt_fuel = (RecordName (pt, "fuel"), prim_int)
 
 (* /!\ "hack", would be nice to find a cleaner solution *)
-let pt_lock = (SimpleName ("&pt->lock"), mutex)
-(* let pt_lock = (RecordName (pt, "lock"), mutex) *)
+(* let pt_lock = (SimpleName ("&pt->lock"), mutex) *)
+let pt_lock = (RecordName (pt, "lock"), mutex) 
 
 
 let try_result = SimpleName "tryresult", try_result_enum
