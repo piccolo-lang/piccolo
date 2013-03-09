@@ -56,11 +56,13 @@ struct
 
   let rec compile_prim0 destination (p: common_prim_type) =
     let f = make_prim p#moduleName p#primName p#arity in
+    Format.printf "arity %d@\n" p#arity;
     let arg_l = ref [] in
-    for i = (p#arity - 1) to 0 do
+    for i = (p#arity - 1) downto 0 do
       arg_l := Var (args i) ::!arg_l
     done;
     let arg_l = !arg_l in
+    Format.printf "arg_l lenght %d@\n" (List.length arg_l);
     Bloc[
       Declare (args p#arity);
       Seq (List.mapi begin fun i v ->
