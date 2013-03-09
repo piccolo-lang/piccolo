@@ -30,7 +30,7 @@ let ppstr1 = "def PingPong(i:chan<string>,o:chan<string>,msg:string) = i?(m), o!
 let ppstr = "def ErrPingPong(i:chan<string>,o:chan<string>,i2:chan<int>,msg:string) = i2?(m), o!m, PingPong(i,o,msg)";;
 let pp = ParseUtils.parseFromString ("module Test/PingPong \n" ^ ppstr ^ "\n def Main() = new(c1:chan<string>),new(c2:chan<string>),spawn{PingPong(c1,c2,\"<PING>\")}, end") ;;
 
-let check_pp () = Middleend.compute_pass pp 2 ;;
+let check_pp () = Middleend.first_pass pp 2 ;;
 
 check_pp ();; 
 

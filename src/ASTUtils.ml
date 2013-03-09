@@ -1,10 +1,9 @@
+
 (* module ASTUtils
-   -------------
-   
-   Various utilities for the AST
+
+AST utilities (traversal, etc.)
 
 *)
-(** this module represents the folding framework for the AST. *)
 
 open Utils ;;
 open Types ;;
@@ -584,33 +583,29 @@ and spawn_action_fold (v:'a) (m:module_type) (d:definition_type) (p:process pref
   n#spawnAction v m d p a (List.fold_left (fun vs (t',v') -> (value_fold (n#spawnAction_val v m d p a) m d (p:>process_type) t' v' n)::vs) [] (List.combine a#argTypes a#args))
 and prim_action_fold (v:'a) (m:module_type) (d:definition_type) (p:process prefix_process_type) (a:prim_action_type) (n:('a,'b) fold_node) =
   n#primAction v m d p a (List.fold_left (fun vs (t',v') -> (value_fold (n#primAction_val v m d p a) m d (p:>process_type) t' v' n)::vs) [] (List.combine a#argTypes a#args))
-
-and let_action_fold (v : 'a) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : let_action_type) (n : ('a, 'b) fold_node) =
-  n#letAction v m d p a (value_fold (n#letAction_val v m d p a) m d (p :> process_type) a#valueType a#value n)
-
-and value_fold (w : 'a) (m : module_type) (d : definition_type) (p : process_type) (t : valueType) (value : value) (n : ('a, 'b) fold_node) =
+and let_action_fold (v:'a) (m:module_type) (d:definition_type) (p:process prefix_process_type) (a:let_action_type) (n:('a,'b) fold_node) =
+  n#letAction v m d p a (value_fold (n#letAction_val v m d p a) m d (p:>process_type) a#valueType a#value n)
+and value_fold (w:'a) (m:module_type) (d:definition_type) (p:process_type) (t:valueType) (value:value) (n:('a,'b) fold_node) =
   match value with
-    | VTrue v -> n#trueValue_val w m d p t v; n#trueValue w m d p t v
-    | VFalse v -> n#falseValue_val w m d p t v; n#falseValue w m d p t v
-    | VInt v -> n#intValue_val w m d p t v; n#intValue w m d p t v
-    | VString v -> n#stringValue_val w m d p t v; n#stringValue w m d p t v
-    | VVar v -> n#varValue_val w m d p t v; n#varValue w m d p t v
+    | VTrue v -> n#trueValue_val w m d p t v ; n#trueValue w m d p t v
+    | VFalse v -> n#falseValue_val w m d p t v ; n#falseValue w m d p t v
+    | VInt v -> n#intValue_val w m d p t v ; n#intValue w m d p t v
+    | VString v -> n#stringValue_val w m d p t v ; n#stringValue w m d p t v
     | VTuple v -> tuple_value_fold w m d p t v n
+    | VVar v -> n#varValue_val w m d p t v; n#varValue w m d p t v
     | VPrim v -> prim_value_fold w m d p t v n
-	
-and tuple_value_fold (w : 'a) (m : module_type) (d : definition_type) (p : process_type) (t : valueType) (v : value tuple_value_type) (n : ('a, 'b) fold_node) =
-  n#tupleValue w m d p t v (List.fold_left (fun vs (t', v') -> (value_fold (n#tupleValue_val w m d p t v) m d (p :> process_type) t' v' n)::vs) [] (List.combine v#types v#elements))
+and tuple_value_fold (w:'a) (m:module_type) (d:definition_type) (p:process_type) (t:valueType) (v:value tuple_value_type) (n:('a,'b) fold_node) =
+  n#tupleValue w m d p t v (List.fold_left (fun vs (t',v') -> (value_fold (n#tupleValue_val w m d p t v) m d (p:>process_type) t' v' n)::vs) [] (List.combine v#types v#elements))
+and prim_value_fold (w:'a) (m:module_type) (d:definition_type) (p:process_type) (t:valueType) (v:value prim_value_type) (n:('a,'b) fold_node) =
+  n#primValue w m d p t v (List.fold_left (fun vs (t',v') -> (value_fold (n#primValue_val w m d p t v) m d (p:>process_type) t' v' n)::vs) [] (List.combine v#argTypes v#args))
 
-and prim_value_fold (w : 'a) (m : module_type) (d : definition_type) (p : process_type) (t : valueType) (v : value prim_value_type) (n : ('a, 'b) fold_node) =
-  n#primValue w m d p t v (List.fold_left (fun vs (t', v') -> (value_fold (n#primValue_val w m d p t v) m d (p :> process_type) t' v' n)::vs) [] (List.combine v#argTypes v#args))
-
-let module_fold_3 (m : moduleDef) (n1 : ('a, 'b) fold_node) (n2 : ('c, 'd) fold_node) (n3 : ('e, 'f) fold_node) : ('b * 'd * 'f) =
-  let (r1, (r2, r3)) = module_fold m (fold_compose n1 (fold_compose n2 n3)) in
-    (r1, r2, r3)
+let module_fold_3 (m:moduleDef) (n1:('a,'b) fold_node) (n2:('c,'d) fold_node) (n3:('e,'f) fold_node) : ('b * 'd * 'f) =
+  let (r1, (r2,r3)) = module_fold m (fold_compose n1 (fold_compose n2 n3))
+  in (r1,r2,r3)
 
 let module_fold_4 m n1 n2 n3 n4 =
-  let ((r1, r2), (r3, r4)) = module_fold m (fold_compose (fold_compose n1 n2) (fold_compose n3 n4)) in
-    (r1, r2, r3, r4)
+  let ((r1,r2), (r3,r4)) = module_fold m (fold_compose (fold_compose n1 n2) (fold_compose n3 n4))
+  in (r1,r2,r3,r4)
 
 let module_fold_iter_all m ns n =
   module_fold m (fold_seq_all ns n)

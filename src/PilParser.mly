@@ -54,14 +54,11 @@
 
   /* grammar */
 %%
-moduleDef: moduleDeclaration definitions EOF { makeModule $1 $2 }
-
-moduleDeclaration :
-| MODULE moduleID { current_module := $2; $2 }
+moduleDef: MODULE moduleID definitions EOF { makeModule $2 $3 }
 
 moduleID: 
 | IDENT { $1 }
-| IDENT SLASH moduleID { $1 ^ "/" ^ $3 }
+| IDENT SLASH moduleID { $1 ^ $3 }
 
 definitions: 
 | definition { [$1] }
@@ -91,8 +88,8 @@ process:
 call:
 | moduleID COLON IDENT LPAREN RPAREN { makeCall !current_module !current_definition $1 $3 [] [] }
 | moduleID COLON IDENT LPAREN values RPAREN { makeCall !current_module !current_definition $1 $3 (List.map snd $5) (List.map fst $5) }
-| IDENT LPAREN RPAREN { makeCall !current_module !current_definition !current_module $1 [] [] }
-| IDENT LPAREN values RPAREN { makeCall !current_module !current_definition !current_module $1 (List.map snd $3) (List.map fst $3) }
+| IDENT LPAREN RPAREN { makeCall !current_module !current_definition "" $1 [] [] }
+| IDENT LPAREN values RPAREN { makeCall !current_module !current_definition "" $1 (List.map snd $3) (List.map fst $3) }
 
 choiceProcess:
 | branch { [$1] }
