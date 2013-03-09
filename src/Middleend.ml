@@ -472,16 +472,15 @@ end
 
 (* Debug tool *)
 (** Print the values of esize, csize, nbchannelmax, nbchoicemax for each definition *)
-let print_sizes m nbpass =
-  print_string ("\n passe : " ^ (string_of_int nbpass));
+let print_values m =
   let defs = List.map (fun (Def (def)) -> def) m#definitions in
   List.iter (fun def -> print_string (
 	       "\n def: " ^ (def#name) ^ 
-		 " esize : " ^ (string_of_int (def#esize)) ^ 
-		 " csize : " ^ (string_of_int (def#csize)) ^ 
-		 " nbchannels : " ^ (string_of_int (def#nbChannels)) ^
-		 " nbchoices : " ^ (string_of_int (def#nbChoiceMax)))) defs;
-  print_string ("\n")
+		 ", esize : " ^ (string_of_int (def#esize)) ^ 
+		 ", csize : " ^ (string_of_int (def#csize)) ^ 
+		 ", nbchannels : " ^ (string_of_int (def#nbChannels)) ^
+		 ", nbchoices : " ^ (string_of_int (def#nbChoiceMax)))) defs;
+  print_string ("\n\n")
 
 (* If a def called has a higher value for esize or csize,
    the calling def must take this value. Thus, we must find a fixpoint for the sizes
@@ -507,7 +506,9 @@ let fixpoint m esize_pass csize_pass channel_pass choice_pass verbosity =
 		   (ASTUtils.fold_compose choice_pass
 		      (ASTUtils.fold_compose csize_pass esize_pass))));
       let Module(m') = m in
-      if (verbosity > 0) then print_sizes m' !nb_pass;
+      if (verbosity > 2) then (
+	print_string ("\n passe : " ^ (string_of_int !nb_pass));
+	print_values m');
       let defs = List.map (fun (Def (def)) -> def) m'#definitions in
       let (esizes', csizes', channels', choices') = 
 	List.fold_left (fun (e, c, chan, choice) def -> 
@@ -536,4 +537,7 @@ let compute_pass m verbosity =
   let channel_pass = new channel_pass verbosity in
   let choice_pass = new choice_pass verbosity in
   fixpoint m esize_pass csize_pass channel_pass choice_pass verbosity;
+  if verbosity >= 1 then (
+    let Module(m') = m in 
+    print_values m');
   errors
