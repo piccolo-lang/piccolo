@@ -11,11 +11,6 @@ open TypeRepr;;
 open Syntax;; 
 open ASTRepr;;
 
-let env_printer def = 
-  let def = definition_type_of_definition def in
-    Printf.printf "%s env :[ %s ]\n " def#name (String.concat ", " def#env)
-;;
-
 let test_end = "def End() = end";; (* ok *)
 
 let test_call1 = "def Call1() = Test/Test1:Call1()";; (* ok *)
@@ -108,15 +103,13 @@ let ppstr4 = "def PingPong(i:chan<string>,o:chan<string>,msg:string) = i?(m), o!
 
 let ppstr5 = "def ErrPingPong(i:chan<string>,o:chan<string>,i2:chan<int>,msg:string) = i2?(m), o!m, ErrPingPong(i,o,i2,msg)";; (* NON *)
 
-let fibStr = "def Fib(n:int,m:int,p:int,r:chan<int>)=[n]r!m,end+tau,Fib(n,m,m,r)";;
+let fibStr = "def Fibonacci(n:int,m:int,p:int,r:chan<int>)=[#core/arith:compare(n,0)]r!m,end+tau,Fibonacci(#core/arith:substract(n,1),#core/arith:add(m, p),m,r)";;
 
-(*
-let fibStr = "def Fib(n:int,m:int,p:int,r:chan<int>)=[n=0]r!m,end+tau,Fib(n-1,m+p,m,r)";; 
-*)
+let main = "def Main() = new(r:chan<int>), spawn{Fibonacci(3,4,5,r)},#core/io:print(\"toto\"),Fibonacci(3,4,5,r)";;
 
-let test = ParseUtils.parseFromString("module Test/Test1 \n" ^ test_in5 );;
+let test = ParseUtils.parseFromString("module Test/Fibonacci \n" ^ fibStr ^ "\n" ^ main );;
 
-let check_pp () = Middleend.first_pass test 5;;
+let check_pp () = Middleend.compute_pass test 5;;
 
 check_pp ();; 
 

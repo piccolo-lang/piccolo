@@ -3,12 +3,11 @@ open Format
 open PrintUtils
 open SeqAST
 
-let rec print_piccType fmt = function 
+let rec print_piccType fmt = function
   | Sty s -> fprintf fmt "%s" s
-  | Pty ("*",t) -> fprintf fmt "%a*" print_piccType t
+  | Pty ("*", t) -> fprintf fmt "%a*" print_piccType t
   | Pty (s,t) -> fprintf fmt "%s%a" s print_piccType t
-  | Fun (t, tl) -> 
-    fprintf fmt "%a (@[ %a @])" print_piccType t 
+  | Fun (t, tl) ->  fprintf fmt "%a (@[ %a @])" print_piccType t 
       (print_list print_piccType ", ") tl
       
 let print_binop fmt = function
