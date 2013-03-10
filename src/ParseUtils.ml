@@ -20,31 +20,29 @@ let report_loc lb =
 
 (** parse a string into a module *)    
 let parseFromString s = 
-  let lexbuf = Lexing.from_string s
-  in
+  let lexbuf = Lexing.from_string s in
     try 
       PilParser.moduleDef PilLexer.token lexbuf
     with Parsing.Parse_error -> raise (Report_parse_error (report_loc lexbuf))
       
 (** parse a string into a definition *)
 let parseDefinitionFromString def =
-  let m = parseFromString ("module test\n" ^ def)
-  in
+  let m = parseFromString ("module test\n" ^ def) in
     match m with
 	Syntax.Module m' ->
 	  match m'#definitions with
 	      d::_ -> d
 	    | [] -> assert false
-
+		
 (** parse a string into a process *)
 let parseProcessFromString proc =
-  let def = parseDefinitionFromString ("def Test() = " ^ proc)
-  in match def with
-      Syntax.Def d' -> d'#process
-
+  let def = parseDefinitionFromString ("def Test() = " ^ proc) in
+    match def with
+	Syntax.Def d' -> d'#process
+	  
 (** parse the content of a file into a module *) 
 let parseFromFile fname =
-  let ch = open_in fname
-  in let lexbuf = Lexing.from_channel ch
-     in PilParser.moduleDef PilLexer.token lexbuf
+  let ch = open_in fname in
+  let lexbuf = Lexing.from_channel ch in
+    PilParser.moduleDef PilLexer.token lexbuf
 
