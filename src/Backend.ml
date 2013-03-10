@@ -245,6 +245,7 @@ struct
     let args_mapper i arg =
       Seq [ compile_value arg;
 	    Assign (args i, Var pt_val);
+	    Assign (pt_val, Val no_value);
 	    (match (value_type_of_value arg)#ofType with
 	    | TChan _ -> 
 	      CallProc (knows_register, [Var child_knows; 
@@ -361,6 +362,7 @@ struct
     in
     Bloc (* cvar after_wait_fuel : label *)
       [Declare try_result ;
+       Assign (try_result, try_result_init);
        Declare nb_disabled ;
        Assign (nb_disabled, Val zero);
        Declare chans;

@@ -20,6 +20,7 @@ let pt_bool = pointer (Sty "PICC_BoolValue")
 let pt_int = pointer (Sty "PICC_IntValue")
 let pt_string = pointer (Sty "PICC_StringValue")
 let pt_channel = pointer (Sty "PICC_ChannelValue")
+let pt_novalue = pointer (Sty "PICC_NoValue")
 
 let channel = pointer (Sty "PICC_Channel")
 
@@ -184,6 +185,7 @@ let zero = "0", prim_int
 let prim_false = "false", prim_bool
 let prim_true = "true", prim_bool
 let pc_label_init = "0", pc_label
+let no_value = "PICC_create_no_value()", pt_novalue
 
 (* Variables *)
 
@@ -214,6 +216,7 @@ let pt_lock = (RecordName (pt, "lock"), mutex)
 
 
 let try_result = SimpleName "tryresult", try_result_enum
+let try_result_init = try_disabled
 let nb_disabled_name = SimpleName "nbdisabled"
 
 let ok_name = SimpleName "ok"

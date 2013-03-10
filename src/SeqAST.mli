@@ -60,6 +60,7 @@ sig
   val pt_int : piccType
   val pt_string : piccType
   val pt_channel : piccType
+  val pt_novalue : piccType
 
   val channel : piccType
     
@@ -199,6 +200,7 @@ sig
   val pt_lock : varDescr
     
   val try_result : varDescr
+  val try_result_init : expr
   val nb_disabled_name : varName
   val ok_name : varName
   val vl_name : varName
@@ -242,6 +244,7 @@ sig
   val zero: value_t
   val prim_false: value_t
   val pc_label_init: value_t
+  val no_value: value_t
 end
   
 module type PrettyPrinter =
