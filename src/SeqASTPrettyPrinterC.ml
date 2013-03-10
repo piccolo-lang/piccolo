@@ -53,6 +53,9 @@ let rec print_instr fmt = function
   | CallProc ((SimpleName n,_), el) 
       when (String.compare n "PICC_copy_value") = 0 -> fprintf fmt "PICC_copy_value( & @[ %a @]);"
     (print_list print_expr ", ") el
+  | CallProc ((SimpleName n,_), el) 
+      when (String.compare n "PICC_channel_dec_ref_count") = 0 -> fprintf fmt "PICC_channel_dec_ref_count( & @[ %a @]);"
+    (print_list print_expr ", ") el
 
   | CallProc ((f,_), el) -> fprintf fmt "%a(@[ %a @]);" print_varName f
     (print_list print_expr ", ") el
@@ -79,7 +82,7 @@ let rec print_instr fmt = function
 
   | Foreach ((v,_), e, il) -> (* !!! *)
     fprintf fmt 
-      "PICC_KNOWNSET_FOREACH(PICC_Channel, %a, @ %a, it);@\n @[%a@] @\n END_KNOWNSET_FOREACH;"
+      "PICC_CHANNEL_KNOWNSET_FOREACH(%a, @ %a, it);@\n @[%a@] @\n END_KNOWNSET_FOREACH;"
       print_varName v
       print_expr e
       (print_list_eol' print_instr "") il
