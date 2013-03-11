@@ -248,8 +248,11 @@ struct
 	    Assign (pt_val, Val no_value);
 	    (match (value_type_of_value arg)#ofType with
 	    | TChan _ -> 
-	      CallProc (knows_register, [Var child_knows; 
-					 CallFun (channel_of_pt_channel, [Var (args i)])])
+	      Seq [ CallProc (knows_register, [Var child_knows; 
+					       CallFun (channel_of_pt_channel, [Var (args i)])]);
+		    (*Increments the channel reference count because it is used by a new thread.
+		      Not present in the spec.*)
+		    CallProc (channel_incr_ref_count, [CallFun (channel_of_pt_channel, [Var (args i)])])]
 	    | _ -> Seq []);
 	    Assign ((child_env i), Var (args i));
 	  ]
