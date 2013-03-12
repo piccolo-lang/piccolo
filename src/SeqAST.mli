@@ -27,6 +27,7 @@ and binop =
       
 type instr =
   | Comment of string
+  | Debug of string
   | Switch of expr * (instr list)
   | Case of expr
   | Bloc of instr list (* real bloc semantic *)
@@ -217,8 +218,6 @@ sig
   val incommits_field : string
   val newchan_name : varName
 
-  val chans_init_value : value_t
-    
   val d_entry : expr (* value of the definition entry point*)
 
   val ocommit_var : varDescr
