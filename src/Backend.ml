@@ -47,6 +47,10 @@ struct
   let make_ite e i1 i2 = Ite (e, i1, i2) (* nicer declaration and indentation *)
   let make_it e i = Ite (e, i, [])
 
+  let string_of_expr e =
+    print_expr Format.str_formatter e;
+    Format.flush_str_formatter ()
+
   class type common_prim_type = object
     method moduleName : string
     method primName : string
@@ -86,6 +90,7 @@ struct
   let compile_end status =
     Seq [
       Comment "------compile_end---------";
+      Debug "C( end )";
       Foreach (chan,
 	       (CallFun (knows_set_knows, [Var pt_knows])),
 	       [CallProc (channel_dec_ref_count, [Var chan]) ]);
@@ -99,6 +104,7 @@ struct
     (*  property : chans \inter knows.FORGET = \emptySet *)
     Seq [
       Comment "------compile_wait---------";
+      Debug "C( wait )";
       Assign (pt_pc, invalid_pc);
       Assign (pt_fuel, fuel_init);
       Foreach (chan,
@@ -113,6 +119,7 @@ struct
   and compile_yield label =
     Seq [
       Comment "------compile_yield---------";
+      Debug ("C( " ^ (string_of_expr label)  ^ " )");
       Assign (pt_pc, label);
       Assign (pt_fuel, fuel_init);
       Foreach (chan,
@@ -125,7 +132,10 @@ struct
 
   let eot_label () = Printf.sprintf "end_of_try_%d" (make_label ())
 
-  let compile_try_tau = Assign (try_result, try_enabled)
+  let compile_try_tau = 
+    Seq[
+      Debug "C( tau )";
+      Assign (try_result, try_enabled)]
     
   let compile_try_in (action:in_action_type) = 
     let in_chan = in_chan_name, channel in
@@ -138,6 +148,7 @@ struct
     Seq [
       Bloc [
 	Comment "------compile_try_in---------";
+	Debug ("C(" ^ action#toString ^ ")");
 	Declare in_chan;
 	Assign (in_chan, CallFun (channel_of_pt_channel, [Var pt_env_c]));
 	make_it (CallFun (set_add, [Var chans;  Var in_chan]))
@@ -196,6 +207,7 @@ struct
     Seq[
       Bloc [
 	Comment "------compile_try_out---------";
+	Debug ("C(" ^ action#toString ^ ")");
 	Declare out_chan;
 	Assign (out_chan, CallFun (channel_of_pt_channel, [Var pt_env_c]));
 	
@@ -229,10 +241,12 @@ struct
 		    [Var (RecordName (out_chan, incommits_field), commit_list)])) end];
 	Label label_end_of_try]
 
+      
   let compile_try_new (action:new_action_type) = 
     let newchan = newchan_name, channel in
     Bloc [
       Comment "------compile_try_new---------";
+      Debug ("C(" ^ action#toString ^ ")");
       Declare newchan;
       Assign (newchan, CallFun (generate_channel, []));
       Assign (pt_env action#variableIndex, CallFun (pt_channel_of_channel, [Var newchan]));
@@ -259,6 +273,7 @@ struct
     in
     Bloc[
       Comment "------compile_try_spawn---------";
+      Debug ("C(" ^ action#toString ^ ")");
       Declare (args action#arity);
       Declare child;
       Assign (child, CallFun (generate_pi_thread, [Val (string_of_int (d#esize), prim_int);
@@ -279,14 +294,16 @@ struct
       Assign (try_result, try_enabled)
     ]
 
-  let compile_try_prim (action:prim_action_type) =
-    Seq
-      [compile_prim0 (fun f arg_l -> CallProc (f, arg_l)) (action :> common_prim_type);
-       Assign (try_result, try_enabled)]
+  let compile_try_prim (action:prim_action_type) = 
+    Seq[
+      Debug ("C(" ^ action#toString ^ ")");
+      compile_prim0 (fun f arg_l -> CallProc (f, arg_l)) (action :> common_prim_type);
+      Assign (try_result, try_enabled)]
 
   let compile_try_let (action:let_action_type) = 
     Seq 
-      [compile_value action#value;
+      [Debug ("C(" ^ action#toString ^ ")");
+       compile_value action#value;
        Assign (pt_env action#variableIndex, Var pt_val)]
 
   let compile_try_action = function
@@ -366,7 +383,8 @@ struct
     )
     in
     Bloc (* cvar after_wait_fuel : label *)
-      [Declare try_result ;
+      [(* Debug ("C(" ^ p#toString ^ ")"); *)
+       Declare try_result ;
        Assign (try_result, try_result_init);
        Declare nb_disabled ;
        Assign (nb_disabled, Val zero);
@@ -409,6 +427,7 @@ struct
     
     Bloc [
       Comment "------compile_call---------";
+      Debug ("C(" ^ p#toString ^ ")");
       Declare (args p#arity);
       CallProc (knows_set_forget_all, [ Var pt_knows ]);
 

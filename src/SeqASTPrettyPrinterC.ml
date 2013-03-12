@@ -43,6 +43,9 @@ let string_name_of_varDescr (n, _) =
 let rec print_instr fmt = function
   | Comment str ->
       fprintf fmt "/* %s */@\n" str
+  | Debug str ->
+    if Settings.debug then
+      fprintf fmt "printf(\"%s\\n\");@\n" (Str.global_replace (Str.regexp "\"") "\\\""  str)
   | Switch (e, il) -> 
     fprintf fmt "switch(%a){@\n@[<hov 3>%a@]@\n}" 
       print_expr e (print_list_eol print_instr "") il
@@ -116,6 +119,9 @@ let print_main nb_th entry_point eSize kSize enabled fmt i =
      "#include <commit_repr.h>";
      "#include <scheduler_repr.h>"
      ]
+  in
+  let inc_list = if Settings.debug then "#include <stdio.h>" :: inc_list
+      else inc_list
   in
   Format.fprintf fmt
     "%a@\n@\n@\n@\n%a@\n@\n@\n@\nint main(){ PICC_main(%d, %s, %d, %d, %d); return 0;}"
