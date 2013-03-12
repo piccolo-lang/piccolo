@@ -279,8 +279,10 @@ struct
       Assign (try_result, try_enabled)
     ]
 
-  let compile_try_prim (action:prim_action_type) = 
-    compile_prim0 (fun f arg_l -> CallProc (f, arg_l)) (action :> common_prim_type)
+  let compile_try_prim (action:prim_action_type) =
+    Seq
+      [compile_prim0 (fun f arg_l -> CallProc (f, arg_l)) (action :> common_prim_type);
+       Assign (try_result, try_enabled)]
 
   let compile_try_let (action:let_action_type) = 
     Seq 
@@ -411,12 +413,13 @@ struct
       CallProc (knows_set_forget_all, [ Var pt_knows ]);
 
       Seq (List.mapi 
-	     (fun i v -> Seq [ compile_value v; Assign ((args i), Var pt_val)])
+	     (fun i v -> Seq [ compile_value v; Assign ((args i), Var pt_val); 
+			       Assign (pt_val, Val no_value)])
 	     p#args);
       
       Seq (init_env [] 0 p#argTypes);
       
-      Assign (pt_proc , Var (SimpleName (m#name ^ "_" ^ d#name), pdef));
+      Assign (pt_proc , Var (SimpleName (p#moduleName ^ "_" ^ p#defName), pdef));
       Assign (pt_pc, d_entry);
       Assign (pt_status, status_call);
       return_void]

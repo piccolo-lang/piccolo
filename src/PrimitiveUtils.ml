@@ -50,8 +50,12 @@ let init () =
     ("compare_values", (makePrimTypeRepr "core/arith/int" "compare" [TInt; TInt] TInt));
   declare_primitive
     value_table
+    ("coreio", "print_info") 
+    ("PICC_print_value_infos", (makePrimTypeRepr "core/io" "print_info" [TString] TString));
+  declare_primitive
+    value_table
     ("coreio", "print") 
-    ("PICC_print_value_infos", (makePrimTypeRepr "core/io" "print" [TString] TString))
+    ("PICC_print_value", (makePrimTypeRepr "core/io" "print" [TString] TString))
 ;;
 
 init();;
