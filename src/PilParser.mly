@@ -39,7 +39,7 @@
 
 %token EOF
 
-  /* types */
+/* types */
 
 %token TBOOL TINT TSTRING TCHAN
 
@@ -52,8 +52,9 @@
 %type <value*valueType> value
 %type <(value*valueType) list> values
 
-  /* grammar */
+/* grammar */
 %%
+
 moduleDef: moduleDeclaration definitions EOF { makeModule $1 $2 }
 
 moduleDeclaration :
@@ -67,7 +68,10 @@ definitions:
 | definition { [$1] }
 | definition definitions { $1::$2 }
 
-definition: DEF IDENT paramlist EQ process { makeDefinition $2 $3 $5 }
+definition: DEF definition_declaration paramlist EQ process { makeDefinition $2 $3 $5 }
+
+definition_declaration:
+| IDENT { current_definition := $1; $1 }
 
 paramlist: 
 | LPAREN RPAREN { [] }
@@ -78,8 +82,8 @@ params:
 | param COMMA params { $1::$3 }
 
 param: 
-| IDENT COLON typeDef { ($1,$3) }
-| IDENT { ($1,TUnknown) }
+| IDENT COLON typeDef { ($1, $3) }
+| IDENT { ($1, TUnknown) }
 
 /* processes */
 
@@ -87,6 +91,7 @@ process:
 | END { makeTerm !current_module !current_definition }
 | call { $1 }
 | choiceProcess { makeChoice !current_module !current_definition $1 }
+| LPAREN choiceProcess RPAREN { makeChoice !current_module !current_definition $2 }
 
 call:
 | moduleID COLON IDENT LPAREN RPAREN { makeCall !current_module !current_definition $1 $3 [] [] }
@@ -100,10 +105,10 @@ choiceProcess:
 
 branch:
 | LBRACKET value RBRACKET action COMMA process { (fst $2, snd $2, $4, $6) }
-| action COMMA process { (makeVTrue(), TBool, $1, $3) }
+| action COMMA process { (makeVTrue (), TBool, $1, $3) }
 
 action: 
-| TAU { makeTau() }
+| TAU { makeTau () }
 | IDENT OUT value { makeOutput $1 (fst $3) (snd $3) }
 | IDENT IN LPAREN IDENT RPAREN { makeInput $1 $4 TUnknown }
 | NEW LPAREN IDENT COLON typeDef RPAREN { makeNew $3 $5 }
@@ -135,8 +140,8 @@ values :
 | value COMMA values { $1::$3 }
 
 value : 
-| VTRUE { (makeVTrue(), TBool) }
-| VFALSE { (makeVFalse(), TBool) }
+| VTRUE { (makeVTrue (), TBool) }
+| VFALSE { (makeVFalse (), TBool) }
 | INT { (makeVInt $1, TInt) }
 | STRING { (makeVString (String.sub $1 1 ((String.length $1) - 2)), TString) }
 | LPAREN values RPAREN { let ts = List.map snd $2 in (makeTuple ts (List.map fst $2), makeTupleType ts)}

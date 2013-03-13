@@ -279,8 +279,8 @@ struct
       Declare (args action#arity);
       Declare child;
       Assign (child, CallFun (generate_pi_thread, [Val (string_of_int (d#esize), prim_int);
-						   Val (string_of_int (d#esize), prim_int);
-						   Val (string_of_int (d#esize), prim_int)]));
+						   Val (string_of_int (d#nbChannels), prim_int);
+						   Val (string_of_int (d#nbChoiceMax), prim_int)]));
       (*[TODO] use a more precise value for the second argument the knowsSet size which
 	is smaller or equal than esize 
 	the third argument is suposed to be the size (in number of choices) of the biggest
