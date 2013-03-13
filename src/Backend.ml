@@ -235,6 +235,7 @@ struct
 	  make_it (Op (Equal, Var ok, commit_valid))
       	    [ compile_value action#value;
       	      Assign (icommit_thread_env_rv, Var pt_val);
+	      Assign (pt_val, Val no_value);
       	      CallProc (awake, [Var scheduler; Var icommit_thread; Var icommit_var]);
       	      Assign (try_result, try_enabled);
       	      Goto label_end_of_try]],
@@ -305,7 +306,8 @@ struct
     Seq 
       [Debug ("C(" ^ action#toString ^ ")");
        compile_value action#value;
-       Assign (pt_env action#variableIndex, Var pt_val)]
+       Assign (pt_env action#variableIndex, Var pt_val);
+       Assign (pt_val, Val no_value)]
 
   let compile_try_action = function
     | Tau action -> compile_try_tau
@@ -326,7 +328,8 @@ struct
     let nb_disabled = nb_disabled_name, prim_int
     and def_label = def_label_pattern m#name d#name
     and choice_cont = Array.make p#arity 0
-    and tmp_chan = tmp_chan_name, channel in
+    and tmp_chan = tmp_chan_name, channel 
+    and tmp_val = tmp_val_name, pt_value in
     
     for i = 0 to (p#arity - 1) do 
       choice_cont.(i) <- make_label ()
@@ -338,6 +341,7 @@ struct
 	compile_value b#guard; 
 	
 	Assign ((pt_enabled i), CallFun (bool_of_boolval,[Var pt_val]));
+	Assign (pt_val, Val no_value);
 	make_ite (Var (pt_enabled i))
 	  [ compile_try_action b#action;
 	    make_ite 
@@ -367,7 +371,12 @@ struct
 	  
 	  let eval = SimpleName (get_eval_name ()), eval_ty in
 	  add_eval_def (DeclareFun (eval, [string_name_of_varDescr pt],
-				    [compile_value a#value; Return (Var pt_val)]));
+				    [Declare tmp_val;
+				     Assign (tmp_val, Val null);
+				     compile_value a#value; 
+				     CallProc (copy_value, [Var tmp_val; Var pt_val]); 
+				     Assign (pt_val, Val no_value); 
+				     Return (Var tmp_val)]));
 	  
 	  [Bloc [Declare tmp_chan;
 		 Assign (tmp_chan, CallFun (channel_of_pt_channel, [Var (pt_env a#channelIndex)]));

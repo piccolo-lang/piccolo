@@ -239,6 +239,8 @@ sig
   val child_status : varDescr
   val child_knows : varDescr
   val child_env : int -> varDescr  
+
+  val tmp_val_name : varName
     
   (* some key values *)
   val null:value_t
