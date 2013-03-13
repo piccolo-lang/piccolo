@@ -51,7 +51,7 @@ let test_new1 = "def New1() = new(id1:bool), end";; (* OK? *)
 
 let test_new2 = "def New2() = new(c:chan<string>), end";; (* OK? *)
 
-let test_new3 = "def New3() = new(id:bool), end";; (* OK? *)
+let test_new3 = "def New3() = new(c:chan<string>), New3(c1)";; (* NON *)
 
 let test_new4 = "def New4() = new(c:chan<int>), end";; (* OK? *)
 
@@ -81,8 +81,7 @@ let test_out3 = "def Out3(c:chan<string>) = c!\"toto\", Test1:Out3()";; (* arity
 
 let test_out4 = "def Out4(c:chan<(int * bool)>) = c!(42, false), Out4(\"toto\")";; (* arity *)
 
-(* /!\ UNDER CONSTRUCTION /!\ *)
-let test_out5 = "def Out5(c:chan<string>, toto:string) = c!toto, end";; (* ??? *)
+let test_out5 = "def Out5(c:chan<string>, toto:string) = c!toto, end";; (* GO BACK HERE *)
 
 let test_out6 = "def Out6(c:chan<string>, toto:string) = c!toto, Out6(toto)";; (* ok arity *)
 
@@ -98,24 +97,20 @@ let test_in4 = "def In4(toto:int) = In4(toto)";; (* ok *)
 
 let test_in5 = "def In5(i:chan<string>, toto:int) = i?(toto), In5(i, toto)";; (* ok, finally ! *)
 
-let test_in6 = "def In6(i:chan<int>) = i?(toto), end";; (* WRONG *)
+let test_in6 = "def In6(i:chan<int>) = i?(toto), end";; (* ok*)
 
 let test_in34 = "def In3(i:chan<string>, toto:string) = i?(toto), In4(i, toto) \n def In4(i:chan<string>, toto:string) = i?(toto), In4(i, toto)";; (* ok *)
 
-let test_in4 = "def In4(toto:int) = In4(toto)";;
-
-let test_in5 = "def In5(i:chan<string>, toto:int) = i?(toto), In5(i, toto)";;
-
 let test_in43 = "def In43(i:chan<string>, toto:string) = i?(toto), In443(i, toto) \n def In443(i:chan<string>, toto:int) = i?(toto), In443(i, toto)";; (* ok *)
 
-let ppstr1 = "def ErrPingPong(i2:chan<string>,msg:string) = i2?(msg), ErrPingPong(i2,msg)";;
+let ppstr1 = "def ErrPingPong(i2:chan<string>,msg:string) = i2?(msg), ErrPingPong(i2,msg)";; (* ok *)
 
-let ppstr2 = "def ErrPingPong(i2:chan<string>,msg:int) = i2?(msg), ErrPingPong(i2,msg)";;
+let ppstr2 = "def ErrPingPong(i2:chan<string>,msg:int) = i2?(msg), ErrPingPong(i2,msg)";; (* ok *)
 
 (* TODO PRIMITIVE *)
 let ppstr3 = "def PingPong(i:chan<string>,o:chan<string>,msg:string) = i?(m), #core/io:println(m), o!msg, PingPong(i,o,msg)";;
 
-let ppstr4 = "def PingPong(i:chan<string>,o:chan<string>,msg:string) = i?(m), o!msg, PingPong(i,o,msg)";; (* what ?! *)
+let ppstr4 = "def PingPong(i:chan<string>,o:chan<string>,msg:string) = i?(m), o!msg, PingPong(i,o,msg)";; (* ok *)
 
 let ppstr5 = "def ErrPingPong(i:chan<string>,o:chan<string>,i2:chan<int>,msg:string) = i2?(m), o!m, ErrPingPong(i,o,i2,msg)";; (* NON *)
 
@@ -125,7 +120,7 @@ let main = "def Main() = new(r:chan<int>), spawn{Fibonacci(3,4,5,r)},#core/io:pr
 
 let testmain = ParseUtils.parseFromString ("module Test/Fibonacci \n" ^ fibStr ^ "\n" ^ main );;
 
-let test = ParseUtils.parseFromString ("module Test/Test \n" ^ test_out5);;
+let test = ParseUtils.parseFromString ("module Test/Test \n" ^ ppstr5);;
 
 let check_pp () = Middleend.compute_pass test 5;;
 

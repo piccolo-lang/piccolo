@@ -148,6 +148,7 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
 	
   (* value variable /!\type check/!\ *) 
   method varValue_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t : Types.valueType) (v : variable_type) : unit =
+    Printf.printf "inside varval %s\n" (string_of_valueType t);
     ()
       
   method varValue (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t : Types.valueType) (v : variable_type) : typeErrors =
@@ -181,6 +182,15 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
   (* out actions /!\type check/!\ *)
   method outAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : out_action_type) : typingEnv =
     self#echoln 2 "\n[TYPING OUT ACTION] started";
+    (match lookup_env env a#channel with
+       | None -> ()
+       | Some (chType, _) -> a#setChannelType chType);
+    (match a#value with
+       | VVar v ->
+	   (match lookup_env env v#name with
+	      | Some (ty, _) -> a#setValueType ty 
+	      | None -> ())
+       | _ -> ());
     env
       
   method outAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : out_action_type) (errs : typeErrors) : typeErrors =
