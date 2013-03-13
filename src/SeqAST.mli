@@ -174,6 +174,7 @@ sig
   (* Misc *)
   val emptySet : varDescr
   val emptyKnownSet : varDescr
+  val freeKnownSet : varDescr
     
   val p_inc : varDescr -> instr 
   val p_dec : varDescr -> instr
@@ -199,6 +200,7 @@ sig
   val pt_clock : varDescr
   val pt_fuel : varDescr
   val pt_lock : varDescr
+  val pt_chans : varDescr  
     
   val try_result : varDescr
   val try_result_init : expr
