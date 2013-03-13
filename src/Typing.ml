@@ -257,8 +257,15 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
       | _ -> [TypeError ("Mismatch type for " ^ a#variable ^ " this is not a Channel, expecting Channel type : ", (a :> ast_type))]
 	  
   (* spawn action *)
-  method spawnAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : spawn_action_type) : typingEnv =
+  method spawnAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : spawn_action_type) : typingEnv =    
     self#echoln 4 "\n[TYPING SPAWN ACTION] started";
+    let (Def def) = lookup_def m a#defName in
+    let arity_error = 
+      let call_arity = a#arity in
+      let def_arity = def#arity in
+      call_arity = def_arity in
+    if arity_error then 
+      failwith ("Arity error for spawn " ^ d#name ^ " in definition " ^ def#name);
     env
       
   method spawnAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : spawn_action_type) (errs : typeErrors list) : typeErrors =
@@ -267,6 +274,13 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
       
   (* prim action *)
   method primAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : prim_action_type) : typingEnv =
+    (* let (Def def) = lookup_def m a#defName in *)
+    (* let arity_error =  *)
+    (*   let call_arity = a#arity in *)
+    (*   let def_arity = def#arity in *)
+    (*   call_arity = def_arity in *)
+    (* if arity_error then  *)
+    (*   failwith ("Arity error for spawn " ^ d#name ^ " in definition " ^ def#name); *)
     self#echoln 4 "\n[TYPING PRIM ACTION] started";
     env
       
@@ -318,8 +332,14 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
     self#echoln 3 "\n[TYPING CALL] started";
     let (Def def) = lookup_def m p#defName in
     let ts = List.map snd def#params in
-      p#setArgTypes ts;
-      env
+    let arity_error = 
+      let call_arity = d#arity in
+      let def_arity = def#arity in
+      call_arity = def_arity in
+    if arity_error then 
+      failwith ("Arity error for call " ^ d#name ^ " in definition " ^ def#name);
+    p#setArgTypes ts;
+    env 
 
   method call (env : typingEnv) (m : module_type) (d : definition_type) (p : call_process_type) (errs : typeErrors list) : typeErrors =
     self#echoln 3 "\n[TYPING CALL] finished";
