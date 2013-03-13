@@ -49,10 +49,10 @@ class bool_value_repr vt v = object
 end
     
 (** constructor boolean value true *)
-let makeVTrue() = VTrue(new bool_value_repr TBool true);;
+let makeVTrue () = VTrue (new bool_value_repr TBool true);;
 
 (** constructor boolea value false *)
-let makeVFalse() = VFalse(new bool_value_repr TBool false);;
+let makeVFalse () = VFalse (new bool_value_repr TBool false);;
 
 (** integer representation of Syntax.const_value_type *)
 class int_value_repr vt v = object
@@ -62,7 +62,7 @@ class int_value_repr vt v = object
 end
 
 (** constructor integer value *)
-let makeVInt v = VInt(new int_value_repr TInt v);;
+let makeVInt v = VInt (new int_value_repr TInt v);;
 
 (** string representation of Syntax.const_value_type *)
 class string_value_repr vt (v : string) = object
@@ -72,7 +72,7 @@ class string_value_repr vt (v : string) = object
 end
 
 (** constructor string value *)
-let makeVString v = VString(new string_value_repr TString v);;
+let makeVString v = VString (new string_value_repr TString v);;
 
 (** representation of Syntax.tuple_value_type *)
 class tuple_value_repr (vt : valueType list) (vs : value list) = object(self)
@@ -81,18 +81,18 @@ class tuple_value_repr (vt : valueType list) (vs : value list) = object(self)
   method arity = List.length vs
   method types = 
     match self#ofType with
-      | TTuple(t) -> t#elements
+      | TTuple (t) -> t#elements
       | _ -> failwith "wrong tuple type, please report (maybe tuple type has not been setted)"
   method elements = vs
   method toString = (string_of_collection "(" ")" "," string_of_value vs) ^ " of types : " ^ (string_of_collection "(" ")" "," string_of_valueType vt) 
-  initializer self#setType (TTuple(TypeRepr.makeTupleTypeRepr vt))
+  initializer self#setType (TTuple (TypeRepr.makeTupleTypeRepr vt))
 end
 
 (** constructor tuple *)
 let makeTupleRepr vt vs = new tuple_value_repr vt vs;;
 
 (** tuple value constructor *)
-let makeTuple vt vs = VTuple((makeTupleRepr vt vs) :> value tuple_value_type);;
+let makeTuple vt vs = VTuple ((makeTupleRepr vt vs) :> value tuple_value_type);;
 
 (** representation of Syntax.variable_type *)
 class variable_repr vt n = object(self)
@@ -109,7 +109,7 @@ class variable_repr vt n = object(self)
 end
 
 (** constructor variable value *)
-let makeVVar vt n = VVar(new variable_repr vt n);;
+let makeVVar vt n = VVar (new variable_repr vt n);;
 
 (** representation of Syntax.prim_value_type *)
 class prim_repr (mname : string) (pname : string) (ps : valueType list) (rt : valueType) (vs : value list) = object(self)
@@ -126,7 +126,7 @@ class prim_repr (mname : string) (pname : string) (ps : valueType list) (rt : va
 end
 
 (** constructor primitive *)
-let makeVPrim mname pname ps rt vs = VPrim(new prim_repr mname pname ps rt vs);;
+let makeVPrim mname pname ps rt vs = VPrim (new prim_repr mname pname ps rt vs);;
 
 (** {2 Actions representations } *)
 
@@ -138,10 +138,10 @@ class out_action_repr ch v vt = object
   val mutable _channelBinder = None
   
   method channel = ch
-  method channelType = TChan(vt)
+  method channelType = TChan (vt)
   method channelIndex = _channelIndex
   method channelBinder = _channelBinder
-  method setChannelBinder (b : ast_binder_type) = _channelBinder <- Some(b)
+  method setChannelBinder (b : ast_binder_type) = _channelBinder <- Some (b)
   method setChannelIndex i = _channelIndex <- i
   method value = v
   method valueType = _valueType
@@ -149,7 +149,7 @@ class out_action_repr ch v vt = object
 end
 
 (** constructor Output action *)
-let makeOutput ch v vt = Output(new out_action_repr ch v vt);;
+let makeOutput ch v vt = Output (new out_action_repr ch v vt);;
 
 (** representation of Syntax.in_action_type *)
 class in_action_repr (ch : string) (v : string) (vt : valueType) = object(self)
@@ -160,11 +160,11 @@ class in_action_repr (ch : string) (v : string) (vt : valueType) = object(self)
   val mutable _channelBinder = None
   
   method channel = ch
-  method channelType = TChan(vt)
+  method channelType = TChan (vt)
   method channelIndex = _channelIndex
   method setChannelIndex i = _channelIndex <- i
   method channelBinder = _channelBinder
-  method setChannelBinder (b : ast_binder_type) = _channelBinder <- Some(b)
+  method setChannelBinder (b : ast_binder_type) = _channelBinder <- Some (b)
   method variable = v
   method variableType = _variableType
   method variableIndex = _variableIndex
@@ -175,7 +175,7 @@ class in_action_repr (ch : string) (v : string) (vt : valueType) = object(self)
 end
 
 (** constructor Input action *)
-let makeInput ch v vt = Input(new in_action_repr ch v vt);;
+let makeInput ch v vt = Input (new in_action_repr ch v vt);;
 
 (** representation of Syntax.tau_action_type *)
 class tau_action_repr = object
@@ -184,7 +184,7 @@ class tau_action_repr = object
 end
 
 (** constructor Tau action *)
-let makeTau() = Tau(new tau_action_repr);; 
+let makeTau () = Tau (new tau_action_repr);; 
 
 (** representation of Syntax.new_action_type *)
 class new_action_repr (v : string) (vt : valueType) = object(self)
@@ -201,7 +201,7 @@ class new_action_repr (v : string) (vt : valueType) = object(self)
 end
 
 (** constructor New action *)
-let makeNew v vt = New(new new_action_repr v vt);;
+let makeNew v vt = New (new new_action_repr v vt);;
 
 (** representation of Syntax.spawn_action_type *)
 class spawn_action_repr (m : string) (d : string) (vts : valueType list) (vs : value list) = object
@@ -232,14 +232,8 @@ class prim_action_repr (mname : string) (pname : string) (vts : valueType list) 
   method toString = "#" ^ mname ^ ":" ^ pname ^ (string_of_collection "(" ")" "," string_of_value vs)
 end
 
-(*  [TODO] find some primitives examples, here is the syntax 
-    that generates a call to makePrim :
-    #moduleID:<ident>( values* ) 
-    exemple (?):
-    #println (cf stackless runtime environment p2)
-*)
 (** constructor Primitive action *)
-let makePrim mname pname vts vs = Prim(new prim_action_repr mname pname vts vs);;
+let makePrim mname pname vts vs = Prim (new prim_action_repr mname pname vts vs);;
 
 (** representation of Syntax.let_action_type *)
 class let_action_repr (v : string) (vt : valueType) (e : value) (et : valueType) = object(self)
@@ -259,7 +253,7 @@ class let_action_repr (v : string) (vt : valueType) (e : value) (et : valueType)
 end
 
 (** constructor Let action *)
-let makeLet var vartype e et = Let(new let_action_repr var vartype e et);;
+let makeLet var vartype e et = Let (new let_action_repr var vartype e et);;
 
 (** {2 Processes representations } *)
 
@@ -277,7 +271,7 @@ class term_process_repr m d = object
 end
 
 (** constructor Term process *)
-let makeTerm m d = Term(new term_process_repr m d);;
+let makeTerm m d = Term (new term_process_repr m d);;
 
 (** epresentation of Syntax.call_process_type *)
 class call_process_repr m d (mname : string) (dname : string) (vts : valueType list) (vs : value list) = object
@@ -294,7 +288,7 @@ class call_process_repr m d (mname : string) (dname : string) (vts : valueType l
 end
 
 (** constructor Call process *)
-let makeCall m d mname dname vts vs = Call(new call_process_repr m d mname dname vts vs);;
+let makeCall m d mname dname vts vs = Call (new call_process_repr m d mname dname vts vs);;
 
 (** constructor helper: build a spawn on the Call argument *)
 let makeSpawnCall = function
@@ -330,7 +324,7 @@ object
   method branches = bs
   method arity = ar
   method toString = 
-    if ar = 1 then
+    if(ar = 1)then
       (List.hd bs)#toString 
     else
       string_of_collection "" "" "+" (function x -> x#toString) bs
@@ -343,10 +337,10 @@ let makeChoice m d bs =
       | [] -> []
       | (g, gt, a, p)::bs' -> (makePrefixRepr m d g gt a p i)::(makeBranches (i + 1) bs')
   in
-    Choice(new choice_process_repr m d (makeBranches 0 bs))
+    Choice (new choice_process_repr m d (makeBranches 0 bs))
 
 (** constructor 1 branch Choice process *)
-let makePrefix m d a p = makeChoice m d [(makeVTrue(), TBool, a, p)]
+let makePrefix m d a p = makeChoice m d [(makeVTrue (), TBool, a, p)]
 
 (** {2 Definitions representations } *)
 
@@ -368,7 +362,9 @@ object
   val mutable _env = List.map fst ps
   val mutable _csize = -1
   val mutable _esize = -1
-  
+  val mutable _nbchans = -1
+  val mutable _nbchoice = -1
+
   method name = n
   method params = List.map (fun p -> (p#name, p#ofType)) _params
   method arity = List.length ps'
@@ -386,6 +382,10 @@ object
   method setCsize c = _csize <- c
   method esize = _esize
   method setEsize e = _esize <- e
+  method nbChannels = _nbchans
+  method setNbChannels c = _nbchans <- c
+  method nbChoiceMax = _nbchoice
+  method setNbChoiceMax c = _nbchoice <- c
   method process = p
   method fetchBinderType (b:string) =
     let rec search = function
@@ -402,7 +402,7 @@ object
 end
 
 (** constructor Definition *)
-let makeDefinition n ps p = Def(new definition_repr n ps p);;
+let makeDefinition n ps p = Def (new definition_repr n ps p);;
 
 (** {2 Modules representations } *)
 
@@ -423,5 +423,5 @@ class module_repr (n : string) (defs : definition list) = object
 end
 
 (** constructor Module *)
-let makeModule n defs = Module(new module_repr n defs);;
+let makeModule n defs = Module (new module_repr n defs);;
 

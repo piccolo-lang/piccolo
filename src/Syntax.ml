@@ -238,8 +238,6 @@ class type call_process_type = object
   method toString : string
 end
 
-(* 'a = process ? find another instanciation of 'a 
-   [TOASK] why 'a if only one instanciation *)
 (** interface representing a prefix process, extends process_type *)
 class type ['a] prefix_process_type = object
   inherit process_type
@@ -287,10 +285,16 @@ class type definition_type = object
   method env : string list
   method extendEnv : string -> unit
   method lookupEnv : string -> int option
+
   method esize : int
   method setEsize : int -> unit
   method csize : int
   method setCsize : int -> unit
+  method nbChannels : int
+  method setNbChannels : int -> unit
+  method nbChoiceMax : int
+  method setNbChoiceMax : int -> unit
+
   method process : process
   method fetchBinderType : string -> valueType option
   method toString : string
