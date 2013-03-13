@@ -260,6 +260,7 @@ let child_status =(RecordName (child, "status"), status_enum)
 let child_knows = (RecordName (child, "knowns"), knows_set)
 let child_env i = (ArrayName ((RecordName (child,"env") ), Val (string_of_int i, prim_int)), pt_value)
 
+let tmp_val_name = SimpleName "tmp_val"
 
 (* Utils *)
 let p_inc v = Assign (v, (Op (Sum, Var v, Val ("1", prim_int))))
