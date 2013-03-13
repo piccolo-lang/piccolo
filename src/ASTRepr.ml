@@ -138,7 +138,7 @@ class out_action_repr ch v vt = object
   val mutable _channelBinder = None
   
   method channel = ch
-  method channelType = TChan (vt)
+  method channelType = TChan vt
   method channelIndex = _channelIndex
   method channelBinder = _channelBinder
   method setChannelBinder (b : ast_binder_type) = _channelBinder <- Some (b)

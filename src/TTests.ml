@@ -17,7 +17,7 @@ let test_call1 = "def Call1() = Test/Test1:Call1()";; (* ok *)
 
 let test_call2 = "def Call2() = Test/Test1:Call2(true)";; (* arity problem *)
 
-let test_call3 = "def Call3() = test()";; (* definition not found problem *)
+let test_call3 = "def Call3() = test()";; (* definition not found problem handled *)
 
 let test_call4 = "def Call4() = Call4(false)";; (* arity ? *)
 
@@ -31,12 +31,11 @@ let test_choice1 = "def ActionTau() = tau, end";; (* ok *)
 
 let test_choice2 = "def Out(c:chan<int>) = c!(42, true, false), end";; (* missmatch ok *)
 
-let test_choice3 = "def In(i:chan<int>) = i?(toto), end";; (* ident no toto *)
+let test_choice3 = "def In(i:chan<int>) = i?(toto), end";; (* ident no toto ok *)
 
 let test_tuple1 = "def Out(c:chan<(int*bool*bool)>) = c!(42, true, false), end";; (* ok *)
 
-(* Under contruction tuple *)
-let test_tuple2 = "def Out(c:chan<int>) = c!(42, (true, false), false), end";; (* ?? *)
+let test_tuple2 = "def Out(c:chan<int>) = c!(42, (true, false), 44), end";; (* tuple in tuple type error, ok *)
 
 let test_branch1 = "def Branch1() = [\"toto\"]tau, end";; (* ok *)
 
@@ -46,13 +45,33 @@ let test_branch3 = "def Branch3(c:chan<string>, i:chan<int>) = i?(toto), end + c
 
 let test_branch4 = "def Branch4(c:chan<(int * string)>) = tau, end";; (* ok *)
 
-let test_action1 = "def Def1() = spawn{PingPong(true, false, true)}, spawn{PongPing((true, false, true))}, end";; (* multiple spawn in *)
+let test_action1 = "def Def1() = spawn{PingPong(true, false, true)}, spawn{PongPing((true, false, true))}, end";; (* def *)
 
-(* TODO *)
-let test_action2 = "def New() = new(id1:bool), end";; (* ToDO *)
+let test_new1 = "def New1() = new(id1:bool), end";; (* OK? *)
 
-(* TODO *)
-let test_action3 = "def Def3() = let(id1:int=42), end";;
+let test_new2 = "def New2() = new(c:chan<string>), end";; (* OK? *)
+
+let test_new3 = "def New3() = new(id:bool), end";; (* OK? *)
+
+let test_new4 = "def New4() = new(c:chan<int>), end";; (* OK? *)
+
+let test_let1 = "def Let1() = let(id1:int=42), end";; (* ok *)
+
+let test_let2 = "def Let2() = let(t:(int*bool*int)=(42,true,44)), end";; (* ok *)
+
+let test_let3 = "def Let3() = let(t:chan<int>=true), end";; (* to ask ! ! ! *)
+
+let test_let4 = "def Let4(x:int) = let(x:bool=true), end";; (* ok *)
+
+let test_let5 = "def Let5(x:int) = let(x:int=y), end";; (* DANGER *)
+
+let test_let6 = "def Let6(y:int) = let(x:int=y), end";; (* DANGER *)
+
+let test_let7 = "def Let7(i:chan<bool>, x:string) = let(x:bool=true), i?(x), end";; (* ok *)
+
+let test_let8 = "def Let8(i:chan<bool>, x:string) = let(x:int=42), i?(x), end";; (* ok *)
+
+let test_let9 = "def Let9(i:chan<string>) = let(x:bool=true), i?(x), end";; (* ok *)
 
 let test_out1 = "def Out1(c:chan<bool>) = c!true, end";; (* ok *)
 
@@ -62,7 +81,8 @@ let test_out3 = "def Out3(c:chan<string>) = c!\"toto\", Test1:Out3()";; (* arity
 
 let test_out4 = "def Out4(c:chan<(int * bool)>) = c!(42, false), Out4(\"toto\")";; (* arity *)
 
-let test_out5 = "def Out5(c:chan<int>, toto:string) = c!toto, end";; (* ??? *)
+(* /!\ UNDER CONSTRUCTION /!\ *)
+let test_out5 = "def Out5(c:chan<string>, toto:string) = c!toto, end";; (* ??? *)
 
 let test_out6 = "def Out6(c:chan<string>, toto:string) = c!toto, Out6(toto)";; (* ok arity *)
 
@@ -88,10 +108,6 @@ let test_in5 = "def In5(i:chan<string>, toto:int) = i?(toto), In5(i, toto)";;
 
 let test_in43 = "def In43(i:chan<string>, toto:string) = i?(toto), In443(i, toto) \n def In443(i:chan<string>, toto:int) = i?(toto), In443(i, toto)";; (* ok *)
 
-let test_new1 = "def New1() = new(id:bool), end";; (* OK? *)
-
-let test_new2 = "def New2() = new(c:chan<int>), end";; (* OK? *)
-
 let ppstr1 = "def ErrPingPong(i2:chan<string>,msg:string) = i2?(msg), ErrPingPong(i2,msg)";;
 
 let ppstr2 = "def ErrPingPong(i2:chan<string>,msg:int) = i2?(msg), ErrPingPong(i2,msg)";;
@@ -107,7 +123,9 @@ let fibStr = "def Fibonacci(n:int,m:int,p:int,r:chan<int>)=[#core/arith:compare(
 
 let main = "def Main() = new(r:chan<int>), spawn{Fibonacci(3,4,5,r)},#core/io:print(\"toto\"),Fibonacci(3,4,5,r)";;
 
-let test = ParseUtils.parseFromString ("module Test/Fibonacci \n" ^ fibStr ^ "\n" ^ main );;
+let testmain = ParseUtils.parseFromString ("module Test/Fibonacci \n" ^ fibStr ^ "\n" ^ main );;
+
+let test = ParseUtils.parseFromString ("module Test/Test \n" ^ test_out5);;
 
 let check_pp () = Middleend.compute_pass test 5;;
 

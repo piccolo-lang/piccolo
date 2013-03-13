@@ -38,14 +38,18 @@ let print_typingEnv env =
   Printf.printf "]\n"
 ;;
 
+(** find a variable v from the corresponding environmment env *)
 let lookup_env env v = 
   try 
     Some (SMap.find v env)
   with Not_found -> None
 ;;
 
-let lookup_def m n = 
-  List.find (fun (Def d) -> d#name = n) m#definitions
+(** find a definition name from a module, raise Not_found exception if not found *)
+let lookup_def m n =
+  try
+    List.find (fun (Def d) -> d#name = n) m#definitions
+  with Not_found -> failwith "hello"
 ;;
 
 (** Thread a typing env which is enriched with definitions and choice_process
@@ -135,12 +139,12 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
       
   method tupleValue (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t : Types.valueType) (v : value tuple_value_type) (errs : typeErrors list) : typeErrors =
     self#echoln 4 "\n[TYPING TUPLE] finished";
-    let errs =
+    let tuple_errs =
       match t with
 	| TTuple (t') -> []
 	| _ -> [TypeError ("Mismatch " ^ (string_of_valueType t), (v :> ast_type))]
     in
-      errs
+      tuple_errs
 	
   (* value variable /!\type check/!\ *) 
   method varValue_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t : Types.valueType) (v : variable_type) : unit =
@@ -238,7 +242,6 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
 
   method newAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : new_action_type) : typeErrors =
     self#echoln 2 "\n[TYPING NEW ACTION] finished";
-    (*enrichir un environnement local ??*)
     match a#variableType with
       | TChan (t) -> []
       | _ -> [TypeError ("Mismatch type for " ^ a#variable ^ " this is not a Channel, expecting Channel type : ", (a :> ast_type))]
@@ -268,8 +271,11 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
       
   method letAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : let_action_type) (errs: typeErrors) : typeErrors =
     self#echoln 2 "\n[TYPING LET ACTION] finished";
-    failwith "letAction_fold: not yet implemented"
-      
+    if(type_eq a#variableType a#valueType)then
+      errs
+    else
+      [TypeError ("Mismatch type in let", (a :> ast_type))]
+	
   (* process *)
   (* branches *)
   method branch_val (env : typingEnv) (m : module_type) (d : definition_type) (c : process choice_process_type) (i : int) (p : process prefix_process_type) : typingEnv =
@@ -300,15 +306,15 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
   (* process call *)
   method call_val (env : typingEnv) (m : module_type) (d : definition_type) (p : call_process_type) : typingEnv =
     self#echoln 3 "\n[TYPING CALL] started";
-    let (Def d) = lookup_def m p#defName in
-    let ts = List.map snd d#params in
+    let (Def def) = lookup_def m p#defName in
+    let ts = List.map snd def#params in
       p#setArgTypes ts;
       env
-	
+
   method call (env : typingEnv) (m : module_type) (d : definition_type) (p : call_process_type) (errs : typeErrors list) : typeErrors =
     self#echoln 3 "\n[TYPING CALL] finished";
     List.concat errs
-      
+
   (* process choice *)
   method choice_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process choice_process_type) : typingEnv =
     self#echoln 4 "\n[TYPING CHOICE] started";
