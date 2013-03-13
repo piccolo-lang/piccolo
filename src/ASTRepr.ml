@@ -136,9 +136,11 @@ class out_action_repr ch v vt = object
   val mutable _valueType = vt
   val mutable _channelIndex = -1
   val mutable _channelBinder = None
+
+  val mutable _channelType = TChan (vt)
   
   method channel = ch
-  method channelType = TChan (vt)
+  method channelType = _channelType
   method channelIndex = _channelIndex
   method channelBinder = _channelBinder
   method setChannelBinder (b : ast_binder_type) = _channelBinder <- Some (b)
@@ -146,6 +148,9 @@ class out_action_repr ch v vt = object
   method value = v
   method valueType = _valueType
   method toString = ch ^ "!" ^ (string_of_value v)
+
+  method setChannelType t = _channelType <- t
+  method setValueType t = _valueType <- t
 end
 
 (** constructor Output action *)

@@ -116,6 +116,9 @@ class type out_action_type = object
   method value : value
   method valueType : valueType
   method toString : string
+
+  method setChannelType : valueType -> unit
+  method setValueType : valueType -> unit
 end
 
 (** interface representing the type of an input? action, extends ast_binder_type *)

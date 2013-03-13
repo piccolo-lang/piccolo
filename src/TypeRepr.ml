@@ -14,7 +14,7 @@ class tuple_type_repr (ts : valueType list) =
 object
   method arity = List.length ts 
   method elements = ts
-  method toString = string_of_collection "" "" "*" string_of_valueType ts
+  method toString = string_of_collection "(" ")" "*" string_of_valueType ts
 end
   
 (** constructor tuple_type_repr *)
