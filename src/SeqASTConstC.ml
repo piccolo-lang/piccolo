@@ -225,7 +225,6 @@ let vl_name = SimpleName "val"
 
 let chan = SimpleName "chan", channel
 let chans = SimpleName "chans", (pset channel)
-let chans_init_value = null
 let tmp_chan_name = SimpleName "tmp_chan"
 
 let in_chan_name = SimpleName "in_chan"
