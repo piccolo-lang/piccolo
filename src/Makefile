@@ -25,7 +25,7 @@ Typing: Typing.cmo
 Middleend: Middleend.cmo
 PrimitiveUtils : PrimitiveUtils.cmo
 SeqAST: SeqAST.cmo
-SeqASTConst: SeqASTConst.cmo
+SeqASTConstUtil: SeqASTConstUtil.cmo
 SeqASTConstC: SeqASTConstC.cmo
 SeqASTPrettyPrinter: SeqASTPrettyPrinter.cmo
 SeqASTPrettyPrinterC: SeqASTPrettyPrinterC.cmo
@@ -71,6 +71,8 @@ SeqASTConstGen.cmo : SeqASTConstGen.ml SeqAST.cmi
 SeqASTConstC.cmo : SeqASTConstC.ml  SeqAST.cmi PrimitiveUtils.cmo
 	$(OCAMLC) -o $@ -c $(OCFLAGS) $<
 
+SeqASTConstUtil.cmo : SeqASTConstUtil.ml  SeqAST.cmi 
+	$(OCAMLC) -o $@ -c $(OCFLAGS) $<
 
 SeqASTPrettyPrinterGen.cmo: SeqASTPrettyPrinterGen.ml SeqAST.cmi PrintUtils.ml
 	$(OCAMLC) -o $@ -c $(OCFLAGS) $<
@@ -79,7 +81,7 @@ SeqASTPrettyPrinterC.cmo: SeqASTPrettyPrinterC.ml SeqAST.cmi PrintUtils.cmo Sett
 	$(OCAMLC) -o $@ -c $(OCFLAGS) $<
 
 
-Backend.cmo: Backend.ml Types.cmo Syntax.cmo SeqAST.cmi 
+Backend.cmo: Backend.ml Types.cmo Syntax.cmo SeqASTConstUtil.cmo SeqAST.cmi 
 	$(OCAMLC) -o $@ -c $(OCFLAGS) $<
 
 TypeRepr.cmo: TypeRepr.ml Utils.ml Types.ml
@@ -104,10 +106,10 @@ Typing.cmo: Utils.ml Types.ml TypeRepr.ml Syntax.ml ASTRepr.ml ASTUtils.ml Typin
 Settings.cmo: Settings.ml
 	$(OCAMLC) -o $@ -c $(OCFLAGS) $<
 
-pcc.cmo: front.ml
+pcc.cmo: pcc.ml
 	$(OCAMLC) -o $@ -c $(OCFLAGS) $<
 
-pcc: Settings.cmo Utils.cmo PrintUtils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilLexer.cmo PilParser.cmo ParseUtils.cmo PrimitiveUtils.cmo Typing.cmo Middleend.cmo SeqASTConstC.cmo SeqASTPrettyPrinterC.cmo Backend.cmo pcc.cmo
+pcc: Settings.cmo Utils.cmo PrintUtils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilLexer.cmo PilParser.cmo ParseUtils.cmo PrimitiveUtils.cmo Typing.cmo Middleend.cmo SeqASTConstUtil.cmo SeqASTConstC.cmo SeqASTPrettyPrinterC.cmo Backend.cmo pcc.cmo
 	$(OCAMLC) $(OCFLAGS) str.cma $^ -o pcc
 
 
@@ -132,7 +134,7 @@ ttests: Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo Pil
 ftests: Utils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilLexer.cmo PilParser.cmo ParseUtils.cmo Typing.cmo Middleend.cmo FTests.cmo
 	$(OCAMLC) $(OCFLAGS) $^ -o FTests
 
-ctests: Settings.cmo Utils.cmo PrintUtils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilLexer.cmo PilParser.cmo ParseUtils.cmo Typing.cmo PrimitiveUtils.cmo Middleend.cmo SeqASTConstC.cmo SeqASTPrettyPrinterC.cmo SeqASTConstGen.cmo SeqASTPrettyPrinterGen.cmo Backend.cmo CTests.cmo
+ctests: Settings.cmo Utils.cmo PrintUtils.cmo Types.cmo TypeRepr.cmo Syntax.cmo ASTRepr.cmo ASTUtils.cmo PilLexer.cmo PilParser.cmo ParseUtils.cmo Typing.cmo PrimitiveUtils.cmo Middleend.cmo SeqASTConstUtil.cmo SeqASTConstC.cmo SeqASTPrettyPrinterC.cmo SeqASTConstGen.cmo SeqASTPrettyPrinterGen.cmo Backend.cmo CTests.cmo
 	$(OCAMLC) $(OCFLAGS) str.cma $^ -o CTests
 
 

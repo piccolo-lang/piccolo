@@ -34,7 +34,8 @@ and print_expr fmt = function
 let rec print_instr fmt = function
   | Comment str ->
     fprintf fmt "(* %s *)" str
-
+  | Debug str ->
+    fprintf fmt "DEBUG(* %s *)" str
   | Switch (e, il) -> 
     fprintf fmt "switch(%a){@[%a@]}" 
       print_expr e (print_list_eol' print_instr "") il
