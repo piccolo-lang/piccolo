@@ -120,7 +120,7 @@ class prim_repr (mname : string) (pname : string) (ps : valueType list) (rt : va
   method args = vs
   method argTypes =
     match self#ofType with
-      | TPrim(t) -> t#params
+      | TPrim (t) -> t#params
       | _ -> failwith "wrong primitive type (please report)"
   method toString = "#" ^ mname ^ ":" ^ pname ^ (string_of_collection "(" ")" "," string_of_value vs)
 end
@@ -235,6 +235,8 @@ class prim_action_repr (mname : string) (pname : string) (vts : valueType list) 
   method args = vs
   method argTypes = _argTypes
   method toString = "#" ^ mname ^ ":" ^ pname ^ (string_of_collection "(" ")" "," string_of_value vs)
+
+  method setArgTypes v = _argTypes <- v
 end
 
 (** constructor Primitive action *)

@@ -108,7 +108,7 @@ let ppstr1 = "def ErrPingPong(i2:chan<string>,msg:string) = i2?(msg), ErrPingPon
 let ppstr2 = "def ErrPingPong(i2:chan<string>,msg:int) = i2?(msg), ErrPingPong(i2,msg)";; (* ok *)
 
 (* TODO PRIMITIVE *)
-let ppstr3 = "def PingPong(i:chan<string>,o:chan<string>,msg:string) = i?(m), #core/io:println(m), o!msg, PingPong(i,o,msg)";;
+let ppstr3 = "def PingPong(i:chan<string>,o:chan<string>,msg:string) = i?(m), #core/io:println(42), o!msg, PingPong(i,o,msg)";;
 
 let ppstr4 = "def PingPong(i:chan<string>,o:chan<string>,msg:string) = i?(m), o!msg, PingPong(i,o,msg)";; (* ok *)
 
@@ -120,7 +120,7 @@ let main = "def Main() = new(r:chan<int>), spawn{Fibonacci(3,4,5,r)},#core/io:pr
 
 let testmain = ParseUtils.parseFromString ("module Test/Fibonacci \n" ^ fibStr ^ "\n" ^ main );;
 
-let test = ParseUtils.parseFromString ("module Test/Test \n" ^ ppstr5);;
+let test = ParseUtils.parseFromString ("module Test/Test \n" ^ ppstr3);;
 
 let check_pp () = Middleend.compute_pass test 5;;
 

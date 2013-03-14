@@ -12,7 +12,6 @@ let prim_bool = Sty "bool"
 let prim_int = Sty "int"
 let prim_string = pointer (Sty "char")
 
-
 let pt_value = pointer (Sty "PICC_Value")
 
 let pt_bool = pointer (Sty "PICC_BoolValue")
@@ -100,10 +99,6 @@ let make_list_n el n =
     else f (n - 1) (el::acc)
   in f n []
 
-let make_prim =
-  fun module_name prim_name arity ->
-    SeqASTConstUtil.makeFun (PrimitiveUtils.get_value_name module_name prim_name) pt_value (make_list_n pt_value arity) 
-
 let create_bool = fun b -> CallFun (make_false, [Val (string_of_bool b, prim_bool)])
 let create_int = fun n -> CallFun (make_int, [Val (string_of_int n, prim_int) ])
 let create_string = fun str -> CallFun (make_string, [Val (str, prim_string) ])
@@ -166,8 +161,6 @@ let low_level_yield = "PICC_low_level_yield"
 let generate_channel = "PICC_create_channel"
 let generate_pi_thread = "PICC_create_pithread"
 
-
-
 (* some key values *)
 let null = "NULL", Sty "NULL"
 let zero = "0", prim_int
@@ -175,9 +168,6 @@ let prim_false = "false", prim_bool
 let prim_true = "true", prim_bool
 let pc_label_init = "0", pc_label
 let no_value = "PICC_create_no_value()", pt_novalue
-
-
-
 
 
 (* SchedPool fields *)
@@ -201,8 +191,6 @@ let pt_fuel = "fuel"
 
 let pt_lock = "lock"
 let pt_chans = "chans"
-
-
 
 let try_result = SimpleName "tryresult", try_result_enum
 let try_result_init = try_disabled
@@ -237,5 +225,4 @@ let child_status =(RecordName (child, "status"), status_enum)
 let child_known = (RecordName (child, "knowns"), knownSet)
 let child_env i = (ArrayName ((RecordName (child,"env") ), Val (string_of_int i, prim_int)), pt_value)
 
-let tmp_val_name = SimpleName "tmp_val"
 

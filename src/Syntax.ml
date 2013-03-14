@@ -176,6 +176,8 @@ class type prim_action_type = object
   method args : value list
   method argTypes : valueType list
   method toString : string
+
+  method setArgTypes : valueType list -> unit
 end
 	  
 (** interface representing the type of the action let, extends ast_binder_type *)
