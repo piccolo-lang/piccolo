@@ -1,7 +1,7 @@
 
-module CBackend = Backend.Make (SeqASTConstC) (SeqASTPrettyPrinterC)
+module CBackend = Backend.Make (SeqASTConstC) (SeqASTPrettyPrinterC) (Prims)
 
-let _ =
+let _ = 
   let ((Syntax.Module m) as mod_def) = ParseUtils.parseFromFile Settings.filename in
   let errors = Middleend.compute_pass mod_def Settings.verbose in
   let main_def, c_code = CBackend.compile_module mod_def in

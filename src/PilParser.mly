@@ -39,7 +39,7 @@
 
 %token EOF
 
-/* types */
+  /* types */
 
 %token TBOOL TINT TSTRING TCHAN
 
@@ -52,9 +52,8 @@
 %type <value*valueType> value
 %type <(value*valueType) list> values
 
-/* grammar */
+  /* grammar */
 %%
-
 moduleDef: moduleDeclaration definitions EOF { makeModule $1 $2 }
 
 moduleDeclaration :
@@ -68,10 +67,7 @@ definitions:
 | definition { [$1] }
 | definition definitions { $1::$2 }
 
-definition: DEF definition_declaration paramlist EQ process { makeDefinition $2 $3 $5 }
-
-definition_declaration:
-| IDENT { current_definition := $1; $1 }
+definition: DEF IDENT paramlist EQ process { makeDefinition $2 $3 $5 }
 
 paramlist: 
 | LPAREN RPAREN { [] }
@@ -91,7 +87,6 @@ process:
 | END { makeTerm !current_module !current_definition }
 | call { $1 }
 | choiceProcess { makeChoice !current_module !current_definition $1 }
-| LPAREN choiceProcess RPAREN { makeChoice !current_module !current_definition $2 }
 
 call:
 | moduleID COLON IDENT LPAREN RPAREN { makeCall !current_module !current_definition $1 $3 [] [] }

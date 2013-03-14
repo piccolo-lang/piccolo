@@ -13,7 +13,7 @@ open TypeRepr ;;
 open Syntax ;; 
 open ASTRepr ;;
 
-module CBackend = Backend.Make (SeqASTConstC) (SeqASTPrettyPrinterC)
+module CBackend = Backend.Make (SeqASTConstC) (SeqASTPrettyPrinterC) (Prims)
 
 let env_printer def = 
   let def = definition_type_of_definition def in

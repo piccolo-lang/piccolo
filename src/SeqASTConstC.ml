@@ -112,10 +112,6 @@ let make_list_n el n =
     else f (n - 1) (el::acc)
   in f n []
 
-let make_prim =
-  fun module_name prim_name arity ->
-    makeFun (PrimitiveUtils.get_value_name module_name prim_name) pt_value (make_list_n pt_value arity) 
-
 let create_bool = fun b -> CallFun (make_false, [Val (string_of_bool b, prim_bool)])
 let create_int = fun n -> CallFun (make_int, [Val (string_of_int n, prim_int) ])
 let create_string = fun str -> CallFun (make_string, [Val (str, prim_string) ])
@@ -178,7 +174,6 @@ let generate_pi_thread = makeFun "PICC_create_pithread" pi_thread [prim_int; pri
 (* Misc *)
 let emptySet = makeFun "PICC_CHANNEL_SET_MAKE" (pointer (pset channel)) []
 let emptyKnownSet = makeFun "PICC_create_empty_known_set" knows_set [] 
-let freeKnownSet = makeFun "PICC_free_known_set" void [knows_set]
 
 (* some key values *)
 let null = "NULL", Sty "NULL"
@@ -214,7 +209,6 @@ let pt_clock = (RecordName (pt, "clock"), clock)
 let pt_fuel = (RecordName (pt, "fuel"), prim_int)
 
 let pt_lock = (RecordName (pt, "lock"), mutex)
-let pt_chans = (RecordName (pt, "chans"), knows_set)
 
 
 let try_result = SimpleName "tryresult", try_result_enum
@@ -260,7 +254,6 @@ let child_status =(RecordName (child, "status"), status_enum)
 let child_knows = (RecordName (child, "knowns"), knows_set)
 let child_env i = (ArrayName ((RecordName (child,"env") ), Val (string_of_int i, prim_int)), pt_value)
 
-let tmp_val_name = SimpleName "tmp_val"
 
 (* Utils *)
 let p_inc v = Assign (v, (Op (Sum, Var v, Val ("1", prim_int))))

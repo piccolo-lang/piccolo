@@ -4,7 +4,6 @@
    Middleend passes
 
 *)
-
 (** This module defines the middle end part of the compiler. Four passes are computed :
     - esize -> compute the maximum environment size
     - csize -> compute the maximum commitment size
@@ -40,12 +39,12 @@ object(self)
   (* module *)
   method moduleDef_val m = []
   method moduleDef m esizes =
-    self#echoln 3 ("\n[ESIZE_MODULE] env pass finished in Module: " ^ m#name);
+    self#echoln 2 ("\n[ESIZE_MODULE] env pass finished in Module: " ^ m#name);
     list_max esizes 
 
   (* definitions *)
   method definition_val _ m (d:definition_type) =
-    self#echoln 5 ("\n[ESIZE_DEF] Start : " ^ (d#name) ^ " env start : " );
+    self#echoln 2 ("\n[ESIZE_DEF] Start : " ^ (d#name) ^ " env start : " );
     calledDefs <- [];
     newVar <- [];
     let (env, _) = List.split d#params in (* the start env contains only the parameters of the def *)
@@ -61,7 +60,7 @@ object(self)
       then max_called
       else esize'
     in
-    self#echoln 5 ("\n[ESIZE_DEF] env pass finished in Definition: " ^
+    self#echoln 2 ("\n[ESIZE_DEF] env pass finished in Definition: " ^
 		      d#name ^ " ==> computed env size = " ^ (string_of_int res));
     d#setEsize res;
     res
@@ -204,13 +203,13 @@ object(self)
   (* definitions *)
   method definition_val _ m (d:definition_type) =
     calledDefs <- [];
-    self#echoln 5 ("\n[Commits_pass_DEF] Start : " ^ (d#name));
+    self#echoln 2 ("\n[Commits_pass_DEF] Start : " ^ (d#name));
     ()
   method definition _ m d nbcommits=
     let max_of_called_defs = 
       List.fold_left (fun acc nbcommits_def -> max nbcommits_def acc) 0 calledDefs in
     let res = max max_of_called_defs nbcommits in 
-    self#echoln 5 ("\n[Commits_pass_DEF] pass finished in Definition: " ^
+    self#echoln 2 ("\n[Commits_pass_DEF] pass finished in Definition: " ^
 		     d#name ^ " => computed csize = " ^ (string_of_int res)) ;
     d#setCsize res;
     res
@@ -476,12 +475,11 @@ let print_values m =
   let defs = List.map (fun (Def (def)) -> def) m#definitions in
   List.iter (fun def -> print_string (
 	       "\n def: " ^ (def#name) ^ 
-		 ", env: [" ^ (String.concat ", " def#env ) ^ "]" ^
 		 ", esize : " ^ (string_of_int (def#esize)) ^ 
-		 ", csize : " ^ (string_of_int (def#csize)) ^  
+		 ", csize : " ^ (string_of_int (def#csize)) ^ 
 		 ", nbchannels : " ^ (string_of_int (def#nbChannels)) ^
 		 ", nbchoices : " ^ (string_of_int (def#nbChoiceMax)))) defs;
-  print_string ("\n\n")
+    print_string ("\n\n")
 
 (* If a def called has a higher value for esize or csize,
    the calling def must take this value. Thus, we must find a fixpoint for the sizes
@@ -507,7 +505,7 @@ let fixpoint m esize_pass csize_pass channel_pass choice_pass verbosity =
 		   (ASTUtils.fold_compose choice_pass
 		      (ASTUtils.fold_compose csize_pass esize_pass))));
       let Module(m') = m in
-      if (verbosity > 1) then (
+      if (verbosity > 2) then (
 	print_string ("\n passe : " ^ (string_of_int !nb_pass));
 	print_values m');
       let defs = List.map (fun (Def (def)) -> def) m'#definitions in
@@ -532,17 +530,13 @@ let fixpoint m esize_pass csize_pass channel_pass choice_pass verbosity =
 
 (** Compute middleend passes. *)
 let compute_pass m verbosity =
-  Printf.printf "\n...start typing pass";
   let errors = ASTUtils.module_fold m (typing_pass verbosity) in
-  Printf.printf "\n...end typing pass";
   let esize_pass = new env_size_pass verbosity in
   let csize_pass = new commitment_size_pass verbosity in
   let channel_pass = new channel_pass verbosity in
   let choice_pass = new choice_pass verbosity in
-  Printf.printf "\n...start middleend";
   fixpoint m esize_pass csize_pass channel_pass choice_pass verbosity;
-  Printf.printf "\n...end middleend";
-  if verbosity >= 1 then (
-    let Module(m') = m in 
-    print_values m');
-  errors
+    if verbosity >= 1 then (
+      let Module(m') = m in 
+	print_values m');
+    errors

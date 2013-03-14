@@ -42,7 +42,17 @@ type instr =
   | Goto of string
   | Return of expr
   | DoWhile of (instr list) * expr
-      
+
+module type Prims =
+sig
+  val add_name : string
+  val substract_name : string
+  val compare_name : string
+  val print_info_name : string
+  val print_str_name : string
+  val print_int_name : string
+end
+
 module type Consts =
 sig
   val void : piccType
@@ -122,8 +132,6 @@ sig
   val create_string : string -> expr
   (* val create_tuple *)
     
-  val make_prim: string -> string -> int -> varDescr
-    
   (* one idea would be to refactor the code so that in SeqASTConst_.ml
      we declare only varName and the corresponding varDescr is defined 
      in Backend.ml : it would ensure the typing
@@ -174,7 +182,6 @@ sig
   (* Misc *)
   val emptySet : varDescr
   val emptyKnownSet : varDescr
-  val freeKnownSet : varDescr
     
   val p_inc : varDescr -> instr 
   val p_dec : varDescr -> instr
@@ -200,7 +207,6 @@ sig
   val pt_clock : varDescr
   val pt_fuel : varDescr
   val pt_lock : varDescr
-  val pt_chans : varDescr  
     
   val try_result : varDescr
   val try_result_init : expr
@@ -239,8 +245,6 @@ sig
   val child_status : varDescr
   val child_knows : varDescr
   val child_env : int -> varDescr  
-
-  val tmp_val_name : varName
     
   (* some key values *)
   val null:value_t
