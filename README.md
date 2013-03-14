@@ -1,6 +1,8 @@
 picc
+the (parallel) pi-calculus compiler
 ====
 
-the (parallel) pi-calculus compiler
+Command line: 
+./run.sh name_of_pth
 
-modified by PATRICK
+-> With name_of_pth.pth located in the directory tests. The output will also be in tests.

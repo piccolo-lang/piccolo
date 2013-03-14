@@ -1,0 +1,3 @@
+module Test/PingPong
+def PingPong(i:chan<string>,o:chan<string>,msg:string) = i?(m), o!msg, PingPong(i, i, o, msg)
+def Main() = new(c1:chan<string>),spawn{PingPong(c1, c1, "<PING>")}, end
