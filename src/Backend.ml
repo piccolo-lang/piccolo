@@ -77,12 +77,20 @@ struct
       else f (n - 1) (Var (args n) :: acc)
     in
     f (n - 1) []
+
+  let init_arg_list n =
+    let rec f n acc =
+      if n = 0 then Assign (args 0, Val arg_init_value) :: acc
+      else f (n - 1) (Assign (args n, Val arg_init_value) :: acc)
+    in
+    f (n - 1) []
       
   let rec compile_prim0 destination (p: common_prim_type) =
     let f = make_prim p#moduleName p#primName p#arity in
     let arg_l = arg_list p#arity in
     Bloc[
       Declare (args p#arity);
+      Seq (init_arg_list p#arity);
       Seq (List.mapi begin fun i v ->
 	Seq [compile_value v;
 	     CallProc (copy_value, [Var (args i); Var pt_val])]
@@ -135,7 +143,7 @@ struct
   and compile_yield label =
     Seq [
       Comment "------compile_yield---------";
-      Debug ("C( " ^ (string_of_expr label)  ^ " )");
+      Debug ("C( yield " ^ (string_of_expr label)  ^ " )");
       Assign (pt_pc, label);
       Assign (pt_fuel, fuel_init);
       Foreach (chan,
@@ -163,7 +171,7 @@ struct
       Bloc [
 	Comment "------compile_try_in---------";
 	Debug ("C(" ^ action#toString ^ ")");
-	make_it (CallFun (knownSet_add, [Var chans;  Var pt_env_c]))
+	make_it (CallFun (knownSet_add, [Var pt_chans;  Var pt_env_c]))
 	  [CallProc (acquire_handle, [Var (pt_env action#channelIndex)])];
 	
 	make_it (Op (Equal, CallFun (handle_globalrc, [Var pt_env_c]), Val ("1", prim_int)))
@@ -216,7 +224,7 @@ struct
       Bloc [
 	Comment "------compile_try_out---------";
 	Debug ("C(" ^ action#toString ^ ")");
-	make_it (CallFun (knownSet_add, [Var chans; Var pt_env_c]))
+	make_it (CallFun (knownSet_add, [Var pt_chans; Var pt_env_c]))
 	  [CallProc (acquire_handle, [Var (pt_env action#channelIndex)])];
 	make_it (Op (Equal, CallFun (handle_globalrc, [Var pt_env_c]), Val ("1", prim_int)))
 	  [Assign (try_result, try_disabled);
@@ -344,9 +352,9 @@ struct
 	      [make_it (Op (Equal, Var try_result, try_enabled))
 		  [p_dec pt_fuel;
 		   make_it (Op (Equal, Var pt_fuel, Val zero ))
-		     [CallProc (release_all_channels, [Var chans]);
-		      CallProc (free_knownSet, [Var chans]);
-		      Assign (chans, CallFun (empty_knownSet, []));
+		     [CallProc (release_all_channels, [Var pt_chans]);
+		      CallProc (free_knownSet, [Var pt_chans]);
+		      Assign (pt_chans, CallFun (empty_knownSet, []));
 		      compile_yield cont_pc];
 		   Assign (pt_pc, cont_pc);
 		   Goto def_label]]
@@ -381,23 +389,23 @@ struct
        Assign (try_result, try_result_init);
        Declare nb_disabled ;
        Assign (nb_disabled, Val zero);
-       Declare chans;
-       Assign (chans, CallFun (empty_knownSet, []));
+       (* Declare chans; *)
+       Assign (pt_chans, CallFun (empty_knownSet, []));
        
        Seq (List.mapi guard_mapper p#branches);
        
        make_it ( Op (Equal, Var nb_disabled, Val (string_of_int p#arity, prim_int) ))
-	 [ CallProc (release_all_channels, [Var chans]);
-	   CallProc (free_knownSet, [Var chans]);
-	   Assign (chans, CallFun (empty_knownSet, []));
+	 [ CallProc (release_all_channels, [Var pt_chans]);
+	   CallProc (free_knownSet, [Var pt_chans]);
+	   Assign (pt_chans, CallFun (empty_knownSet, []));
 	   compile_end status_blocked ];
        
        Seq (List.mapi action_mapper p#branches);
        
        CallProc (acquire, [Var pt_lock]);
-       CallProc (release_all_channels, [Var chans]);
-       CallProc (free_knownSet, [Var chans]);
-       Assign (chans, CallFun (empty_knownSet, []));
+       CallProc (release_all_channels, [Var pt_chans]);
+       CallProc (free_knownSet, [Var pt_chans]);
+       Assign (pt_chans, CallFun (empty_knownSet, []));
        compile_wait;
        
        Seq (List.mapi (fun i prefix -> 

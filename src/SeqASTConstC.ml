@@ -217,6 +217,7 @@ let icommit_thread_env_rv =
 
 
 let args i= (ArrayName (SimpleName "args", Val (string_of_int i, prim_int)), pt_value)
+let arg_init_value = null
 let child = SimpleName "child", pi_thread
 
 let child_proc = (RecordName (child, "proc"), pdef)

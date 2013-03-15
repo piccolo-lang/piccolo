@@ -99,7 +99,7 @@ sig
   val pdef : piccType
 
   val eval_ty : piccType
-    
+   
   val eval_asvar : varDescr
 
   (* enum types and their values *)
@@ -155,6 +155,7 @@ sig
   val icommit_thread_env_rv : varDescr
     
   val args : int -> varDescr
+  val arg_init_value : value_t
   val child : varDescr
 
   val child_proc : varDescr
