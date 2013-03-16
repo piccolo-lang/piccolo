@@ -172,7 +172,6 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
 	  self#echoln 5 (Printf.sprintf "ERROR setted to %s \n" v#toString);      
 	  [TypeError (("Unknown type for " ^ v#name), (v :> ast_type))]
       | Some (t', binder) ->
-	  print_endline (string_of_valueType t);
 	  v#setType t';
 	  v#setBinder binder;
 	  self#echoln 5 (Printf.sprintf "=> variable %s setted to %s" v#name v#toString);
@@ -403,14 +402,10 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
   (* process term *)
   method term_val (env : typingEnv) (m : module_type) (d : definition_type) (p : term_process_type) : unit =
     self#echoln 5 "\n    < TYPING END > started";
-    print_endline "hello";
-    print_typingEnv env;
     ()
       
   method term (env : typingEnv) (m : module_type) (d : definition_type) (p : term_process_type) : typeErrors =
     self#echoln 5 "\n    < TYPING END > finished";
-print_endline "hello";
-    print_typingEnv env;
     []
       
   (* process call *)
@@ -442,8 +437,6 @@ print_endline "hello";
       
   method definition (env : typingEnv) (m : module_type) (d : definition_type) (errs : typeErrors) : typeErrors = 
     self#echoln 2 "\n    < TYPING DEFINITION > finished";
-    print_endline "hello";
-    print_typingEnv env;
     errs 
       
   (* module *)
