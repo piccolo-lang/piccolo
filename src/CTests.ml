@@ -1,11 +1,19 @@
 
+(* module TTests 
+   -------------
+
+  Tests of Typing module
+
+*)
+
+(** Various tests for the Typing module *)
 
 open Types ;;  
 open TypeRepr ;; 
 open Syntax ;; 
 open ASTRepr ;;
 
-module CBackend = Backend.Make (SeqASTConstC) (SeqASTPrettyPrinterC) (Prims)
+module CBackend = Backend.Make (SeqASTConstC) (SeqASTConstC) (Prims) (SeqASTPrettyPrinterC)
 
 let env_printer def = 
   let def = definition_type_of_definition def in
