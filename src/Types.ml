@@ -12,7 +12,6 @@ open Utils;;
 class type ['a] tuple_type = object
   method arity : int
   method elements : 'a list
-  method setElements : 'a list -> unit
   method toString : string
 end
 	  
@@ -20,7 +19,6 @@ end
 class type ['a, 'b] prim_type = object
   method arity : int
   method params : 'a
-  method setParams : 'a -> unit
   method return : 'b
   method moduleName : string
   method primName : string
@@ -39,7 +37,7 @@ type valueType =
       
 (** string representing a valueType *)
 let rec string_of_valueType = function
-  | TUnknown -> "UNKNOWN"
+  | TUnknown -> "unknown"
   | TBool -> "bool"
   | TInt -> "int"
   | TString -> "string"

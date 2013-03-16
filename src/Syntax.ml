@@ -22,7 +22,6 @@ end
 (** interface representing a bound ast with a valueType, extends ast_type *)
 class type virtual ast_binder_type = object
   inherit ast_type
-
   method fetchBinderType : string -> valueType option
 end
 
@@ -38,7 +37,6 @@ end
 (** interface representing a valueType, extends ast_type *) 
 class type virtual value_type = object
   inherit ast_type
-
   method ofType : valueType
   method setType : valueType -> unit
 end
@@ -46,7 +44,6 @@ end
 (** interface representing a constant valueType, extends value_type *)
 class type ['a] const_value_type = object
   inherit value_type
-
   method toVal : 'a
   method toString : string
 end
@@ -54,10 +51,8 @@ end
 (** interface representing a tuple valueType, extends value_type *)
 class type ['a] tuple_value_type = object
   inherit value_type
-
   method arity : int
   method types : valueType list
-  method setTypes : valueType list -> unit
   method elements : 'a list
   method toString : string
 end
@@ -65,7 +60,6 @@ end
 (** interface representing a variable type, extends value_type *)
 class type variable_type = object
   inherit value_type
-
   method name : string
   method index : int
   method setIndex : int -> unit
@@ -77,15 +71,11 @@ end
 (** interface reprsenting a primitive valueType, extends value_type *)
 class type ['a] prim_value_type = object
   inherit value_type
-
   method moduleName : string
   method primName : string
   method arity : int
   method args : 'a list
   method argTypes : valueType list
-  method setArgTypes : valueType list -> unit
-  method returnType : valueType
-  method setReturnType : valueType -> unit
   method toString : string
 end
 	  
@@ -117,51 +107,47 @@ let string_of_value v = (value_type_of_value v)#toString
 (** interface representing the type of an output! action, extends ast_type *)
 class type out_action_type = object
   inherit ast_type
-
   method channel : string
   method channelType : valueType
-  method setChannelType : valueType -> unit
   method channelIndex : int
-  method setChannelIndex : int -> unit
   method channelBinder : ast_binder_type option
   method setChannelBinder : ast_binder_type -> unit
+  method setChannelIndex : int -> unit
   method value : value
   method valueType : valueType
-  method setValueType : valueType -> unit
   method toString : string
+
+  method setChannelType : valueType -> unit
+  method setValueType : valueType -> unit
 end
 
 (** interface representing the type of an input? action, extends ast_binder_type *)
 class type in_action_type = object
   inherit ast_binder_type
-
   method channel : string
   method channelType : valueType
-  method setChannelType : valueType -> unit
-  method setChannelIndex : int -> unit
   method channelIndex : int
+  method setChannelIndex : int -> unit
   method channelBinder : ast_binder_type option
   method setChannelBinder : ast_binder_type -> unit
   method variable : string
   method variableType : valueType
-  method setVariableType : valueType -> unit
   method variableIndex : int
-  method setVariableIndex : int -> unit
   method fetchBinderType : string -> valueType option
+  method setVariableIndex : int -> unit
+  method setVariableType : valueType -> unit
   method toString : string
 end
 
 (** interface representing the type of the silent action tau, extends ast_type *)
 class type tau_action_type = object
   inherit ast_type
-
   method toString : string
 end
 
 (** interface representing the type of the channel creation new, extends ast_binder_type *)    
 class type new_action_type = object
   inherit ast_binder_type
-
   method variable : string
   method variableType : valueType
   method variableIndex : int
@@ -173,33 +159,30 @@ end
 (** interface representing the type of the thread creation spawn, extends ast_type *)
 class type spawn_action_type = object
   inherit ast_type
-
   method moduleName : string
   method defName : string
   method arity : int
   method args : value list
   method argTypes : valueType list
-  method setArgTypes : valueType list -> unit
   method toString : string
 end
 
 (** interface representing the type of a primitive action, extends ast_type *)
 class type prim_action_type = object
   inherit ast_type
-
   method moduleName : string
   method primName : string
   method arity : int
   method args : value list
   method argTypes : valueType list
-  method setArgTypes : valueType list -> unit
   method toString : string
+
+  method setArgTypes : valueType list -> unit
 end
 	  
 (** interface representing the type of the action let, extends ast_binder_type *)
 class type let_action_type = object
   inherit ast_binder_type
-
   method variable : string
   method variableType : valueType
   method variableIndex : int
@@ -207,7 +190,6 @@ class type let_action_type = object
   method fetchBinderType : string -> valueType option
   method value : value
   method valueType : valueType
-  method setValueType : valueType -> unit
   method toString : string
 end
 
@@ -239,7 +221,6 @@ let string_of_action a = (ast_type_of_action a)#toString
 (** interface representing the type of a process, extends ast_type *)
 class type virtual process_type = object
   inherit ast_type
-
   method inModule : string
   method inDef : string
 end
@@ -247,14 +228,12 @@ end
 (** interface representing the type of a process termination end, extends process_type *)
 class type term_process_type = object
   inherit process_type
-
   method toString : string
 end
 
 (** interface representing the type of a process Call, extends process_type *)
 class type call_process_type = object
   inherit process_type
-
   method moduleName : string
   method defName : string
   method args : value list
@@ -267,7 +246,6 @@ end
 (** interface representing a prefix process, extends process_type *)
 class type ['a] prefix_process_type = object
   inherit process_type
-
   method guard : value
   method guardType : valueType
   method setGuardType: valueType -> unit
@@ -280,7 +258,6 @@ end
 (** interface representing the type of a process Choice, extends process_type *)
 class type ['a] choice_process_type = object
   inherit process_type
-
   method branches : ('a prefix_process_type) list
   method arity : int
   method toString : string
@@ -306,7 +283,6 @@ let string_of_process p = (process_type_of_process p)#toString
 (** interface representing the type of a definition, extends ast_binder_type *)
 class type definition_type = object
   inherit ast_binder_type
-
   method name : string
   method params : (string * valueType) list
   method arity : int
@@ -346,7 +322,6 @@ let string_of_definition = function
 (** interface representing the type of a module *)
 class type module_type = object
   inherit ast_type
-
   method name : string
   method definitions : definition list
   method addDefinition : definition -> unit
