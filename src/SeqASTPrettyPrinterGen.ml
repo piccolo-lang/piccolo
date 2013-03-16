@@ -18,6 +18,9 @@ let print_binop fmt = function
   | Div -> fprintf fmt "/"
   | Equal -> fprintf fmt "=="
 
+let print_unop fmt = function
+  | Not -> fprintf fmt "Not"
+
 let rec print_varName fmt = function
   | SimpleName n -> fprintf fmt "%s" n
   | RecordName ((v,_),n) -> fprintf fmt "%a.%s" print_varName v n
@@ -27,6 +30,7 @@ and print_expr fmt = function
   | Val (v, _) -> fprintf fmt "%s" v
   | Var (v, _) -> fprintf fmt "%a" print_varName v
   | Op (op, e1, e2) -> fprintf fmt "%a %a %a" print_expr e1 print_binop op print_expr e2
+  | Opu (op, e) -> fprintf fmt "%a (%a)" print_unop op print_expr e
   | CallFun ((f,_), args) -> 
     fprintf fmt "%a(@[ %a @])" print_varName f
       (print_list print_expr ", ") args
@@ -34,7 +38,8 @@ and print_expr fmt = function
 let rec print_instr fmt = function
   | Comment str ->
     fprintf fmt "(* %s *)" str
-
+  | Debug str ->
+    fprintf fmt "DEBUG(* %s *)" str
   | Switch (e, il) -> 
     fprintf fmt "switch(%a){@[%a@]}" 
       print_expr e (print_list_eol' print_instr "") il

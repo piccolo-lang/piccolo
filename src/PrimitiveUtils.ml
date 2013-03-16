@@ -16,40 +16,37 @@ type k = string * string;;
 (** The type of the value, represents the primitive with name, argument types, return type *)
 type v = prim_type_repr;;
 
-(** Add a primitive into a chosen table *)
 let declare_primitive table module_name def_name =
   Hashtbl.add table module_name def_name
 ;;
  
-(** The hash table representing the types of primitive focntions *)
 let prim_type_table : (k, v) Hashtbl.t = Hashtbl.create 10;;
 
-(** get the value of a primitive *)
-let get_value_type module_name def_name =
-  try
-    Hashtbl.find prim_type_table (module_name, def_name)
-  with _ -> failwith "primitive name unknown"
-;;
-
-(* Initialization of type table with all the wanted primitives *)
 let _ =
-  declare_primitive prim_type_table 
-    ("corearith", "add") (makePrimTypeRepr "core/arith" "add" [TInt; TInt] TInt);
-  
-  declare_primitive prim_type_table
-    ("corearith", "substract") (makePrimTypeRepr "core/arith" "substract" [TInt; TInt] TInt);
-  
-  declare_primitive prim_type_table
-    ("corearith", "compare") (makePrimTypeRepr "core/arith" "compare" [TInt; TInt] TInt);
-  
-  declare_primitive prim_type_table
-    ("coreio", "print_info") (makePrimTypeRepr "core/io" "print_info" [TString] TString);
-  
-  declare_primitive prim_type_table
-    ("coreio", "print_str") (makePrimTypeRepr "core/io" "print_str" [TString] TString);
-  
-  declare_primitive prim_type_table
-    ("coreio", "print_int") (makePrimTypeRepr "core/io" "print_int" [TInt] TString);;
+  declare_primitive
+    prim_type_table 
+    ("corearith", "add")
+    (makePrimTypeRepr "core/arith" "add" [TInt; TInt] TInt);
+  declare_primitive
+    prim_type_table
+    ("corearith", "substract")
+    (makePrimTypeRepr "core/arith" "substract" [TInt; TInt] TInt);
+  declare_primitive
+    prim_type_table
+    ("corearith", "compare")
+    (makePrimTypeRepr "core/arith" "compare" [TInt; TInt] TInt);
+  declare_primitive
+    prim_type_table
+    ("coreio", "print_info")
+    (makePrimTypeRepr "core/io" "print_info" [TString] TString);
+  declare_primitive
+    prim_type_table
+    ("coreio", "print_str")
+    (makePrimTypeRepr "core/io" "print_str" [TString] TString);
+  declare_primitive
+    prim_type_table
+    ("coreio", "print_int")
+    (makePrimTypeRepr "core/io" "print_int" [TInt] TString);;
     
 module Make (Prims : SeqAST.Prims) =
 struct
@@ -57,17 +54,26 @@ struct
   (** The type of the value, represents the primitive with name, argument types, return type *)
   type v = string ;;
 
-  (** The hash table representing the names of primitive focntions *)
+  (* (\** The hash table representing the primitive procedures *\) *)
+  (* let proc_table : (k, v) Hashtbl.t = Hashtbl.create 10;; *)
+
+  (** The hash table representing the primitive focntions *)
   let prim_name_table : (k, v) Hashtbl.t = Hashtbl.create 10;;
+  
+  (** Add a primitive into a table 
+  let declare_primitive table module_name def_name =
+    Hashtbl.add table module_name def_name
+  ;;*)
   
   (** get the value of a primitive *)
   let get_value_name module_name def_name =
     try
-      Hashtbl.find prim_name_table (module_name, def_name)
+let name = Hashtbl.find prim_name_table (module_name, def_name) in
+	name
     with _ -> failwith "primitive name unknown"
   ;;
   
-  (* Initialization of name table with all the wanted primitives *)
+  (** Initialization with all the wanted primitives *)
   let _ =
     declare_primitive prim_name_table ("corearith", "add") Prims.add_name;
 
