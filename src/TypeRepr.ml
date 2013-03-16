@@ -12,8 +12,11 @@ open Types;;
 (** implementation of Types.tuple_type with a list of valueType*)
 class tuple_type_repr (ts : valueType list) =
 object
+  val mutable _types = ts
+    
   method arity = List.length ts 
-  method elements = ts
+  method elements = _types
+  method setElements t = _types <- t
   method toString = string_of_collection "(" ")" "*" string_of_valueType ts
 end
   
@@ -27,8 +30,11 @@ let makeTupleType : valueType list -> valueType =
 
 (** implementation of Types.prim_type *)
 class prim_type_repr (mname : string) (pname : string) (ps : valueType list) (rt : valueType) = object
+  val mutable _params = ps
+    
   method arity = List.length ps
-  method params = ps
+  method params = _params
+  method setParams ps = _params <- ps
   method return = rt
   method moduleName = mname 
   method primName = pname
