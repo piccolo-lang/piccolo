@@ -390,8 +390,8 @@ struct
        Assign (try_result, try_result_init);
        Declare nb_disabled ;
        Assign (nb_disabled, Val zero);
-       (* Declare chans; *)
-       Assign (pt_chans, CallFun (empty_knownSet, []));
+       (* Declare chans; 
+       Assign (pt_chans, CallFun (empty_knownSet, []));*)
        
        Seq (List.mapi guard_mapper p#branches);
        
