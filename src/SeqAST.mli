@@ -282,5 +282,5 @@ sig
     
   val print_instr_list_std : instr list -> unit
     
-  val print_main : int -> string -> int -> int -> int -> Format.formatter -> instr -> unit
+  val print_main : int -> string -> int -> int -> int -> int -> int -> int -> Format.formatter -> instr -> unit
 end

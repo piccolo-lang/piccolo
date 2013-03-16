@@ -152,7 +152,7 @@ let rec print_instr fmt = function
     print_expr e
       
 
-let print_main nb_th entry_point eSize kSize enabled fmt i =
+let print_main nb_th entry_point std_gc_fuel quick_gc_fuel active_factor eSize kSize enabled fmt i =
   let inc_list = 
     ["#include <runtime.h>";
      "#include <value.h>";
@@ -167,9 +167,9 @@ let print_main nb_th entry_point eSize kSize enabled fmt i =
       else inc_list
   in
   Format.fprintf fmt
-    "%a@\n@\n@\n@\n%a@\n@\n@\n@\nint main(){ PICC_main(%d, %s, %d, %d, %d); return 0;}"
+    "%a@\n@\n@\n@\n%a@\n@\n@\n@\nint main(){ PICC_main(%d, %s, %d, %d, %d, %d, %d, %d); return 0;}"
     PrintUtils.(print_list_eol print_string "") inc_list
-    print_instr i nb_th entry_point eSize kSize enabled
+    print_instr i nb_th entry_point std_gc_fuel quick_gc_fuel active_factor eSize kSize enabled
     
 
 let print_instr_list_std il =
