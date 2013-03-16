@@ -16,7 +16,6 @@ and expr =
   | Val of value_t
   | Var of varDescr
   | Op of binop * expr * expr
-  | Opu of unop * expr
   | CallFun of varDescr * (expr list)
       
 and binop = 
@@ -25,8 +24,7 @@ and binop =
   | Mult
   | Div
   | Equal
-and unop = Not
-
+      
 type instr =
   | Comment of string
   | Debug of string
@@ -45,7 +43,6 @@ type instr =
   | Return of expr
   | DoWhile of (instr list) * expr
 
-
 module type Prims =
 sig
   val add_name : string
@@ -56,12 +53,13 @@ sig
   val print_int_name : string
 end
 
-module type OutputTypes =
+module type Consts =
 sig
   val void : piccType
     (* primitive int the sense that it's a primitive type of the target language
      * for instance in C it's just the plain int
      *)
+    
   val prim_bool : piccType
   val prim_int : piccType
   val prim_string : piccType
@@ -76,8 +74,7 @@ sig
   val pt_novalue : piccType
 
   val channel : piccType
-  val handle : piccType
-
+    
   val sched_pool : piccType
   val pi_thread : piccType
     
@@ -91,20 +88,19 @@ sig
   val pc_label : piccType
   val commit_list : piccType
     
-  val knownSet : piccType
-  val knownValue : piccType
-
-  val queue : piccType
-  val ready_queue : piccType
-  val wait_queue : piccType
+  val knows_set : piccType
+    
+  val pset : piccType -> piccType
+    
+  val queue : piccType -> piccType
     
   val pdef : piccType
 
   val eval_ty : piccType
-   
+    
   val eval_asvar : varDescr
-
-  (* enum types and their values *)
+    (* enum types and their values *)
+    (* the values are given as expr since they're only use in assignenment *)
   val status_enum : piccType
     
   val status_run : expr
@@ -125,8 +121,8 @@ sig
   val commit_valid: expr
   val commit_invalid: expr
     
-
   (* const values *)
+    
   val fuel_init: expr
   val invalid_pc: expr
     
@@ -136,6 +132,81 @@ sig
   val create_string : string -> expr
   (* val create_tuple *)
     
+  (* one idea would be to refactor the code so that in SeqASTConst_.ml
+     we declare only varName and the corresponding varDescr is defined 
+     in Backend.ml : it would ensure the typing
+  *)    
+  val copy_value: varDescr
+  val bool_of_boolval: varDescr
+    
+  val pt_channel_of_channel: varDescr
+  val channel_of_pt_channel: varDescr
+  val acquire_channel: varDescr
+  val channel_globalrc: varDescr
+  val eval_fun_of_out_commit: varDescr
+    
+  (* Runtime functions *)
+  val awake : varDescr
+  val can_awake : varDescr
+  val channel_dec_ref_count : varDescr
+  val channel_incr_ref_count : varDescr
+    
+  val fetch_input_commitment : varDescr
+  val fetch_output_commitment : varDescr
+    
+  val knows_register : varDescr
+  val knows_set_forget_all : varDescr
+  val knows_set_forget_to_unknown : varDescr
+    
+  val knows_set_forget : varDescr
+  val knows_set_knows : varDescr
+    
+  val register_input_commitment : varDescr
+    
+  val register_output_commitment : varDescr
+  val set_add : varDescr
+  val commit_list_is_empty : varDescr
+    
+  (* Thread Synchronization function *)
+  val wait_queue_push : varDescr
+  val ready_queue_push : varDescr
+  val ready_queue_add : varDescr
+  val release_all_channels : varDescr
+  val acquire : varDescr
+  val release : varDescr
+  val low_level_yield : varDescr
+    
+  val generate_channel : varDescr
+  val generate_pi_thread : varDescr
+    
+  (* Misc *)
+  val emptySet : varDescr
+  val emptyKnownSet : varDescr
+    
+  val p_inc : varDescr -> instr 
+  val p_dec : varDescr -> instr
+    
+  val return_void : instr
+    
+  (* SchedPool fields *)
+  val scheduler : varDescr
+  val sched_ready : varDescr
+  val sched_wait : varDescr
+    
+  (* PiThread fields *)
+  val pt : varDescr
+  val pt_status : varDescr
+  val pt_enabled : int -> varDescr
+  val pt_knows : varDescr
+  val pt_env : int -> varDescr
+  val pt_commit : varDescr
+  val pt_commits : varDescr
+  val pt_proc : varDescr
+  val pt_pc : varDescr
+  val pt_val : varDescr
+  val pt_clock : varDescr
+  val pt_fuel : varDescr
+  val pt_lock : varDescr
     
   val try_result : varDescr
   val try_result_init : expr
@@ -145,7 +216,16 @@ sig
 
   val chan : varDescr (* tmp var used in foreach loops *) 
   val chans : varDescr (* channel set*)
+  val tmp_chan_name : varName
   
+  val in_chan_name : varName
+  val outcommits_field : string
+  val in_chanx_name : varName
+
+  val out_chan_name : varName
+  val incommits_field : string
+  val newchan_name : varName
+
   val d_entry : expr (* value of the definition entry point*)
 
   val ocommit_var : varDescr
@@ -156,14 +236,14 @@ sig
   val icommit_refvar : varDescr
   val icommit_thread_env_rv : varDescr
     
+
   val args : int -> varDescr
-  val arg_init_value : value_t
   val child : varDescr
 
   val child_proc : varDescr
   val child_pc : varDescr
   val child_status : varDescr
-  val child_known : varDescr
+  val child_knows : varDescr
   val child_env : int -> varDescr  
     
   (* some key values *)
@@ -172,99 +252,8 @@ sig
   val prim_false: value_t
   val pc_label_init: value_t
   val no_value: value_t
-
 end
-
-(**************************************)
-(**************************************)
-(**************************************)
   
-
-module type Names =
-sig
-  val copy_value: string
-  val bool_of_bool_value: string
-    
-  val create_channel_value: string
-
-  val outcommits_of_channel_value : string
-  val incommits_of_channel_value : string
-
-
-  val eval_fun_of_out_commit: string
-    
-  (* Runtime functions *)
-  val awake : string
-  val can_awake : string
-    
-  (* return the handle value *)
-  val get_handle : string
-  (* lock the handle *)
-  val acquire_handle: string
-  val handle_globalrc: string
-
-  val handle_dec_ref_count : string
-  val handle_incr_ref_count : string
-    
-  val fetch_input_commitment : string
-  val fetch_output_commitment : string
-
-  val empty_knownSet : string
-  val free_knownSet : string
-  val knownSet_add : string
-
-  val knownSet_register : string
-  val knownSet_forget_all : string
-  val knownSet_forget_to_unknown : string
-    
-  val knownSet_forget : string
-  val knownSet_known : string
-    
-  val register_input_commitment : string
-  val register_output_commitment : string
-
-  val commit_list_is_empty : string
-    
-  (* Thread Synchronization function *)
-  val wait_queue_push : string
-  val ready_queue_push : string
-  val ready_queue_add : string
-  val release_all_channels : string
-  val acquire : string
-  val release : string
-  val low_level_yield : string
-    
-  val generate_channel : string
-  val generate_pi_thread : string
-    
-
-  (* SchedPool fields *)
-  val scheduler : string
-  val sched_ready : string
-  val sched_wait : string
-    
-  (* PiThread fields *)
-  val pt : string
-  val pt_status : string
-  val pt_enabled : string
-  val pt_known : string
-  val pt_env : string
-  val pt_commit : string
-  val pt_commits : string
-  val pt_proc : string
-  val pt_pc : string
-  val pt_val : string
-  val pt_clock : string
-  val pt_fuel : string
-  val pt_lock : string
-  val pt_chans : string  
-    
-end
-
-(**************************************)
-(**************************************)
-(**************************************)
-
 module type PrettyPrinter =
 sig
   
