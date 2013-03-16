@@ -7,6 +7,7 @@ let type_of_expr = function
   | Val (_, t)
   | Var (_,t)
   | CallFun ((_,t),_) -> t
+  | Opu (_, _) -> Sty "bool" (*only "not" implemented for now*)
   | Op (b, _, _) -> begin
     match b with
     | Equal -> Sty "bool"
@@ -32,6 +33,9 @@ let print_binop fmt = function
   | Div -> fprintf fmt "/"
   | Equal -> fprintf fmt "=="
 
+let print_unop fmt = function
+  | Not -> fprintf fmt "!"
+
 let rec print_varName fmt = function
   | SimpleName n -> fprintf fmt "%s" n
   | RecordName ((v, (Pty (nt, _))),n) -> 
@@ -55,7 +59,8 @@ and print_arg_list types fmt args =
 and print_expr fmt = function
   | Val (v, _) -> fprintf fmt "%s" v
   | Var (v, _) -> fprintf fmt "%a" print_varName v
-  | Op (op, e1, e2) -> fprintf fmt "%a %a %a" print_expr e1 print_binop op print_expr e2
+  | Op (op, e1, e2) -> fprintf fmt "(%a) %a (%a)" print_expr e1 print_binop op print_expr e2
+  | Opu (op, e) -> fprintf fmt "%a (%a)" print_unop op print_expr e
 
   | CallFun ((f, Fun (_, argTypes )), args) -> 
     fprintf fmt "%a(@[ %a @])" print_varName f

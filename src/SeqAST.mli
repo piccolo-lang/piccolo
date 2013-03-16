@@ -16,6 +16,7 @@ and expr =
   | Val of value_t
   | Var of varDescr
   | Op of binop * expr * expr
+  | Opu of unop * expr
   | CallFun of varDescr * (expr list)
       
 and binop = 
@@ -24,7 +25,8 @@ and binop =
   | Mult
   | Div
   | Equal
-      
+and unop = Not
+
 type instr =
   | Comment of string
   | Debug of string

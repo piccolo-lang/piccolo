@@ -114,7 +114,7 @@ struct
   let compile_end status =
     Seq [
       Comment "------compile_end---------";
-      Debug "C( end )";
+      Debug "end";
       Foreach (chan,
 	       (CallFun (knownSet_known, [Var pt_known])),
 	       [CallProc (handle_dec_ref_count, [CallFun (get_handle, [Var chan])]) ]);
@@ -128,7 +128,7 @@ struct
     (*  property : chans \inter known.FORGET = \emptySet *)
     Seq [
       Comment "------compile_wait---------";
-      Debug "C( wait )";
+      Debug "wait";
       Assign (pt_pc, invalid_pc);
       Assign (pt_fuel, fuel_init);
       Foreach (chan,
@@ -143,7 +143,7 @@ struct
   and compile_yield label =
     Seq [
       Comment "------compile_yield---------";
-      Debug ("C( yield " ^ (string_of_expr label)  ^ " )");
+      Debug ("yield " ^ (string_of_expr label));
       Assign (pt_pc, label);
       Assign (pt_fuel, fuel_init);
       Foreach (chan,
@@ -158,7 +158,7 @@ struct
 
   let compile_try_tau = 
     Seq[
-      Debug "C( tau )";
+      Debug "tau";
       Assign (try_result, try_enabled)]
     
   let compile_try_in (action:in_action_type) = 
@@ -170,7 +170,7 @@ struct
     Seq [
       Bloc [
 	Comment "------compile_try_in---------";
-	Debug ("C(" ^ action#toString ^ ")");
+	Debug (action#toString);
 	make_it (CallFun (knownSet_add, [Var pt_chans;  Var pt_env_c]))
 	  [CallProc (acquire_handle, [Var (pt_env action#channelIndex)])];
 	
@@ -208,8 +208,8 @@ struct
       	      Assign (try_result, try_enabled);
       	      Goto label_end_of_try]],
 	  
-	  (CallFun (commit_list_is_empty, 
-		    [ CallFun (outcommits_of_channel_value, [Var pt_env_c]) ])) 
+	  (Opu (Not, CallFun (commit_list_is_empty, 
+			      [ CallFun (outcommits_of_channel_value, [Var pt_env_c]) ]))) 
 	end];
       Label label_end_of_try] 
   (* Label must be out of the bloc to make the c code compile*)
@@ -223,7 +223,7 @@ struct
     Seq[
       Bloc [
 	Comment "------compile_try_out---------";
-	Debug ("C(" ^ action#toString ^ ")");
+	Debug (action#toString);
 	make_it (CallFun (knownSet_add, [Var pt_chans; Var pt_env_c]))
 	  [CallProc (acquire_handle, [Var (pt_env action#channelIndex)])];
 	make_it (Op (Equal, CallFun (handle_globalrc, [Var pt_env_c]), Val ("1", prim_int)))
@@ -250,15 +250,16 @@ struct
       	      CallProc (awake, [Var scheduler; Var icommit_thread; Var icommit_var]);
       	      Assign (try_result, try_enabled);
       	      Goto label_end_of_try]],
-	  (CallFun (commit_list_is_empty, 
-		    [CallFun (incommits_of_channel_value, [Var pt_env_c]) ])) end];
+	  (Opu (Not, CallFun (commit_list_is_empty, 
+			      [CallFun (incommits_of_channel_value, [Var pt_env_c]) ])))
+	end];
 	Label label_end_of_try]
 
       
   let compile_try_new (action:new_action_type) = 
     Bloc [
       Comment "------compile_try_new---------";
-      Debug ("C(" ^ action#toString ^ ")");
+      Debug (action#toString);
       Assign (pt_env action#variableIndex, CallFun (create_channel_value, 
 						    [CallFun (generate_channel, [])]));
       CallProc (knownSet_register, [Var pt_known; Var (pt_env action#variableIndex)]);
@@ -283,7 +284,7 @@ struct
     in
     Bloc[
       Comment "------compile_try_spawn---------";
-      Debug ("C(" ^ action#toString ^ ")");
+      Debug (action#toString);
       Declare (args action#arity);
       Declare child;
       Assign (child, CallFun (generate_pi_thread, [Val (string_of_int (d#esize), prim_int);
@@ -301,13 +302,13 @@ struct
 
   let compile_try_prim (action:prim_action_type) = 
     Seq[
-      Debug ("C(" ^ action#toString ^ ")");
+      Debug ( action#toString );
       compile_prim0 (fun f arg_l -> CallProc (f, arg_l)) (action :> common_prim_type);
       Assign (try_result, try_enabled)]
 
   let compile_try_let (action:let_action_type) = 
     Seq 
-      [Debug ("C(" ^ action#toString ^ ")");
+      [Debug ( action#toString );
        compile_value action#value;
        Assign (pt_env action#variableIndex, Var pt_val)]
 
@@ -431,7 +432,7 @@ struct
     
     Bloc [
       Comment "------compile_call---------";
-      Debug ("C(" ^ p#toString ^ ")");
+      Debug ("Call(" ^ p#toString ^ ")");
       Declare (args p#arity);
       CallProc (knownSet_forget_all, [ Var pt_known ]);
 
