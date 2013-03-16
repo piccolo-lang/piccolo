@@ -34,7 +34,7 @@ let _ =
   declare_primitive
     prim_type_table
     ("corearith", "compare")
-    (makePrimTypeRepr "core/arith" "compare" [TInt; TInt] TInt);
+    (makePrimTypeRepr "core/arith" "compare" [TInt; TInt] TBool);
   declare_primitive
     prim_type_table
     ("coreio", "print_info")
