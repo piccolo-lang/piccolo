@@ -29,6 +29,8 @@ let _ =
   Hashtbl.add prefix_args_table SeqASTConstC.acquire_handle [ad];
   Hashtbl.add prefix_args_table SeqASTConstC.handle_globalrc [ad];
 
+  Hashtbl.add prefix_args_table SeqASTConstC.bool_of_bool_value [ad];
+
   Hashtbl.add prefix_args_table SeqASTConstC.init_bool_true [ad];
   Hashtbl.add prefix_args_table SeqASTConstC.init_bool_false [ad];
   Hashtbl.add prefix_args_table SeqASTConstC.init_int_value [ad; ""];
