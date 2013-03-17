@@ -229,9 +229,8 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
 	  
   method outAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : out_action_type) (errs : typeErrors) : typeErrors =
     self#echoln 2 "\n    < TYPING OUT ACTION > finished";
-    print_endline a#toString;
     (match lookup_env env a#channel with
-       | None -> [TypeError ("Unbound channel " ^ a#channel, (a :> ast_type))]
+       | None -> [TypeError ("OUT Unbound channel " ^ a#channel, (a :> ast_type))]
        | Some (chType, _) ->
 	   try 
 	     let valType = 
@@ -265,14 +264,14 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
 	  (a#setChannelBinder (d :> ast_binder_type);
 	   a#setVariableType vt; 
 	   self#echoln 5 (Printf.sprintf "=> input variable %s setted to type %s" a#variable (string_of_valueType vt)));
-      | Some _ | None -> ()
+      | Some _ | None -> a#setChannelBinder (a :> ast_binder_type)
 	  
   method inAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : in_action_type) : typeErrors =
     self#echoln 2 "\n    < TYPING INPUT ACTION > finished";
     match d#fetchBinderType a#channel with 
-      |	None -> [TypeError (("Unbound channel " ^ a#channel), (a :> ast_type))]
       | Some (TChan (vt)) -> []
       | Some (_ as t) -> [TypeError (("Type Error : This expression has type " ^ (string_of_valueType t) ^ " but an expression was expected of type " ^ (string_of_valueType a#channelType), (a :> ast_type)))]
+      |	None -> [TypeError (("IN Unbound channel " ^ a#channel), (a :> ast_type))]
 	  
   (* tau action *)
   method tauAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : tau_action_type) : unit =
@@ -341,7 +340,7 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
     self#echoln 3 "\n    < TYPING PRIM ACTION > finished";
     let prim = PrimitiveUtils.get_value_type a#moduleName a#primName in
       (if(not(prim#arity = a#arity))then
-	 failwith ("Arity Error : This primitive has arity of size " ^  (string_of_int a#arity) ^ " but an the primitive should have arity of size" ^ (string_of_int prim#arity))
+	 failwith ("Arity Error : This primitive has arity of size " ^  (string_of_int prim#arity) ^ " but an the primitive should have arity of size " ^ (string_of_int a#arity))
        else
 	 ());
 	let errl =
@@ -350,8 +349,8 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
 	       if(type_eq t1 t2)then
 		 l
 	       else
-		 TypeError ("Mismatch PRIM § § § : ", (a :> ast_type))::l)
-	    [] prim#params a#argTypes
+		 TypeError ("Type Error : This expression has type " ^ (string_of_valueType t1) ^ " but an expression was expected of type " ^ (string_of_valueType t2), (a :> ast_type))::l)
+	    [] a#argTypes prim#params
 	in
 	  errl@(List.concat errs)
       
@@ -386,6 +385,18 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
   (* branches *)
   method branch_val (env : typingEnv) (m : module_type) (d : definition_type) (c : process choice_process_type) (i : int) (p : process prefix_process_type) : typingEnv =
     self#echoln 5 "\n    < TYPING BRANCH > started";
+    (match p#guard with
+       | VTrue _ | VFalse _ -> p#setGuardType TBool
+       | VInt _ -> p#setGuardType TInt
+       | VString _ -> p#setGuardType TString
+       | VTuple (t) -> p#setGuardType (TUnknown)
+       | VPrim (pr) -> 
+	   let prim = PrimitiveUtils.get_value_type pr#moduleName pr#primName in
+	     p#setGuardType prim#return
+       | VVar (v) ->
+	   (match lookup_env env v#name with
+	      | Some (ty, _) -> p#setGuardType ty
+	      | None -> failwith ("Error : Unbound value " ^ v#name)));
     match p#action with
       | Input (a) ->
 	  (match lookup_env env a#channel with
@@ -419,8 +430,6 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
       
   method term (env : typingEnv) (m : module_type) (d : definition_type) (p : term_process_type) : typeErrors =
     self#echoln 5 "\n    < TYPING END > finished";
-    print_endline "hello";
-    print_typingEnv env;
     []
       
   (* process call *)

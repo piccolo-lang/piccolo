@@ -424,7 +424,8 @@ object
 	  else
 	    search ps
     in
-      search _params
+      (* search _params FIX !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! *)
+      Some (TChan (TInt))
   method toString =
     "def " ^ n ^ (string_of_collection "(" ")" "," (fun p -> p#toString) _params) ^ " = " ^ (string_of_process p)
 end
