@@ -1,8 +1,7 @@
 module Test/Fibonacci
 
 def Fibonacci(n:int, m:int, p:int, r:chan<int>) = 
-    [#core/arith:equals(n, 0)] r!m, end +
+    [#core/arith:equals(n, 1)] r!m, end +
     tau, Fibonacci(#core/arith:substract(n, 1), #core/arith:add(m, p), m, r)
 
-def Main() = 
-    new(r:chan<int>), spawn{Fibonacci(5, 1, 1, r)}, spawn{Fibonacci(3, 1, 1, r)}, r?(x), #core/io:print_int(x), r?(x), #core/io:print_int(x), end
+def Main() = new(r:chan<int>), spawn{Fibonacci(5, 1, 1, r)}, r?(x), #core/io:print_int(x), end

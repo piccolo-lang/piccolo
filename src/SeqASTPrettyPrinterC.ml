@@ -29,6 +29,8 @@ let _ =
   Hashtbl.add prefix_args_table SeqASTConstC.acquire_handle [ad];
   Hashtbl.add prefix_args_table SeqASTConstC.handle_globalrc [ad];
 
+  Hashtbl.add prefix_args_table SeqASTConstC.bool_of_bool_value [ad];
+
   Hashtbl.add prefix_args_table SeqASTConstC.init_bool_true [ad];
   Hashtbl.add prefix_args_table SeqASTConstC.init_bool_false [ad];
   Hashtbl.add prefix_args_table SeqASTConstC.init_int_value [ad; ""];
@@ -145,6 +147,12 @@ let rec print_instr fmt = function
   | Declare (v,t) -> fprintf fmt "%a %a;" print_piccType t print_varName v
   | Assign ((v,_), e) -> fprintf fmt "%a = %a;" print_varName v print_expr e
   
+  | DeclareFun (( v, (Fun (ret, argType))), args_names, []) ->
+    fprintf fmt "%a %a(%a);"
+      print_piccType ret
+      print_varName v
+      (print_list2 print_piccType print_string ", ") (argType, args_names)
+
   | DeclareFun (( v, (Fun (ret, argType))), args_names, il) ->
     fprintf fmt "%a %a(%a){@\n@[<hov 3>%a@]@\n}"
       print_piccType ret

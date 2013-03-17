@@ -159,7 +159,9 @@ struct
     
   let compile_try_in (action:in_action_type) = 
     let ok = ok_name, commit_status_enum in
-    let vl = vl_name, pt_value in
+    
+    (* let vl = vl_name, pt_value in *) 
+    
     let pt_env_x = pt_env action#variableIndex in
     let pt_env_c = pt_env action#channelIndex in
     let label_end_of_try = eot_label () in
@@ -167,11 +169,12 @@ struct
       Bloc [
 	Comment "------compile_try_in---------";
 	Debug (action#toString);
-	make_it (CallFun (knownSet_add, [Var pt_chans;  Var pt_env_c]))
+	make_it (CallFun (knownSet_add, [Var chans;  Var pt_env_c]))
 	  [CallProc (acquire_handle, [Var (pt_env action#channelIndex)])];
 	
 	make_it (Op (Equal, CallFun (handle_globalrc, [Var pt_env_c]), Val ("1", prim_int)))
 	  [Assign (try_result, try_disabled);
+	   Debug (action#toString ^ " : try = disabled");
 	   Goto label_end_of_try];
 	Declare ocommit_var;
 	Declare ok;
@@ -181,6 +184,7 @@ struct
 	  
 	  make_it (Op (Equal, Var ocommit_var, Val null))
       	    [Assign (try_result, try_commit);
+	     Debug (action#toString ^ " : try = commit");
       	     Goto label_end_of_try];
 	  
 	  DoWhile begin 
@@ -190,11 +194,18 @@ struct
       	    (Op (Equal, Var ok, commit_cannot_acquire)) end;
 	  
 	  make_it (Op (Equal, Var ok, commit_valid))
-      	    [ Declare vl;
+      	    [ (* Declare vl; *)
+	      
 	      Declare eval_asvar;
 	      Assign (eval_asvar, CallFun (eval_fun_of_out_commit, [Var ocommit_var]));
-	      Assign (vl, CallFun (eval_asvar, [Var ocommit_thread]));
-	      Assign (pt_env_x, Var vl);
+	      
+	      
+	      CallProc (eval_asvar, [Var ocommit_thread]);
+	      Assign (pt_env_x, Var ocommit_thread_val);
+	      
+	      (* Assign (vl, CallFun (eval_asvar, [Var ocommit_thread])); *)
+	      (* Assign (pt_env_x, Var vl); *)
+	      
 	      (match action#variableType with
 	      | TChan _ -> 
 		Seq [make_it (CallFun (knownSet_register, [Var pt_known; Var pt_env_x]))
@@ -202,6 +213,7 @@ struct
 	      | _ -> Seq []);
 	      CallProc (awake, [Var scheduler; Var ocommit_thread; Var ocommit_var]); 
       	      Assign (try_result, try_enabled);
+	      Debug (action#toString ^ " : try = enabled");
       	      Goto label_end_of_try]],
 	  
 	  (Opu (Not, CallFun (commit_list_is_empty, 
@@ -220,10 +232,11 @@ struct
       Bloc [
 	Comment "------compile_try_out---------";
 	Debug (action#toString);
-	make_it (CallFun (knownSet_add, [Var pt_chans; Var pt_env_c]))
+	make_it (CallFun (knownSet_add, [Var chans; Var pt_env_c]))
 	  [CallProc (acquire_handle, [Var (pt_env action#channelIndex)])];
 	make_it (Op (Equal, CallFun (handle_globalrc, [Var pt_env_c]), Val ("1", prim_int)))
 	  [Assign (try_result, try_disabled);
+	   Debug (action#toString ^ " : try = disabled");
 	   Goto label_end_of_try];
 	Declare icommit_var;
 	Declare ok;
@@ -232,6 +245,7 @@ struct
 	  
 	  make_it (Op (Equal, Var icommit_var, Val null))
       	    [Assign (try_result, try_commit);
+	     Debug (action#toString ^ " : try = commit");
       	     Goto label_end_of_try];
 	  
 	  DoWhile begin 
@@ -245,6 +259,7 @@ struct
       	      Assign (icommit_thread_env_rv, Var pt_val);
       	      CallProc (awake, [Var scheduler; Var icommit_thread; Var icommit_var]);
       	      Assign (try_result, try_enabled);
+	      Debug (action#toString ^ " : try = enabled");
       	      Goto label_end_of_try]],
 	  (Opu (Not, CallFun (commit_list_is_empty, 
 			      [CallFun (incommits_of_channel_value, [Var pt_env_c]) ])))
@@ -298,15 +313,18 @@ struct
 
   let compile_try_prim (action:prim_action_type) = 
     Seq[
+      Comment "------compile_try_prim---------";
       Debug ( action#toString );
       compile_prim0 false (action :> common_prim_type);
       Assign (try_result, try_enabled)]
 
   let compile_try_let (action:let_action_type) = 
     Seq 
-      [Debug ( action#toString );
+      [Comment "------compile_try_let---------";
+       Debug ( action#toString );
        compile_value action#value;
-       Assign (pt_env action#variableIndex, Var pt_val)]
+       Assign (pt_env action#variableIndex, Var pt_val);
+       Assign (try_result, try_enabled)]
 
   let compile_try_action = function
     | Tau action -> compile_try_tau
@@ -348,10 +366,12 @@ struct
 	      
 	      [make_it (Op (Equal, Var try_result, try_enabled))
 		  [p_dec pt_fuel;
+		   (* != with the spec : release moved before the test*)
+		   CallProc (release_all_channels, [Var chans]);
 		   make_it (Op (Equal, Var pt_fuel, Val zero ))
-		     [CallProc (release_all_channels, [Var pt_chans]);
-		      CallProc (free_knownSet, [Var pt_chans]);
-		      Assign (pt_chans, CallFun (empty_knownSet, []));
+		     [(* CallProc (release_all_channels, [Var chans]); *)
+		      CallProc (free_knownSet, [Var chans]);
+		      Assign (chans, CallFun (empty_knownSet, []));
 		      compile_yield cont_pc];
 		   Assign (pt_pc, cont_pc);
 		   Goto def_label]]
@@ -386,23 +406,23 @@ struct
        Assign (try_result, try_result_init);
        Declare nb_disabled ;
        Assign (nb_disabled, Val zero);
-       (* Declare chans; 
-       Assign (pt_chans, CallFun (empty_knownSet, []));*)
+       Declare chans; 
+       Assign (chans, CallFun (empty_knownSet, []));
        
        Seq (List.mapi guard_mapper p#branches);
        
        make_it ( Op (Equal, Var nb_disabled, Val (string_of_int p#arity, prim_int) ))
-	 [ CallProc (release_all_channels, [Var pt_chans]);
-	   CallProc (free_knownSet, [Var pt_chans]);
-	   Assign (pt_chans, CallFun (empty_knownSet, []));
+	 [ CallProc (release_all_channels, [Var chans]);
+	   CallProc (free_knownSet, [Var chans]);
+	   Assign (chans, CallFun (empty_knownSet, []));
 	   compile_end status_blocked ];
        
        Seq (List.mapi action_mapper p#branches);
        
        CallProc (acquire, [Var pt_lock]);
-       CallProc (release_all_channels, [Var pt_chans]);
-       CallProc (free_knownSet, [Var pt_chans]);
-       Assign (pt_chans, CallFun (empty_knownSet, []));
+       CallProc (release_all_channels, [Var chans]);
+       CallProc (free_knownSet, [Var chans]);
+       Assign (chans, CallFun (empty_knownSet, []));
        compile_wait;
        
        Seq (List.mapi (fun i prefix -> 
@@ -443,20 +463,24 @@ struct
       Assign (pt_status, status_call);
       return_void]
       
+  let def_sig m d body=
+    DeclareFun ((SimpleName (m#name ^ "_" ^ d#name), pdef), [string_name_of_varDescr scheduler; 
+							     string_name_of_varDescr pt], body)
+
   let compile_def m (Def d) =
     init_label ();
-    DeclareFun ((SimpleName (m#name ^ "_" ^ d#name), pdef), [string_name_of_varDescr scheduler; 
-							     string_name_of_varDescr pt],
-		[Label (def_label_pattern m#name d#name);
+    def_sig m d [Label (def_label_pattern m#name d#name);
 		 Switch (Var pt_pc, [Case d_entry;
 				     compile_process m d d#process
-				    ])])
+				    ])]
 
   let compile_module (Module m) =
     let defs = m#definitions in 
     compiled_module := Some m;
     let (Def d) = List.(nth defs ( (length defs) - 1) ) in
-    d, Seq [Seq !eval_funs; Seq (List.map (compile_def m) defs)]
+    d, Seq [Seq !eval_funs; 
+	    Seq (List.map (fun (Def d) -> def_sig m d []) defs);
+	    Seq (List.map (compile_def m) defs)]
       
 
   let print_piccType  = Printer.print_piccType
