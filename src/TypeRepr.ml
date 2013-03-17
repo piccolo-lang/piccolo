@@ -15,8 +15,8 @@ object
   val mutable _types = ts
     
   method arity = List.length ts 
-  method elements = _types
-  method setElements t = _types <- t
+  method els = _types
+  method setEls t = _types <- t
   method toString = string_of_collection "(" ")" "*" string_of_valueType ts
 end
   

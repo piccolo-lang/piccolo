@@ -8,7 +8,9 @@
 
 open Utils;;
 open Types;;
+open TypeRepr;;
 open Syntax;;
+open PrimitiveUtils;;
 
 (** type representing typeError *)
 type typeError =
@@ -47,7 +49,7 @@ let lookup_env env v =
 let lookup_def m n =
   try
     List.find (fun (Def d) -> d#name = n) m#definitions
-  with Not_found -> failwith ("Unbound value " ^ n)
+  with Not_found -> failwith ("Unbound definition " ^ n)
 ;;
 
 (** Thread a typing env which is enriched with definitions and choice_process
@@ -134,33 +136,50 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
   method tupleValue_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t : Types.valueType) (v : value tuple_value_type) : typingEnv =
     self#echoln 3 "\n    < TYPING TUPLE > started";
     let rec funct var_list type_list =
+      (match var_list with
+	 | [] -> []
+	 | head::tail ->
+	     (match head with
+		| VVar (head) ->
+		    (match lookup_env env head#name with
+		       | None -> failwith ("Error : Unbound value " ^ head#name)
+		       | Some (ty, _) -> ty::(funct tail (List.tl type_list)))
+		| VPrim (head) ->
+		    let prim = get_value_type head#moduleName head#primName in 
+		      prim#return::(funct tail (List.tl type_list))
+		| _ -> (List.hd type_list)::(funct tail (List.tl type_list))))
+    in
+    let l = (funct v#elements v#types) in
+      v#setTypes l;
+      self#echoln 5 (Printf.sprintf "=> tuple setted to %s" (string_of_collection "(" ")" "*" string_of_valueType l));
+      env
+      
+  method tupleValue (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t : Types.valueType) (v : value tuple_value_type) (errs : typeErrors list) : typeErrors =
+    self#echoln 3 "\n    < TYPING TUPLE > finished";
+    let rec funct var_list type_list =
       match var_list with
 	| [] -> []
 	| head::tail ->
 	    (match head with
 	       | VVar (head) ->
 		   (match lookup_env env head#name with
-		      | None -> failwith ("Error : Unbound value " ^ head#name)
-		      | Some (ty, _) -> ty::(funct tail (List.tl type_list)))
-		     (* | VTupl *)
+		      | Some (ty, _) -> ty::(funct tail (List.tl type_list))
+		      | None -> failwith ("Error : Unbound value " ^ head#name)) 
 	       | VPrim (head) ->
-		   let prim = PrimitiveUtils.get_value_type head#moduleName head#primName in 
+		   let prim = get_value_type head#moduleName head#primName in 
 		     prim#return::(funct tail (List.tl type_list))
+	       | VTuple (head) -> (makeTupleType head#types)::(funct tail (List.tl type_list))  
 	       | _ -> (List.hd type_list)::(funct tail (List.tl type_list)))
     in
     let l = (funct v#elements v#types) in
       v#setTypes l;
       self#echoln 5 (Printf.sprintf "=> tuple setted to %s" (string_of_collection "(" ")" "*" string_of_valueType l));
-      env
-	
-  method tupleValue (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t : Types.valueType) (v : value tuple_value_type) (errs : typeErrors list) : typeErrors =
-    self#echoln 3 "\n    < TYPING TUPLE > finished";
-    let tuple_errs =
+      let tuple_errs =
       match t with
 	| TTuple (t') -> []
-	| _ -> [TypeError ("Type Error : TTThis expression has type " ^ (string_of_valueType t) ^ " but an expression was expected of type " ^ (string_of_valueType v#ofType), (v :> ast_type))]
-    in
-      tuple_errs@(List.concat errs)
+	| _ -> [TypeError ("Type Error : This expression has type " ^ (string_of_valueType t) ^ " but an expression was expected of type " ^ (string_of_valueType v#ofType), (v :> ast_type))]
+      in
+	tuple_errs@(List.concat errs)
 	
   (* value variable *) 
   method varValue_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t : Types.valueType) (v : variable_type) : unit =
@@ -181,80 +200,60 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
 	  (if(type_eq t' t)then
 	     []
 	   else
-	     [TypeError (("Type Error : " ^ v#name ^ " VThis expression has type " ^  (string_of_valueType t') ^ " but an expression was expected of type " ^ (string_of_valueType t)), (v :> ast_type))])
-      | None -> [TypeError (("Unbound variable " ^ v#name), (v :> ast_type))]
+	     [TypeError (("Type Error : " ^ v#name ^ " This expression has type " ^  (string_of_valueType t') ^ " but an expression was expected of type " ^ (string_of_valueType t)), (v :> ast_type))])
+      | None -> failwith ("Error : Unbound value " ^ v#name)
 	  
   (* value primitive *)
   method primValue_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t : Types.valueType) (v : value prim_value_type) : typingEnv = 
     self#echoln 3 "\n    < TYPING PRIMITIVE > started";
-    let prim = PrimitiveUtils.get_value_type v#moduleName v#primName in 
-      v#setArgTypes prim#params;
-      v#setReturnType prim#return;
-      env
+    let prim = get_value_type v#moduleName v#primName in 
+      if(prim#arity <> v#arity)then
+	failwith ("Arity Error : Using primitive " ^ prim#primName ^ " with " ^ (string_of_int v#arity) ^ " argument(s), this primitive should have " ^ (string_of_int prim#arity) ^ " argument(s)")
+      else 
+	(v#setArgTypes prim#params;
+	 v#setReturnType prim#return;
+	 env)
 	
   method primValue (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t: Types.valueType) (v : value prim_value_type) (errs: typeErrors list) : typeErrors =
     self#echoln 3 "\n    < TYPING PRIMITIVE > finished";
-    let prim = PrimitiveUtils.get_value_type v#moduleName v#primName in 
-      (if(not(prim#arity = v#arity))then
-	 failwith ("Arity Error : This primitive has arity of size " ^  (string_of_int v#arity) ^ " but an the primitive should have arity of size" ^ (string_of_int prim#arity))
-       else
-	 ());
-      let errl =
-	List.fold_left2
-	  (fun l t1 t2 ->
-	     if(type_eq t1 t2)then
-	       l
-	     else
-	       TypeError ("Mismatch PRIMVALUE § § § : ", (v :> ast_type))::l)
-	  [] prim#params v#argTypes (* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*)
-      in
-	errl@(List.concat errs)
+    (List.concat errs)
 	  
   (* action *)
   (* out actions *)
   method outAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : out_action_type) : typingEnv =
     self#echoln 2 "\n    < TYPING OUT ACTION > started";
     (match lookup_env env a#channel with
-       | None -> env
        | Some (chType, _) -> 
 	   a#setChannelType chType;
+	   self#echoln 5 (Printf.sprintf "=> channel %s setted to type %s" a#channel (string_of_valueType a#channelType));
 	   (match a#value with 
 	      | VVar (v) ->
 		  (match lookup_env env v#name with
 		     | Some (ty, _) -> a#setValueType ty; env
-		     | None -> env)
-| VTuple (t) -> print_endline (string_of_collection "(" ")" "I" string_of_valueType t#types); a#setValueType t#ofType; env
+		     | None -> failwith ("Error : Unbound value " ^ v#name))
 	      | VPrim (p) -> a#setValueType p#returnType; env
-	      | _ -> env))
+	      | _ -> env)
+       | None -> failwith ("Error : Unbound value " ^ a#channel))
 	  
   method outAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : out_action_type) (errs : typeErrors) : typeErrors =
     self#echoln 2 "\n    < TYPING OUT ACTION > finished";
     (match lookup_env env a#channel with
-       | None -> [TypeError ("OUT Unbound channel " ^ a#channel, (a :> ast_type))]
        | Some (chType, _) ->
-	   try 
-	     let valType = 
-	       match a#value with 
-		 | VVar (v) ->
-		     (match lookup_env env v#name with
-			| Some (ty, _) -> ty
-			| None -> failwith v#name)
-		(* | VTuple (t) ->
- print_endline (string_of_collection "(" ")" " O " string_of_valueType t#types);
-		     print_endline (string_of_valueType t#ofType);
- t#ofType*)
-		 | VPrim (p) -> p#returnType
-		 | _ -> a#valueType
-	     in
-	       (match (chType, valType) with
-		  | (TChan (t1) as chan, t2) ->
-		      if(type_eq t1 t2)then
-			[]
-		      else
-			[TypeError (("Type Error : This expression has type " ^  (string_of_valueType chan) ^ " but an expression was expected of type " ^ (string_of_valueType (TChan (t2))), (a :> ast_type)))]
-		  | (_ as t, t2) -> [TypeError (("Type Error : This expression has type " ^  (string_of_valueType t) ^ " but an expression was expected of type " ^ (string_of_valueType (TChan (t2))), (a :> ast_type)))])
-	   with Failure var_name -> [TypeError ("Unbound variable " ^ var_name, (a :> ast_type))]
-    )@errs
+	   let valType = 
+	     (match a#value with 
+		| VPrim (p) -> p#returnType
+		| VTuple (t) -> makeTupleType t#types
+		| _ -> a#valueType)
+	   in
+	     (match (chType, valType) with
+		| (TChan (t1) as chan, t2) ->
+		    if(type_eq t1 t2)then
+		      []
+		    else
+		      [TypeError (("Type Error : This expression has type " ^  (string_of_valueType chan) ^ " but an expression was expected of type " ^ (string_of_valueType (TChan (t2))), (a :> ast_type)))]
+		| (_ as t, t2) -> [TypeError (("Type Error : This expression has type " ^  (string_of_valueType t) ^ " but an expression was expected of type " ^ (string_of_valueType (TChan (t2))), (a :> ast_type)))])
+       | None -> failwith ("Error : Unbound value " ^ a#channel))
+    @errs
       
   (* in action *)
   method inAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : in_action_type) : unit =
@@ -264,14 +263,15 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
 	  (a#setChannelBinder (d :> ast_binder_type);
 	   a#setVariableType vt; 
 	   self#echoln 5 (Printf.sprintf "=> input variable %s setted to type %s" a#variable (string_of_valueType vt)));
-      | Some _ | None -> a#setChannelBinder (a :> ast_binder_type)
+      | Some _ -> a#setChannelBinder (a :> ast_binder_type) 
+      | None ->  failwith ("Error : Unbound value " ^ a#channel)
 	  
   method inAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : in_action_type) : typeErrors =
     self#echoln 2 "\n    < TYPING INPUT ACTION > finished";
     match d#fetchBinderType a#channel with 
       | Some (TChan (vt)) -> []
       | Some (_ as t) -> [TypeError (("Type Error : This expression has type " ^ (string_of_valueType t) ^ " but an expression was expected of type " ^ (string_of_valueType a#channelType), (a :> ast_type)))]
-      |	None -> [TypeError (("IN Unbound channel " ^ a#channel), (a :> ast_type))]
+      |	None -> failwith ("Error : Unbound value " ^ a#channel)
 	  
   (* tau action *)
   method tauAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : tau_action_type) : unit =
@@ -285,6 +285,8 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
   (* new action /!\ *)
   method newAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : new_action_type) : unit =
     self#echoln 2 "\n    < TYPING NEW ACTION > started";
+    a#setChannelBinder (d :> ast_binder_type);
+    d#extendEnv (a#variable);
     ()
       
   method newAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : new_action_type) : typeErrors =
@@ -297,31 +299,17 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
   method spawnAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : spawn_action_type) : typingEnv =
     self#echoln 3 "\n    < TYPING SPAWN ACTION > started";
     let (Def def) = lookup_def m a#defName in
-    let arity_error = 
-      let call_arity = a#arity in 
-      let def_arity = def#arity in
-      call_arity <> def_arity in 
-    if arity_error then
-      failwith ("Arity error for spawn " ^ a#defName ^ " in definition " ^ d#name);
-    let ts = List.map snd def#params in
-    a#setArgTypes ts;
-    env
-	
+      if(a#arity <> def#arity)then
+	failwith ("Arity Error : Spawning " ^ def#name ^ " with " ^ (string_of_int a#arity) ^ " argument(s), the definition should have " ^ (string_of_int def#arity) ^ " argument(s)")
+      else
+	let ts = List.map snd def#params in
+	  a#setArgTypes ts;
+	  env
+	    
   method spawnAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : spawn_action_type) (errs : typeErrors list) : typeErrors =
     self#echoln 3 "\n    < TYPING SPAWN ACTION > finished";
-    let (Def def) = lookup_def m a#defName in
-    let ts = List.map snd def#params in
-    let errl =
-      List.fold_left2
-	(fun l t1 t2 ->
-	   if(type_eq t1 t2)then
-	     l
-	   else
-	     TypeError ("Mismatch SPAWNVALUE § § § : ", (a :> ast_type))::l)
-	[] a#argTypes ts
-    in
-      errl@(List.concat errs)
-      
+    (List.concat errs)
+	
   (* prim action *)
   method primAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : prim_action_type) : typingEnv =
     self#echoln 3 "\n    < TYPING PRIM ACTION > started";
@@ -335,20 +323,39 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
 		      | None -> failwith ("Error : Unbound value " ^ head#name)
 		      | Some (ty, _) -> ty::(funct tail (List.tl type_list)))
 	       | VPrim (head) ->
-		   let prim = PrimitiveUtils.get_value_type head#moduleName head#primName in 
-		     prim#return::(funct tail (List.tl type_list))
+		   let prim = get_value_type head#moduleName head#primName in 
+		     prim#return::(funct tail (List.tl type_list)) 
 	       | _ -> (List.hd type_list)::(funct tail (List.tl type_list)))
     in
-      a#setArgTypes (List.rev (funct (List.rev a#args) (List.rev a#argTypes)));
+    let l = (funct a#args a#argTypes) in
+      a#setArgTypes l;
+      self#echoln 5 (Printf.sprintf "=> primitive args setted to %s" (string_of_collection "(" ")" "*" string_of_valueType l));
       env
 	
   method primAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : prim_action_type) (errs : typeErrors list) : typeErrors =
     self#echoln 3 "\n    < TYPING PRIM ACTION > finished";
-    let prim = PrimitiveUtils.get_value_type a#moduleName a#primName in
-      (if(not(prim#arity = a#arity))then
-	 failwith ("Arity Error : This primitive has arity of size " ^  (string_of_int prim#arity) ^ " but an the primitive should have arity of size " ^ (string_of_int a#arity))
-       else
-	 ());
+    let prim = get_value_type a#moduleName a#primName in
+    let rec funct var_list type_list =
+      match var_list with
+	| [] -> []
+	| head::tail ->
+	    (match head with
+	       | VVar (head) ->
+		   (match lookup_env env head#name with
+		      | None -> failwith ("Error : Unbound value " ^ head#name)
+		      | Some (ty, _) -> ty::(funct tail (List.tl type_list)))
+	       | VPrim (head) ->
+		   let prim = get_value_type head#moduleName head#primName in 
+		     prim#return::(funct tail (List.tl type_list)) 
+	       | VTuple (head) -> (makeTupleType head#types)::(funct tail (List.tl type_list)) 
+	       | _ -> (List.hd type_list)::(funct tail (List.tl type_list)))
+    in 
+    let l = (funct a#args a#argTypes) in
+      a#setArgTypes l;
+      self#echoln 5 (Printf.sprintf "=> primitive args setted to %s" (string_of_collection "(" ")" "*" string_of_valueType l));
+      if(prim#arity <> a#arity)then
+	failwith ("Arity Error : Using primitive " ^ prim#primName ^ " with " ^ (string_of_int a#arity) ^ " argument(s), this primitive should have " ^ (string_of_int prim#arity) ^ " argument(s)")
+      else
 	let errl =
 	  List.fold_left2
 	    (fun l t1 t2 ->
@@ -359,7 +366,7 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
 	    [] a#argTypes prim#params
 	in
 	  errl@(List.concat errs)
-      
+	    
   (* let action *)
   method letAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : let_action_type) : typingEnv =
     self#echoln 2 "\n    < TYPING LET ACTION > started";
@@ -367,9 +374,7 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
        | VVar (v) ->
 	   (match lookup_env env v#name with
 	      | Some (ty, _) -> a#setValueType ty; env
-	      | None -> env)
-       | VPrim (p) -> a#setValueType p#returnType; env
-       | VTuple (t) -> env
+	      | None -> failwith ("Error : Unbound value " ^ v#name))
        | _ -> env)
       
   method letAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : let_action_type) (errs: typeErrors) : typeErrors =
@@ -378,14 +383,14 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
        | VVar (v) ->
 	   (match lookup_env env v#name with
 	      | Some (ty, _) -> ()
-	      | None -> ())
+	      | None -> failwith ("Error : Unbound value " ^ v#name))
        | VPrim (p) -> a#setValueType p#returnType
-       | VTuple (t) -> failwith "tuplo"
+       | VTuple (t) -> a#setValueType (makeTupleType (t#types))
        | _ -> ());
-      if(type_eq a#variableType a#valueType)then
-	errs
-      else
-	[TypeError (("Type Error : This expression has type " ^  (string_of_valueType a#variableType) ^ " but an expression was expected of type " ^ (string_of_valueType a#valueType), (a :> ast_type)))]
+    if(type_eq a#variableType a#valueType)then
+      errs
+    else
+      [TypeError (("Type Error : This expression has type " ^  (string_of_valueType a#variableType) ^ " but an expression was expected of type " ^ (string_of_valueType a#valueType), (a :> ast_type)))]
     
   (* process *)
   (* branches *)
@@ -395,14 +400,14 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
        | VTrue _ | VFalse _ -> p#setGuardType TBool
        | VInt _ -> p#setGuardType TInt
        | VString _ -> p#setGuardType TString
-       | VTuple (t) -> p#setGuardType (TUnknown)
-       | VPrim (pr) -> 
-	   let prim = PrimitiveUtils.get_value_type pr#moduleName pr#primName in
-	     p#setGuardType prim#return
        | VVar (v) ->
 	   (match lookup_env env v#name with
 	      | Some (ty, _) -> p#setGuardType ty
-	      | None -> failwith ("Error : Unbound value " ^ v#name)));
+	      | None -> failwith ("Error : Unbound value " ^ v#name))
+       | VPrim (pr) -> 
+	   let prim = get_value_type pr#moduleName pr#primName in
+	     p#setGuardType prim#return
+       | VTuple (t) -> p#setGuardType (makeTupleType t#types));
     match p#action with
       | Input (a) ->
 	  (match lookup_env env a#channel with
@@ -411,10 +416,10 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
 		  self#echoln 5 (Printf.sprintf "=> variable %s of type %s added to environnement" a#variable (string_of_valueType a#variableType));
 		  SMap.add a#variable (var_ty, (a :> ast_binder_type)) env)
 	     | Some (_, binder)-> SMap.add a#variable (TBool, (a :> ast_binder_type)) env (* Erreur !!*)
-	     | None -> env)	  
+	     | None -> failwith ("Error : Unbound value " ^ a#channel))	  
       | New (a) -> 
 	  (self#echoln 5 (Printf.sprintf "=> variable %s of type %s added to environnement" a#variable (string_of_valueType a#variableType));
-	   SMap.add a#variable (a#variableType, (a :> ast_binder_type)) env)
+	   SMap.add a#variable (a#variableType, (d :> ast_binder_type)) env)
       | Let (a) ->
 	  (self#echoln 5 (Printf.sprintf "=> variable %s of type %s added to environnement" a#variable (string_of_valueType a#variableType));
 	   SMap.add a#variable (a#variableType, (a :> ast_binder_type)) env)
@@ -442,15 +447,12 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
   method call_val (env : typingEnv) (m : module_type) (d : definition_type) (p : call_process_type) : typingEnv =
     self#echoln 4 "\n    < TYPING CALL > started";
     let (Def def) = lookup_def m p#defName in
-        let arity_error = 
-      let call_arity = p#arity in
-      let def_arity = def#arity in
-      call_arity <> def_arity in
-    if arity_error then 
-      failwith ("Arity error for call " ^ def#name ^ " in definition " ^ p#defName);
-    let ts = List.map snd def#params in
-    p#setArgTypes ts;
-    env
+      if(p#arity <> def#arity)then
+	failwith ("Arity Error : Calling " ^ d#name ^ " with " ^ (string_of_int p#arity) ^ " argument(s), the definition should have " ^ (string_of_int def#arity) ^ " argument(s)")
+      else
+	let ts = List.map snd def#params in
+	  p#setArgTypes ts;
+	  env
 
   method call (env : typingEnv) (m : module_type) (d : definition_type) (p : call_process_type) (errs : typeErrors list) : typeErrors =
     self#echoln 4 "\n    < TYPING CALL > finished";
@@ -477,11 +479,11 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
       
   (* module *)
   method moduleDef_val (m : module_type) : typingEnv = 
-    self#echoln 2 "\n    < TYPING_MODULE > Typing pass started";
+    self#echoln 2 "\n    < TYPING MODULE > Typing pass started";
     SMap.empty
       
   method moduleDef (m : module_type) (errs : typeErrors list) : typeErrors =
-    self#echoln 2 "\n    < TYPING_MODULE > Typing pass finished";
+    self#echoln 2 "\n    < TYPING MODULE > Typing pass finished";
     let errs' = List.fold_left (fun es es' -> es@es') [] errs in
       if(empty_list errs')then  
 	(self#echoln 1

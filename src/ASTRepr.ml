@@ -80,18 +80,19 @@ let makeVString v = VString (new string_value_repr TString v);;
 class tuple_value_repr (vt : valueType list) (vs : value list) = object(self)
   inherit value_repr ((makeTupleTypeRepr vt) :> valueType tuple_type)
   val mutable _els = vs
+  val mutable _vts = vt
     
   method arity = List.length vs
-  method types = 
+  method types =
     match self#ofType with
-      | TTuple (t) -> t#elements
+      | TTuple (t) -> t#els
       | _ -> failwith "wrong tuple type, please report (maybe tuple type has not been setted)"
   method setTypes ts =
     match self#ofType with
-      | TTuple (t) -> t#setElements ts
+      | TTuple (t) -> t#setEls ts
       | _ -> failwith "wrong tuple type"
   method elements = vs
-  method toString = (string_of_collection "(" ")" "," string_of_value vs) ^ " of types : " ^ (string_of_collection "(" ")" "," string_of_valueType vt) 
+  method toString = (string_of_collection "(" ")" "," string_of_value self#elements) ^ " of types : " ^ (string_of_collection "(" ")" "," string_of_valueType self#types) 
   initializer self#setType (TTuple (TypeRepr.makeTupleTypeRepr vt))
 end
 
@@ -213,11 +214,13 @@ class new_action_repr (v : string) (vt : valueType) = object(self)
   inherit ast_repr
   val mutable _variableType = vt
   val mutable _variableIndex = -1
+  val mutable _channelBinder = None
  
   method variable = v
   method variableType = _variableType
   method variableIndex = _variableIndex
   method setVariableIndex i = _variableIndex <- i
+  method setChannelBinder (b : ast_binder_type) = _channelBinder <- Some (b)
   method fetchBinderType (b : string) = if b = self#variable then Some _variableType else None
   method toString = "new(" ^ v ^ ":" ^ (string_of_valueType _variableType) ^ ")"
 end
@@ -424,8 +427,7 @@ object
 	  else
 	    search ps
     in
-      (* search _params FIX !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! *)
-      Some (TChan (TInt))
+      search _params
   method toString =
     "def " ^ n ^ (string_of_collection "(" ")" "," (fun p -> p#toString) _params) ^ " = " ^ (string_of_process p)
 end

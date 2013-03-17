@@ -167,6 +167,7 @@ class type new_action_type = object
   method variableIndex : int
   method setVariableIndex : int -> unit
   method fetchBinderType : string -> valueType option
+  method setChannelBinder : ast_binder_type -> unit
   method toString : string
 end
 

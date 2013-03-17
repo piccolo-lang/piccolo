@@ -610,7 +610,7 @@ and value_fold (w : 'a) (m : module_type) (d : definition_type) (p : process_typ
 	
 and tuple_value_fold (w : 'a) (m : module_type) (d : definition_type) (p : process_type) (t : valueType) (v : value tuple_value_type) (n : ('a, 'b) fold_node) =
   let tuple_val_computed = n#tupleValue_val w m d p t v in
-    n#tupleValue w m d p t v (List.fold_left (fun vs (t', v') -> (value_fold tuple_val_computed m d (p:>process_type) t' v' n)::vs) [] (List.combine v#types v#elements))
+    n#tupleValue w m d p t v (List.fold_left (fun vs (t', v') -> (value_fold tuple_val_computed m d (p :> process_type) t' v' n)::vs) [] (List.combine v#types v#elements))
       
 and prim_value_fold (w : 'a) (m : module_type) (d : definition_type) (p : process_type) (t : valueType) (v : value prim_value_type) (n : ('a, 'b) fold_node) =
   let primValue_val_computed = n#primValue_val w m d p t v in

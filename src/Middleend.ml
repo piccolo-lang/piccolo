@@ -530,9 +530,9 @@ let fixpoint m esize_pass csize_pass channel_pass choice_pass verbosity =
 
 (** Compute middleend passes. *)
 let compute_pass m verbosity =
-  if verbosity >=1 then print_string "\nTyping pass start...\n";
+  if verbosity >=1 then print_string "\n < TYPING PASS START >\n";
   let errors = ASTUtils.module_fold m (typing_pass verbosity) in
-  if verbosity >=1 then print_string "Typing pass ended!";
+  if verbosity >=1 then print_string "\n < TYPING PASS END > \n";
   let esize_pass = new env_size_pass verbosity in
   let csize_pass = new commitment_size_pass verbosity in
   let channel_pass = new channel_pass verbosity in
