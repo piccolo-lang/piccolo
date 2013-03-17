@@ -297,9 +297,15 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
   method spawnAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : spawn_action_type) : typingEnv =
     self#echoln 3 "\n    < TYPING SPAWN ACTION > started";
     let (Def def) = lookup_def m a#defName in
+    let arity_error = 
+      let call_arity = a#arity in 
+      let def_arity = def#arity in
+      call_arity <> def_arity in 
+    if arity_error then
+      failwith ("Arity error for spawn " ^ a#defName ^ " in definition " ^ d#name);
     let ts = List.map snd def#params in
-      a#setArgTypes ts;
-      env
+    a#setArgTypes ts;
+    env
 	
   method spawnAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : spawn_action_type) (errs : typeErrors list) : typeErrors =
     self#echoln 3 "\n    < TYPING SPAWN ACTION > finished";
@@ -436,9 +442,15 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
   method call_val (env : typingEnv) (m : module_type) (d : definition_type) (p : call_process_type) : typingEnv =
     self#echoln 4 "\n    < TYPING CALL > started";
     let (Def def) = lookup_def m p#defName in
+        let arity_error = 
+      let call_arity = p#arity in
+      let def_arity = def#arity in
+      call_arity <> def_arity in
+    if arity_error then 
+      failwith ("Arity error for call " ^ def#name ^ " in definition " ^ p#defName);
     let ts = List.map snd def#params in
-      p#setArgTypes ts;
-      env
+    p#setArgTypes ts;
+    env
 
   method call (env : typingEnv) (m : module_type) (d : definition_type) (p : call_process_type) (errs : typeErrors list) : typeErrors =
     self#echoln 4 "\n    < TYPING CALL > finished";
