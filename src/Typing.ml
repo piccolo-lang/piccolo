@@ -17,7 +17,7 @@ type typeError =
       
 (** string representing a typeError *)
 let string_of_typeError = function
-  | TypeError (msg, ast) -> "Error at "  ^ (ast#posString) ^ "\n  ==> " ^ msg
+  | TypeError (msg, ast) -> "Error at "  ^ (ast#posString) ^ "\n ===> /!\\ " ^ msg ^ " /!\\ "
 ;;
       
 (** type representing a list of typeErrors *)      
@@ -75,7 +75,7 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
     let errs =
       match t with
 	| TBool -> []
-	| _ -> [TypeError ("Type Error: This expression has type " ^ (string_of_valueType t) ^ " but an expression was expected of type bool", (v :> ast_type))]
+	| _ -> [TypeError ("Type Error : This expression has type " ^ (string_of_valueType t) ^ " but an expression was expected of type bool", (v :> ast_type))]
     in
       errs
 	
@@ -92,7 +92,7 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
     let errs =
       match t with
 	| TBool -> []
-	| _ ->  [TypeError ("Type Error: This expression has type " ^ (string_of_valueType t) ^ " but an expression was expected of type bool", (v :> ast_type))]
+	| _ ->  [TypeError ("Type Error : This expression has type " ^ (string_of_valueType t) ^ " but an expression was expected of type bool", (v :> ast_type))]
     in
       errs
 	
@@ -109,7 +109,7 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
     let errs =
       match t with
 	| TInt -> []
-	| _ -> [TypeError ("Type Error: This expression has type " ^ (string_of_valueType t) ^ " but an expression was expected of type int", (v :> ast_type))]
+	| _ -> [TypeError ("Type Error : This expression has type " ^ (string_of_valueType t) ^ " but an expression was expected of type int", (v :> ast_type))]
     in
       errs
 	
@@ -126,7 +126,7 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
     let errs =
       match t with
 	| TString -> []
-	| _ -> [TypeError ("Type Error: This expression has type " ^ (string_of_valueType t) ^ " but an expression was expected of type string", (v :> ast_type))]
+	| _ -> [TypeError ("Type Error : This expression has type " ^ (string_of_valueType t) ^ " but an expression was expected of type string", (v :> ast_type))]
     in
       errs
 	
@@ -140,14 +140,17 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
 	    (match head with
 	       | VVar (head) ->
 		   (match lookup_env env head#name with
-		      | None -> failwith ("Error: Unbound value " ^ head#name)
+		      | None -> failwith ("Error : Unbound value " ^ head#name)
 		      | Some (ty, _) -> ty::(funct tail (List.tl type_list)))
+		     (* | VTupl *)
 	       | VPrim (head) ->
 		   let prim = PrimitiveUtils.get_value_type head#moduleName head#primName in 
 		     prim#return::(funct tail (List.tl type_list))
 	       | _ -> (List.hd type_list)::(funct tail (List.tl type_list)))
     in
-      v#setTypes (funct v#elements v#types);
+    let l = (funct v#elements v#types) in
+      v#setTypes l;
+      self#echoln 5 (Printf.sprintf "=> tuple setted to %s" (string_of_collection "(" ")" "*" string_of_valueType l));
       env
 	
   method tupleValue (env : typingEnv) (m : module_type) (d : definition_type) (p : process_type) (t : Types.valueType) (v : value tuple_value_type) (errs : typeErrors list) : typeErrors =
@@ -155,7 +158,7 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
     let tuple_errs =
       match t with
 	| TTuple (t') -> []
-	| _ -> [TypeError ("Type Error: This expression has type " ^ (string_of_valueType t) ^ " but an expression was expected of type " ^ (string_of_valueType v#ofType), (v :> ast_type))]
+	| _ -> [TypeError ("Type Error : TTThis expression has type " ^ (string_of_valueType t) ^ " but an expression was expected of type " ^ (string_of_valueType v#ofType), (v :> ast_type))]
     in
       tuple_errs@(List.concat errs)
 	
@@ -178,7 +181,7 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
 	  (if(type_eq t' t)then
 	     []
 	   else
-	     [TypeError (("Type Error: " ^ v#name ^ " This expression has type " ^  (string_of_valueType t') ^ " but an expression was expected of type " ^ (string_of_valueType t)), (v :> ast_type))])
+	     [TypeError (("Type Error : " ^ v#name ^ " VThis expression has type " ^  (string_of_valueType t') ^ " but an expression was expected of type " ^ (string_of_valueType t)), (v :> ast_type))])
       | None -> [TypeError (("Unbound variable " ^ v#name), (v :> ast_type))]
 	  
   (* value primitive *)
@@ -193,7 +196,7 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
     self#echoln 3 "\n    < TYPING PRIMITIVE > finished";
     let prim = PrimitiveUtils.get_value_type v#moduleName v#primName in 
       (if(not(prim#arity = v#arity))then
-	 failwith ("Arity Error: This primitive has arity of size " ^  (string_of_int v#arity) ^ " but an the primitive should have arity of size" ^ (string_of_int prim#arity))
+	 failwith ("Arity Error : This primitive has arity of size " ^  (string_of_int v#arity) ^ " but an the primitive should have arity of size" ^ (string_of_int prim#arity))
        else
 	 ());
       let errl =
@@ -220,25 +223,28 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
 		  (match lookup_env env v#name with
 		     | Some (ty, _) -> a#setValueType ty; env
 		     | None -> env)
-	      | VTuple (t) -> a#setValueType t#ofType; env
+| VTuple (t) -> print_endline (string_of_collection "(" ")" "I" string_of_valueType t#types); a#setValueType t#ofType; env
 	      | VPrim (p) -> a#setValueType p#returnType; env
 	      | _ -> env))
 	  
   method outAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : out_action_type) (errs : typeErrors) : typeErrors =
     self#echoln 2 "\n    < TYPING OUT ACTION > finished";
+    print_endline a#toString;
     (match lookup_env env a#channel with
        | None -> [TypeError ("Unbound channel " ^ a#channel, (a :> ast_type))]
        | Some (chType, _) ->
-	   a#setChannelType chType;
 	   try 
 	     let valType = 
 	       match a#value with 
 		 | VVar (v) ->
 		     (match lookup_env env v#name with
-			| Some (ty, _) -> a#setValueType ty; ty
+			| Some (ty, _) -> ty
 			| None -> failwith v#name)
-		 | VTuple (t) -> print_endline t#toString; a#setValueType t#ofType; t#ofType
-		 | VPrim (p) -> print_endline "prim"; a#setValueType p#returnType; p#returnType
+		(* | VTuple (t) ->
+ print_endline (string_of_collection "(" ")" " O " string_of_valueType t#types);
+		     print_endline (string_of_valueType t#ofType);
+ t#ofType*)
+		 | VPrim (p) -> p#returnType
 		 | _ -> a#valueType
 	     in
 	       (match (chType, valType) with
@@ -246,8 +252,8 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
 		      if(type_eq t1 t2)then
 			[]
 		      else
-			[TypeError (("Type Error: This expression has type " ^  (string_of_valueType chan) ^ " but an expression was expected of type " ^ (string_of_valueType (TChan (t2))), (a :> ast_type)))]
-		  | (_ as t, t2) -> [TypeError (("Type Error: This expression has type " ^  (string_of_valueType t) ^ " but an expression was expected of type " ^ (string_of_valueType (TChan (t2))), (a :> ast_type)))])
+			[TypeError (("Type Error : This expression has type " ^  (string_of_valueType chan) ^ " but an expression was expected of type " ^ (string_of_valueType (TChan (t2))), (a :> ast_type)))]
+		  | (_ as t, t2) -> [TypeError (("Type Error : This expression has type " ^  (string_of_valueType t) ^ " but an expression was expected of type " ^ (string_of_valueType (TChan (t2))), (a :> ast_type)))])
 	   with Failure var_name -> [TypeError ("Unbound variable " ^ var_name, (a :> ast_type))]
     )@errs
       
@@ -266,7 +272,7 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
     match d#fetchBinderType a#channel with 
       |	None -> [TypeError (("Unbound channel " ^ a#channel), (a :> ast_type))]
       | Some (TChan (vt)) -> []
-      | Some (_ as t) -> [TypeError (("Type Error: This expression has type " ^ (string_of_valueType t) ^ " but an expression was expected of type " ^ (string_of_valueType a#channelType), (a :> ast_type)))]
+      | Some (_ as t) -> [TypeError (("Type Error : This expression has type " ^ (string_of_valueType t) ^ " but an expression was expected of type " ^ (string_of_valueType a#channelType), (a :> ast_type)))]
 	  
   (* tau action *)
   method tauAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : tau_action_type) : unit =
@@ -286,7 +292,7 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
     self#echoln 2 "\n    < TYPING NEW ACTION > finished";
     match a#variableType with
       | TChan (t) -> []
-      | _ -> [TypeError ("Type Error: " ^ a#variable ^ "This expression has type " ^ (string_of_valueType a#variableType) ^ " but an expression was expected of type channel", (a :> ast_type))]
+      | _ -> [TypeError ("Type Error : " ^ a#variable ^ " This expression has type " ^ (string_of_valueType a#variableType) ^ " but an expression was expected of type channel", (a :> ast_type))]
 	  
   (* spawn action *)
   method spawnAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : spawn_action_type) : typingEnv =
@@ -321,7 +327,7 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
 	    (match head with
 	       | VVar (head) ->
 		   (match lookup_env env head#name with
-		      | None -> failwith ("Error: Unbound value " ^ head#name)
+		      | None -> failwith ("Error : Unbound value " ^ head#name)
 		      | Some (ty, _) -> ty::(funct tail (List.tl type_list)))
 	       | VPrim (head) ->
 		   let prim = PrimitiveUtils.get_value_type head#moduleName head#primName in 
@@ -335,7 +341,7 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
     self#echoln 3 "\n    < TYPING PRIM ACTION > finished";
     let prim = PrimitiveUtils.get_value_type a#moduleName a#primName in
       (if(not(prim#arity = a#arity))then
-	 failwith ("Arity Error: This primitive has arity of size " ^  (string_of_int a#arity) ^ " but an the primitive should have arity of size" ^ (string_of_int prim#arity))
+	 failwith ("Arity Error : This primitive has arity of size " ^  (string_of_int a#arity) ^ " but an the primitive should have arity of size" ^ (string_of_int prim#arity))
        else
 	 ());
 	let errl =
@@ -352,23 +358,30 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
   (* let action *)
   method letAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : let_action_type) : typingEnv =
     self#echoln 2 "\n    < TYPING LET ACTION > started";
-    env
+    (match a#value with
+       | VVar (v) ->
+	   (match lookup_env env v#name with
+	      | Some (ty, _) -> a#setValueType ty; env
+	      | None -> env)
+       | VPrim (p) -> a#setValueType p#returnType; env
+       | VTuple (t) -> env
+       | _ -> env)
       
   method letAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : let_action_type) (errs: typeErrors) : typeErrors =
     self#echoln 2 "\n    < TYPING LET ACTION > finished";
     (match a#value with
        | VVar (v) ->
 	   (match lookup_env env v#name with
-	      | Some (ty, _) -> a#setValueType ty;
-	      | None -> ()) (*[TypeError (("Unbound variable " ^ v#name), (v :> ast_type))]@errs)*)
-       | VPrim (p) -> a#setValueType p#returnType;
-       | VTuple (t) -> () 
+	      | Some (ty, _) -> ()
+	      | None -> ())
+       | VPrim (p) -> a#setValueType p#returnType
+       | VTuple (t) -> failwith "tuplo"
        | _ -> ());
-    if(type_eq a#variableType a#valueType)then
-      errs
-    else
-      [TypeError (("Type Error: This expression has type " ^  (string_of_valueType a#variableType) ^ " but an expression was expected of type " ^ (string_of_valueType a#valueType), (a :> ast_type)))]
-      
+      if(type_eq a#variableType a#valueType)then
+	errs
+      else
+	[TypeError (("Type Error : This expression has type " ^  (string_of_valueType a#variableType) ^ " but an expression was expected of type " ^ (string_of_valueType a#valueType), (a :> ast_type)))]
+    
   (* process *)
   (* branches *)
   method branch_val (env : typingEnv) (m : module_type) (d : definition_type) (c : process choice_process_type) (i : int) (p : process prefix_process_type) : typingEnv =
@@ -395,9 +408,9 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
     let terrs =
       match p#guardType with
 	| TBool -> guardErrs
-	| _ -> [TypeError ("Mismatch type in guard ", (p :> ast_type))]@guardErrs
+	| _ as t -> [TypeError ("Type Error : This expression has type " ^ (string_of_valueType t) ^ " but an expression was expected of type bool for guard", (p :> ast_type))]@guardErrs
     in
-    terrs@actErrs@continuationErrs
+      terrs@actErrs@continuationErrs
       
   (* process term *)
   method term_val (env : typingEnv) (m : module_type) (d : definition_type) (p : term_process_type) : unit =
@@ -406,6 +419,8 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
       
   method term (env : typingEnv) (m : module_type) (d : definition_type) (p : term_process_type) : typeErrors =
     self#echoln 5 "\n    < TYPING END > finished";
+    print_endline "hello";
+    print_typingEnv env;
     []
       
   (* process call *)
@@ -448,7 +463,9 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
     self#echoln 2 "\n    < TYPING_MODULE > Typing pass finished";
     let errs' = List.fold_left (fun es es' -> es@es') [] errs in
       if(empty_list errs')then  
-	(self#echoln 1 (" \n  ===> Type Checking : success, no low-level type error \n"); 
+	(self#echoln 1
+	   (" \n  ===> Type Checking : success, no low-level type error \n "
+	    ^ " --------------------------------------------------------- \n"); 
 	 errs')
       else
 	(List.iter (fun err -> self#echoln 1 (string_of_typeError err)) errs';

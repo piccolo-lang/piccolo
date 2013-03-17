@@ -531,11 +531,11 @@ let fixpoint m esize_pass csize_pass channel_pass choice_pass verbosity =
 (** Compute middleend passes. *)
 let compute_pass m verbosity =
   let errors = ASTUtils.module_fold m (typing_pass verbosity) in
-  let esize_pass = new env_size_pass verbosity in
-  let csize_pass = new commitment_size_pass verbosity in
-  let channel_pass = new channel_pass verbosity in
-  let choice_pass = new choice_pass verbosity in
-  fixpoint m esize_pass csize_pass channel_pass choice_pass verbosity;
+  let esize_pass = new env_size_pass 1 in
+  let csize_pass = new commitment_size_pass 1 in
+  let channel_pass = new channel_pass 1 in
+  let choice_pass = new choice_pass 1 in
+  fixpoint m esize_pass csize_pass channel_pass choice_pass 1;
     if verbosity >= 1 then (
       let Module(m') = m in 
 	print_values m');
