@@ -18,3 +18,8 @@ def EndFilter(in:chan<int>, primes:chan<int>) =
 def Primes(primes:chan<int>, nb:int) =
   new(gen:chan<int>), spawn{EndFilter(gen, primes)}, gen!2, Gen(3, nb, 2, gen)
 
+def Main() =
+  new(primes:chan<int>), spawn{Primes(primes, 100)}, Printer(primes)
+
+def Printer(primes:chan<int>) =
+  primes?(x), #core/io:print_int(x), Printer(primes)  
