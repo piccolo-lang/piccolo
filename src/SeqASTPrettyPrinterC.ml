@@ -44,7 +44,9 @@ let _ =
 
   Hashtbl.add prefix_args_table Prims.add_name [ad;ad;ad];
   Hashtbl.add prefix_args_table Prims.substract_name [ad;ad;ad];
+  Hashtbl.add prefix_args_table Prims.modulo_name [ad;ad;ad];
   Hashtbl.add prefix_args_table Prims.equals_name [ad;ad;ad];
+  Hashtbl.add prefix_args_table Prims.less_than_name [ad;ad;ad];
   Hashtbl.add prefix_args_table Prims.print_str_name [ad];
   (* Hashtbl.add prefix_args_table Prims.print_int_name [ad]; == print_str_name *)
   Hashtbl.add prefix_args_table Prims.print_info_name [ad]

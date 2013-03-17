@@ -16,7 +16,7 @@ let ident = ['a'-'z''A'-'Z''_'] ['a'-'z''A'-'Z''0'-'9''_']*('\'')*
 let digit = ['0'-'9']
 let int = (['1'-'9'] digit*)
 
-let line_cmt = ('/''/'_* eol)
+let line_cmt = ("--"[^'\n']*)
 
 let r_module = "module"
 let r_def = "def"
