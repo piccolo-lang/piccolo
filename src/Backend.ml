@@ -159,7 +159,9 @@ struct
     
   let compile_try_in (action:in_action_type) = 
     let ok = ok_name, commit_status_enum in
-    let vl = vl_name, pt_value in
+    
+    (* let vl = vl_name, pt_value in *) 
+    
     let pt_env_x = pt_env action#variableIndex in
     let pt_env_c = pt_env action#channelIndex in
     let label_end_of_try = eot_label () in
@@ -192,11 +194,18 @@ struct
       	    (Op (Equal, Var ok, commit_cannot_acquire)) end;
 	  
 	  make_it (Op (Equal, Var ok, commit_valid))
-      	    [ Declare vl;
+      	    [ (* Declare vl; *)
+	      
 	      Declare eval_asvar;
 	      Assign (eval_asvar, CallFun (eval_fun_of_out_commit, [Var ocommit_var]));
-	      Assign (vl, CallFun (eval_asvar, [Var ocommit_thread]));
-	      Assign (pt_env_x, Var vl);
+	      
+	      
+	      CallProc (eval_asvar, [Var ocommit_thread]);
+	      Assign (pt_env_x, Var ocommit_thread_val);
+	      
+	      (* Assign (vl, CallFun (eval_asvar, [Var ocommit_thread])); *)
+	      (* Assign (pt_env_x, Var vl); *)
+	      
 	      (match action#variableType with
 	      | TChan _ -> 
 		Seq [make_it (CallFun (knownSet_register, [Var pt_known; Var pt_env_x]))
@@ -304,13 +313,15 @@ struct
 
   let compile_try_prim (action:prim_action_type) = 
     Seq[
+      Comment "------compile_try_prim---------";
       Debug ( action#toString );
       compile_prim0 false (action :> common_prim_type);
       Assign (try_result, try_enabled)]
 
   let compile_try_let (action:let_action_type) = 
     Seq 
-      [Debug ( action#toString );
+      [Comment "------compile_try_let---------";
+       Debug ( action#toString );
        compile_value action#value;
        Assign (pt_env action#variableIndex, Var pt_val);
        Assign (try_result, try_enabled)]

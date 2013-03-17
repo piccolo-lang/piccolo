@@ -211,6 +211,7 @@ let d_entry = Val ("0", prim_int)
 
 let ocommit_var = SimpleName "commit", commit
 let ocommit_thread = RecordName (ocommit_var, "thread"), pi_thread
+let ocommit_thread_val = RecordName (ocommit_thread, "val"), pt_value
   
 let icommit_var = SimpleName "commit", commit 
 let icommit_thread = RecordName (icommit_var, "thread"), pi_thread 

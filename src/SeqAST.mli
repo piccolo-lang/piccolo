@@ -150,12 +150,13 @@ sig
   val vl_name : varName
 
   val chan : varDescr (* tmp var used in foreach loops *) 
-  val chans : varDescr (* channel set*)
+  val chans : varDescr (* chan set *)
   
   val d_entry : expr (* value of the definition entry point*)
 
   val ocommit_var : varDescr
   val ocommit_thread : varDescr
+  val ocommit_thread_val : varDescr
     
   val icommit_var : varDescr
   val icommit_thread : varDescr
