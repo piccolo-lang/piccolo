@@ -90,22 +90,22 @@ struct
     let arg_l = arg_list p#arity in
     Bloc[
       Declare (args p#arity);
-      Seq (init_arg_list p#arity);
+      (* Seq (init_arg_list p#arity); *)
       Seq (List.mapi begin fun i v ->
 	Seq [compile_value v;
-	     CallProc (copy_value, [Var (args i); Var pt_val])]
+	    Assign (args i, Var pt_val)]
       end p#args);
       destination f arg_l]
 
   and compile_value = function 
       (* copy_value is here used as a procedure, 
 	 but it returns a bool that can be tested *)
-    | VTrue _ -> CallProc (copy_value, [Var pt_val; create_bool true])
-    | VFalse _ -> CallProc (copy_value, [Var pt_val; create_bool false])
-    | VInt vt -> CallProc (copy_value, [Var pt_val; create_int vt#toVal])
-    | VString vt -> CallProc (copy_value, [Var pt_val; create_string vt#toString])
+    | VTrue _ -> CallProc (make_true, [Var pt_val])
+    | VFalse _ -> CallProc (make_false, [Var pt_val])
+    | VInt vt -> CallProc (make_int, [Var pt_val;  Val (make_prim_int vt#toVal) ])
+    | VString vt -> CallProc (make_string, [Var pt_val; create_string_handle vt#toString])
     | VTuple _ -> failwith "TODO compile_value VTuple"
-    | VVar vt -> CallProc (copy_value, [Var pt_val; Var (pt_env vt#index)])
+    | VVar vt -> Assign (pt_val, Var (pt_env vt#index))
     | VPrim p -> compile_prim0 
 	(fun f arg_l -> 
 	   CallProc (copy_value, [Var pt_val; CallFun (f, arg_l)])) 
@@ -260,8 +260,8 @@ struct
     Bloc [
       Comment "------compile_try_new---------";
       Debug (action#toString);
-      Assign (pt_env action#variableIndex, CallFun (create_channel_value, 
-						    [CallFun (generate_channel, [])]));
+      CallProc (make_channel, [Var (pt_env action#variableIndex);
+			       CallFun (generate_channel, [])]);
       CallProc (knownSet_register, [Var pt_known; Var (pt_env action#variableIndex)]);
       Assign (try_result, try_enabled)]
       
@@ -271,7 +271,7 @@ struct
     let args_mapper i arg =
       Seq [ compile_value arg;
 	    Assign (args i, Var pt_val);
-	    Assign (pt_val, Val no_value);
+	    (* Assign (pt_val, Val no_value); *)
 	    (match (value_type_of_value arg)#ofType with
 	    | TChan _ -> 
 	      Seq [ CallProc (knownSet_register, [Var child_known; Var (args i)]);
@@ -341,7 +341,7 @@ struct
       Seq[
 	compile_value b#guard; 
 	Assign ((pt_enabled i), CallFun (bool_of_bool_value,[Var pt_val]));
-	Assign (pt_val, Val no_value);
+	(* Assign (pt_val, Val no_value); *)
 	make_ite (Var (pt_enabled i))
 	  [ compile_try_action b#action;
 	    make_ite 
@@ -436,10 +436,9 @@ struct
       Declare (args p#arity);
       CallProc (knownSet_forget_all, [ Var pt_known ]);
 
-      Seq (List.mapi 
-	     (fun i v -> Seq [ compile_value v; Assign ((args i), Var pt_val); 
-			       Assign (pt_val, Val no_value)])
-	     p#args);
+      Seq (List.mapi
+      	     (fun i v -> Seq [ compile_value v; Assign ((args i), Var pt_val)])
+      	     p#args);
       
       Seq (init_env [] 0 p#argTypes);
       

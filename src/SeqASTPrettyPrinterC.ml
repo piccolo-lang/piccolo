@@ -14,10 +14,43 @@ let type_of_expr = function
     | _ -> Sty "int"
   end
 
-let known_cast t argt = 
-  if (compare t SeqASTConstC.knownValue) = 0
-    && (compare argt SeqASTConstC.pt_value) = 0
-  then "(PICC_KnownValue*) " else ""
+let prefix_args_table = Hashtbl.create 20;;
+
+let ad="&"
+let cast= "(PICC_KnownValue*) &"
+
+let _ =
+  (* Hashtbl.add prefix_args_table SeqASTConstC.bool_of_bool_value [ad]; *)
+  Hashtbl.add prefix_args_table SeqASTConstC.knownSet_add [""; cast];
+  Hashtbl.add prefix_args_table SeqASTConstC.knownSet_register [""; cast];
+  Hashtbl.add prefix_args_table SeqASTConstC.knownSet_forget_to_unknown [""; cast];
+  Hashtbl.add prefix_args_table SeqASTConstC.handle_dec_ref_count [ad];
+  Hashtbl.add prefix_args_table SeqASTConstC.get_handle [ad];
+  Hashtbl.add prefix_args_table SeqASTConstC.acquire_handle [ad];
+  Hashtbl.add prefix_args_table SeqASTConstC.handle_globalrc [ad];
+  Hashtbl.add prefix_args_table SeqASTConstC.init_string_value [ad; ""];
+  Hashtbl.add prefix_args_table SeqASTConstC.init_channel_value [ad; ""];
+  Hashtbl.add prefix_args_table SeqASTConstC.fetch_input_commitment [ad];
+  Hashtbl.add prefix_args_table SeqASTConstC.fetch_output_commitment [ad];
+  Hashtbl.add prefix_args_table SeqASTConstC.outcommits_of_channel_value [ad];
+  Hashtbl.add prefix_args_table SeqASTConstC.incommits_of_channel_value [ad];
+  Hashtbl.add prefix_args_table SeqASTConstC.register_input_commitment [""; ad; ""; ""];
+  Hashtbl.add prefix_args_table SeqASTConstC.register_output_commitment [""; ad; ""; ""];
+  Hashtbl.add prefix_args_table Prims.print_str_name [ad];
+  (* Hashtbl.add prefix_args_table Prims.print_int_name [ad]; == print_str_name *)
+  Hashtbl.add prefix_args_table Prims.print_info_name [ad]
+  
+    
+let prefixes n l =
+    try
+      Hashtbl.find prefix_args_table n
+    with Not_found -> begin
+      let rec f i acc =
+	if i == 0 then  acc
+	else f (i - 1) ("" :: acc)
+      in f (List.length l) []
+    end
+
 
 let rec print_piccType fmt = function
   | Sty s -> fprintf fmt "%s" s
@@ -47,12 +80,12 @@ let rec print_varName fmt = function
   | RecordName ((v, _),n) -> fprintf fmt "%a.%s" print_varName v n
   | ArrayName (v,e) -> fprintf fmt "%a[%a]" print_varName v print_expr e
 
-and print_arg_list types fmt args =
-  match types, args with  
+and print_arg_list prefixes fmt args =
+  match prefixes, args with  
   | [], [] -> () (* /!\ No test, but normally only string and channel are given to knownSet *)
-  | [t], [x] -> fprintf fmt "%s%a" (known_cast t (type_of_expr x)) print_expr x
-  | th::ttl, ah::atl -> 
-    fprintf fmt "%s%a,@ %a" (known_cast th (type_of_expr ah)) print_expr ah (print_arg_list ttl) atl
+  | [p], [x] -> fprintf fmt "%s%a" p print_expr x
+  | ph::ptl, ah::atl -> 
+    fprintf fmt "%s%a,@ %a" ph print_expr ah (print_arg_list ptl) atl
   | _ -> failwith "Wrong arity in the output code"
 
 
@@ -62,9 +95,9 @@ and print_expr fmt = function
   | Op (op, e1, e2) -> fprintf fmt "(%a) %a (%a)" print_expr e1 print_binop op print_expr e2
   | Opu (op, e) -> fprintf fmt "%a (%a)" print_unop op print_expr e
 
-  | CallFun ((f, Fun (_, argTypes )), args) -> 
-    fprintf fmt "%a(@[ %a @])" print_varName f
-      (print_arg_list argTypes) args
+  | CallFun ((SimpleName f, Fun (_, argTypes )), args) -> 
+    fprintf fmt "%s(@[ %a @])" f
+      (print_arg_list (prefixes f argTypes)) args
 
   | CallFun ((f,_), args) -> 
     fprintf fmt "%a(@[ %a @])" print_varName f
@@ -89,15 +122,9 @@ let rec print_instr fmt = function
   | Seq il -> fprintf fmt  "%a" (print_list_eol print_instr "") il
   
 
-  | CallProc ((SimpleName n,_), el) 
-      when (String.compare n SeqASTConstC.copy_value) = 0 
-      || (String.compare n SeqASTConstC.handle_dec_ref_count) = 0 -> 
-    
-    fprintf fmt "%s( & @[ %a @]);" n (print_list print_expr ", ") el
-
-  
-  | CallProc ((f, Fun (_, (argTypes))), args) -> fprintf fmt "%a(@[ %a @]);" print_varName f
-    (print_arg_list argTypes) args
+  | CallProc ((SimpleName f, Fun (_, (argTypes))), args) -> 
+    fprintf fmt "%s(@[ %a @]);" f
+    (print_arg_list (prefixes f argTypes)) args
 
 
   | CallProc ((f,_), el) -> fprintf fmt "%a(@[ %a @]);" print_varName f
@@ -126,7 +153,7 @@ let rec print_instr fmt = function
 
   | Foreach ((v,_), e, il) -> (* !!! *)
     fprintf fmt 
-      "{PICC_KnownValue* %a;@\nPICC_KNOWNSET_FOREACH(%a, @ %a){@\n @[%a@] @\n}@\n}@\n"
+      "{PICC_KnownValue %a;@\n PICC_KnownSet* s=%a;@\nPICC_KNOWNSET_FOREACH(s, @ %a){@\n @[%a@] @\n}@\nPICC_free_knownset(s);@\n}@\n"
       print_varName v
       print_expr e
       print_varName v

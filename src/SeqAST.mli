@@ -130,11 +130,15 @@ sig
   val fuel_init: expr
   val invalid_pc: expr
     
-  (* value creation *)
-  val create_bool: bool -> expr
-  val create_int: int -> expr
-  val create_string : string -> expr
-  (* val create_tuple *)
+  (* value Initialisation - no malloc*)
+  val make_true: varDescr
+  val make_false: varDescr
+  val make_int: varDescr
+  val make_string: varDescr
+  val make_channel: varDescr 
+    
+    (*malloc*)
+  val create_string_handle : string -> expr
     
     
   val try_result : varDescr
@@ -171,7 +175,7 @@ sig
   val zero: value_t
   val prim_false: value_t
   val pc_label_init: value_t
-  val no_value: value_t
+  (* val no_value: value_t *)
 
 end
 
@@ -185,11 +189,8 @@ sig
   val copy_value: string
   val bool_of_bool_value: string
     
-  val create_channel_value: string
-
   val outcommits_of_channel_value : string
   val incommits_of_channel_value : string
-
 
   val eval_fun_of_out_commit: string
     

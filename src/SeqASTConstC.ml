@@ -12,7 +12,7 @@ let prim_bool = Sty "bool"
 let prim_int = Sty "int"
 let prim_string = pointer (Sty "char")
 
-let pt_value = pointer (Sty "PICC_Value")
+let pt_value = Sty "PICC_Value"
 
 let pt_bool = pointer (Sty "PICC_BoolValue")
 let pt_int = pointer (Sty "PICC_IntValue")
@@ -88,10 +88,14 @@ let invalid_pc = Val ("PICC_INVALID_PC", pc_label)
 
 (* value creation *)
 
-let make_true   = SeqASTConstUtil.makeFun "PICC_create_bool_value" pt_bool [prim_bool]
-let make_false  = SeqASTConstUtil.makeFun "PICC_create_bool_value" pt_bool [prim_bool]
-let make_int    = SeqASTConstUtil.makeFun "PICC_create_int_value" pt_int [prim_int]
-let make_string = SeqASTConstUtil.makeFun "PICC_create_string_value" pt_string [prim_string]
+let init_string_value = "PICC_INIT_STRING_VALUE"
+let init_channel_value = "PICC_INIT_CHANNEL_VALUE"
+
+let make_true   = SeqASTConstUtil.makeFun "PICC_INIT_BOOL_TRUE" void [pt_value]
+let make_false  = SeqASTConstUtil.makeFun "PICC_INIT_BOOL_FALSE" void [pt_value]
+let make_int    = SeqASTConstUtil.makeFun "PICC_INIT_INT_VALUE" void [pt_value; prim_int]
+let make_string = SeqASTConstUtil.makeFun init_string_value void [pt_value; prim_string]
+let make_channel= SeqASTConstUtil.makeFun init_channel_value void [pt_value; channel]
 
 let make_list_n el n = 
   let rec f n acc = 
@@ -99,15 +103,12 @@ let make_list_n el n =
     else f (n - 1) (el::acc)
   in f n []
 
-let create_bool = fun b -> CallFun (make_false, [Val (string_of_bool b, prim_bool)])
-let create_int = fun n -> CallFun (make_int, [Val (string_of_int n, prim_int) ])
-let create_string = fun str -> CallFun (make_string, [Val (str, prim_string) ])
+let make_string_handle = SeqASTConstUtil.makeFun "PICC_create_string_handle" handle [prim_string]
+let create_string_handle = fun str -> CallFun (make_string_handle, [Val (str, prim_string) ])
 
 let copy_value = "PICC_copy_value"
 
-let bool_of_bool_value = "PICC_bool_of_bool_value"
-
-let create_channel_value = "PICC_create_channel_value"
+let bool_of_bool_value = "PICC_BOOL_OF_BOOL_VALUE"
 
 let outcommits_of_channel_value = "OUTCOMMITS_LIST_OF_VALUE"
 let incommits_of_channel_value = "INCOMMITS_LIST_OF_VALUE"
@@ -167,7 +168,7 @@ let zero = "0", prim_int
 let prim_false = "false", prim_bool
 let prim_true = "true", prim_bool
 let pc_label_init = "0", pc_label
-let no_value = "PICC_create_no_value()", pt_novalue
+(* let no_value = "PICC_create_no_value()", pt_novalue *)
 
 
 (* SchedPool fields *)

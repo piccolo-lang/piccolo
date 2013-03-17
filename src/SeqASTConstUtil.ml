@@ -12,8 +12,6 @@ struct
 
   let bool_of_bool_value = makeFun Names.bool_of_bool_value prim_bool [pt_value]
 
-  let create_channel_value = makeFun Names.create_channel_value pt_channel [channel]
-  
   let outcommits_of_channel_value = makeFun Names.outcommits_of_channel_value commit_list [pt_value]
   let incommits_of_channel_value = makeFun Names.incommits_of_channel_value commit_list [pt_value]
 
@@ -105,5 +103,5 @@ struct
   let p_inc v = Assign (v, (Op (Sum, Var v, Val ("1", prim_int))))
   let p_dec v = Assign (v, (Op (Minus, Var v, Val ("1", prim_int))))
 
-
+  let make_prim_int i = (string_of_int i), prim_int
 end
