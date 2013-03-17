@@ -452,20 +452,24 @@ struct
       Assign (pt_status, status_call);
       return_void]
       
+  let def_sig m d body=
+    DeclareFun ((SimpleName (m#name ^ "_" ^ d#name), pdef), [string_name_of_varDescr scheduler; 
+							     string_name_of_varDescr pt], body)
+
   let compile_def m (Def d) =
     init_label ();
-    DeclareFun ((SimpleName (m#name ^ "_" ^ d#name), pdef), [string_name_of_varDescr scheduler; 
-							     string_name_of_varDescr pt],
-		[Label (def_label_pattern m#name d#name);
+    def_sig m d [Label (def_label_pattern m#name d#name);
 		 Switch (Var pt_pc, [Case d_entry;
 				     compile_process m d d#process
-				    ])])
+				    ])]
 
   let compile_module (Module m) =
     let defs = m#definitions in 
     compiled_module := Some m;
     let (Def d) = List.(nth defs ( (length defs) - 1) ) in
-    d, Seq [Seq !eval_funs; Seq (List.map (compile_def m) defs)]
+    d, Seq [Seq !eval_funs; 
+	    Seq (List.map (fun (Def d) -> def_sig m d []) defs);
+	    Seq (List.map (compile_def m) defs)]
       
 
   let print_piccType  = Printer.print_piccType

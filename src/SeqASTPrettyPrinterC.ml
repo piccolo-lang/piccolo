@@ -147,6 +147,12 @@ let rec print_instr fmt = function
   | Declare (v,t) -> fprintf fmt "%a %a;" print_piccType t print_varName v
   | Assign ((v,_), e) -> fprintf fmt "%a = %a;" print_varName v print_expr e
   
+  | DeclareFun (( v, (Fun (ret, argType))), args_names, []) ->
+    fprintf fmt "%a %a(%a);"
+      print_piccType ret
+      print_varName v
+      (print_list2 print_piccType print_string ", ") (argType, args_names)
+
   | DeclareFun (( v, (Fun (ret, argType))), args_names, il) ->
     fprintf fmt "%a %a(%a){@\n@[<hov 3>%a@]@\n}"
       print_piccType ret
