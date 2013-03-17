@@ -28,8 +28,9 @@ let prim_type_table : (k, v) Hashtbl.t = Hashtbl.create 10;;
 let get_value_type module_name def_name =
   try
     Hashtbl.find prim_type_table (module_name, def_name)
-  with _ -> failwith "primitive name unknown"
+  with _ -> failwith ("Primitive Error : Unbound primitive #" ^ module_name ^ ":" ^ def_name)
 ;;
+
 
 (* Initialization of type table with all the wanted primitives *)
 let _ =

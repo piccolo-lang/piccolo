@@ -52,7 +52,15 @@ let test_branch3 = "def Branch3(c:chan<string>, i:chan<int>, toto:string) = i?(t
 
 let test_branch4 = "def Branch4(c:chan<(int * string)>) = tau, end";; (* ok *)
 
-let test_branch5 = "def Branch5() = [42]tau, end";; (* ok *)
+let test_branch5 = "def Branch5() = [#core/arith:compare(5,6)]tau, end";; (* ok *)
+
+let test_branch6 = "def Branch6(y:bool) = [y]tau, end";; (* ok *)
+
+let test_branch7 = "def Branch7() = [42]tau, end";; (* ok *)
+
+let test_branch8 = "def Branch8() = [(true, false)]tau, end";; (* ok *)
+
+let test_branch9 = "def Branch9(y:bool) = [z]tau, end";; (* ok *)
 
 let test_new1 = "def New1() = new(id1:bool), end";; (* new only for chan ok *)
 
@@ -124,7 +132,7 @@ let test_prim_action6 = "def PrA6() = #core/io:fake_prim(42), end";; (* not foun
 
 let test_prim_action7 = "def PrA7() = let(x:int=42), #core/io:print_int(x), end";; (* ok *)
 
-let test_prim_action8 = "def PrA8() = let(x:bool=true), #core/io:print_int(x), end";; (* expected arg type ok *)
+let test_prim_action8 = "def PrA8() = let(x:bool=true), #core/io:print_int((x, #core/arith:add(4, 5))), end";; (* expected arg type ok *)
 
 let test_prim_action9 = "def PrA9(i2:chan<int>) = i2?(m), #core/io:print_str(m), end";; (* ok *)
 
@@ -180,7 +188,7 @@ let main = "def Main() = new(r:chan<int>), spawn{Fibonacci(3,4,5,r)},#core/io:pr
 
 let testmain = ParseUtils.parseFromString ("module Test/Fibonacci \n" ^ fibStr ^ "\n" ^ main );;
 
-let test = ParseUtils.parseFromString ("module Test/Test \n" ^ test_call5);;
+let test = ParseUtils.parseFromString ("module Test/Test \n" ^ test_prim_action9);;
 
 let check_pp () = Middleend.compute_pass test 5;;
 
