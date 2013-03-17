@@ -43,8 +43,8 @@ let _ =
     (makePrimTypeRepr "core/arith" "substract" [TInt; TInt] TInt);
   declare_primitive
     prim_type_table
-    ("corearith", "compare")
-    (makePrimTypeRepr "core/arith" "compare" [TInt; TInt] TBool);
+    ("corearith", "equals")
+    (makePrimTypeRepr "core/arith" "equals" [TInt; TInt] TBool);
   declare_primitive
     prim_type_table
     ("coreio", "print_info")
@@ -80,7 +80,7 @@ struct
 
     declare_primitive prim_name_table ("corearith", "substract") Prims.substract_name;
 
-    declare_primitive prim_name_table ("corearith", "compare") Prims.compare_name; 
+    declare_primitive prim_name_table ("corearith", "equals") Prims.equals_name; 
 
     declare_primitive prim_name_table ("coreio", "print_info") Prims.print_info_name;
 

@@ -50,7 +50,7 @@ module type Prims =
 sig
   val add_name : string
   val substract_name : string
-  val compare_name : string
+  val equals_name : string
   val print_info_name : string
   val print_str_name : string
   val print_int_name : string

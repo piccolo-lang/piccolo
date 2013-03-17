@@ -2,7 +2,7 @@
 INC=../../libpirt/include
 LIB=../../libpirt/src
 
-PCC=../src/pcc #-debug
+PCC=../src/pcc -debug
 CFLAGS= -g -Wall -std=c99
 
 LIBFILES=$(wildcard $(LIB)/*.c)

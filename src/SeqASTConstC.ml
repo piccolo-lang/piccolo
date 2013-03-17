@@ -88,12 +88,15 @@ let invalid_pc = Val ("PICC_INVALID_PC", pc_label)
 
 (* value creation *)
 
+let init_bool_true = "PICC_INIT_BOOL_TRUE"
+let init_bool_false = "PICC_INIT_BOOL_FALSE"
+let init_int_value = "PICC_INIT_INT_VALUE"
 let init_string_value = "PICC_INIT_STRING_VALUE"
 let init_channel_value = "PICC_INIT_CHANNEL_VALUE"
 
-let make_true   = SeqASTConstUtil.makeFun "PICC_INIT_BOOL_TRUE" void [pt_value]
-let make_false  = SeqASTConstUtil.makeFun "PICC_INIT_BOOL_FALSE" void [pt_value]
-let make_int    = SeqASTConstUtil.makeFun "PICC_INIT_INT_VALUE" void [pt_value; prim_int]
+let make_true   = SeqASTConstUtil.makeFun init_bool_true void [pt_value]
+let make_false  = SeqASTConstUtil.makeFun init_bool_false void [pt_value]
+let make_int    = SeqASTConstUtil.makeFun init_int_value void [pt_value; prim_int]
 let make_string = SeqASTConstUtil.makeFun init_string_value void [pt_value; prim_string]
 let make_channel= SeqASTConstUtil.makeFun init_channel_value void [pt_value; channel]
 

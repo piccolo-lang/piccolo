@@ -88,6 +88,7 @@ struct
   let rec compile_prim0 destination (p: common_prim_type) =
     let f = make_prim p#moduleName p#primName p#arity in
     let arg_l = arg_list p#arity in
+    let arg_l = if destination then (Var pt_val) :: arg_l else arg_l in
     Bloc[
       Declare (args p#arity);
       (* Seq (init_arg_list p#arity); *)
@@ -95,21 +96,16 @@ struct
 	Seq [compile_value v;
 	    Assign (args i, Var pt_val)]
       end p#args);
-      destination f arg_l]
+      CallProc (f, arg_l)]
 
   and compile_value = function 
-      (* copy_value is here used as a procedure, 
-	 but it returns a bool that can be tested *)
     | VTrue _ -> CallProc (make_true, [Var pt_val])
     | VFalse _ -> CallProc (make_false, [Var pt_val])
     | VInt vt -> CallProc (make_int, [Var pt_val;  Val (make_prim_int vt#toVal) ])
     | VString vt -> CallProc (make_string, [Var pt_val; create_string_handle vt#toString])
     | VTuple _ -> failwith "TODO compile_value VTuple"
     | VVar vt -> Assign (pt_val, Var (pt_env vt#index))
-    | VPrim p -> compile_prim0 
-	(fun f arg_l -> 
-	   CallProc (copy_value, [Var pt_val; CallFun (f, arg_l)])) 
-	  (p :> common_prim_type)
+    | VPrim p -> compile_prim0 true (p :> common_prim_type)
       
   let compile_end status =
     Seq [
@@ -303,7 +299,7 @@ struct
   let compile_try_prim (action:prim_action_type) = 
     Seq[
       Debug ( action#toString );
-      compile_prim0 (fun f arg_l -> CallProc (f, arg_l)) (action :> common_prim_type);
+      compile_prim0 false (action :> common_prim_type);
       Assign (try_result, try_enabled)]
 
   let compile_try_let (action:let_action_type) = 

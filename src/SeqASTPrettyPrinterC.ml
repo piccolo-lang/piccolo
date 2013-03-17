@@ -16,7 +16,7 @@ let type_of_expr = function
 
 let prefix_args_table = Hashtbl.create 20;;
 
-let ad="&"
+let ad= "&"
 let cast= "(PICC_KnownValue*) &"
 
 let _ =
@@ -28,14 +28,23 @@ let _ =
   Hashtbl.add prefix_args_table SeqASTConstC.get_handle [ad];
   Hashtbl.add prefix_args_table SeqASTConstC.acquire_handle [ad];
   Hashtbl.add prefix_args_table SeqASTConstC.handle_globalrc [ad];
+
+  Hashtbl.add prefix_args_table SeqASTConstC.init_bool_true [ad];
+  Hashtbl.add prefix_args_table SeqASTConstC.init_bool_false [ad];
+  Hashtbl.add prefix_args_table SeqASTConstC.init_int_value [ad; ""];
   Hashtbl.add prefix_args_table SeqASTConstC.init_string_value [ad; ""];
   Hashtbl.add prefix_args_table SeqASTConstC.init_channel_value [ad; ""];
+
   Hashtbl.add prefix_args_table SeqASTConstC.fetch_input_commitment [ad];
   Hashtbl.add prefix_args_table SeqASTConstC.fetch_output_commitment [ad];
   Hashtbl.add prefix_args_table SeqASTConstC.outcommits_of_channel_value [ad];
   Hashtbl.add prefix_args_table SeqASTConstC.incommits_of_channel_value [ad];
   Hashtbl.add prefix_args_table SeqASTConstC.register_input_commitment [""; ad; ""; ""];
   Hashtbl.add prefix_args_table SeqASTConstC.register_output_commitment [""; ad; ""; ""];
+
+  Hashtbl.add prefix_args_table Prims.add_name [ad;ad;ad];
+  Hashtbl.add prefix_args_table Prims.substract_name [ad;ad;ad];
+  Hashtbl.add prefix_args_table Prims.equals_name [ad;ad;ad];
   Hashtbl.add prefix_args_table Prims.print_str_name [ad];
   (* Hashtbl.add prefix_args_table Prims.print_int_name [ad]; == print_str_name *)
   Hashtbl.add prefix_args_table Prims.print_info_name [ad]
