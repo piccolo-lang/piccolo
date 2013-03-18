@@ -78,8 +78,8 @@ params:
 | param COMMA params { $1::$3 }
 
 param: 
-| IDENT COLON typeDef { ($1,$3) }
-| IDENT { ($1,TUnknown) }
+| IDENT COLON typeDef { ($1, $3) }
+| IDENT { ($1, TUnknown) }
 
 /* processes */
 
@@ -100,10 +100,10 @@ choiceProcess:
 
 branch:
 | LBRACKET value RBRACKET action COMMA process { (fst $2, snd $2, $4, $6) }
-| action COMMA process { (makeVTrue(), TBool, $1, $3) }
+| action COMMA process { (makeVTrue (), TBool, $1, $3) }
 
 action: 
-| TAU { makeTau() }
+| TAU { makeTau () }
 | IDENT OUT value { makeOutput $1 (fst $3) (snd $3) }
 | IDENT IN LPAREN IDENT RPAREN { makeInput $1 $4 TUnknown }
 | NEW LPAREN IDENT COLON typeDef RPAREN { makeNew $3 $5 }
@@ -135,8 +135,8 @@ values :
 | value COMMA values { $1::$3 }
 
 value : 
-| VTRUE { (makeVTrue(), TBool) }
-| VFALSE { (makeVFalse(), TBool) }
+| VTRUE { (makeVTrue (), TBool) }
+| VFALSE { (makeVFalse (), TBool) }
 | INT { (makeVInt $1, TInt) }
 | STRING { (makeVString (String.sub $1 1 ((String.length $1) - 2)), TString) }
 | LPAREN values RPAREN { let ts = List.map snd $2 in (makeTuple ts (List.map fst $2), makeTupleType ts)}

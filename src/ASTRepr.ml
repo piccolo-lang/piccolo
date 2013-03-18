@@ -32,15 +32,16 @@ end
 (** parent class of all the Syntax.valueType representations *)
 class value_repr v = object
   inherit ast_repr
-  val mutable vtype = TUnknown
+  val mutable _vtype = TUnknown
 
-  method ofType = vtype
-  method setType t = vtype <- t
+  method ofType = _vtype
+  method setType t = _vtype <- t 
 end
 
 (** boolean representation of Syntax.const_value_type *)
 class bool_value_repr vt v = object
   inherit value_repr vt
+  
   method toVal = v
   method toString =
     match v with
@@ -67,6 +68,7 @@ let makeVInt v = VInt (new int_value_repr TInt v);;
 (** string representation of Syntax.const_value_type *)
 class string_value_repr vt (v : string) = object
   inherit value_repr vt
+  
   method toVal = v
   method toString = "\"" ^ v ^ "\""
 end
@@ -77,14 +79,20 @@ let makeVString v = VString (new string_value_repr TString v);;
 (** representation of Syntax.tuple_value_type *)
 class tuple_value_repr (vt : valueType list) (vs : value list) = object(self)
   inherit value_repr ((makeTupleTypeRepr vt) :> valueType tuple_type)
- 
+  val mutable _els = vs
+  val mutable _vts = vt
+    
   method arity = List.length vs
-  method types = 
+  method types =
     match self#ofType with
-      | TTuple (t) -> t#elements
+      | TTuple (t) -> t#els
       | _ -> failwith "wrong tuple type, please report (maybe tuple type has not been setted)"
+  method setTypes ts =
+    match self#ofType with
+      | TTuple (t) -> t#setEls ts
+      | _ -> failwith "wrong tuple type"
   method elements = vs
-  method toString = (string_of_collection "(" ")" "," string_of_value vs) ^ " of types : " ^ (string_of_collection "(" ")" "," string_of_valueType vt) 
+  method toString = (string_of_collection "(" ")" "," string_of_value self#elements) ^ " of types : " ^ (string_of_collection "(" ")" "," string_of_valueType self#types) 
   initializer self#setType (TTuple (TypeRepr.makeTupleTypeRepr vt))
 end
 
@@ -114,15 +122,24 @@ let makeVVar vt n = VVar (new variable_repr vt n);;
 (** representation of Syntax.prim_value_type *)
 class prim_repr (mname : string) (pname : string) (ps : valueType list) (rt : valueType) (vs : value list) = object(self)
   inherit value_repr ((makePrimTypeRepr mname pname ps rt) :> ((valueType list), valueType) prim_type)
+  val mutable _returnType = rt
+  
   method moduleName = mname
   method primName = pname
   method arity = List.length vs
   method args = vs
   method argTypes =
     match self#ofType with
-      | TPrim(t) -> t#params
+      | TPrim (t) -> t#params
       | _ -> failwith "wrong primitive type (please report)"
+  method setArgTypes ts =
+    match self#ofType with
+      | TPrim (t) -> t#setParams ts
+      | _ -> failwith "wrong primitive type"
   method toString = "#" ^ mname ^ ":" ^ pname ^ (string_of_collection "(" ")" "," string_of_value vs)
+  method returnType = _returnType
+  method setReturnType t = _returnType <- t
+  initializer self#setType (TPrim (TypeRepr.makePrimTypeRepr mname pname ps rt))
 end
 
 (** constructor primitive *)
@@ -133,18 +150,21 @@ let makeVPrim mname pname ps rt vs = VPrim (new prim_repr mname pname ps rt vs);
 (** Representation of Syntax.out_action_type *)
 class out_action_repr ch v vt = object
   inherit ast_repr
-  val mutable _valueType = vt
   val mutable _channelIndex = -1
   val mutable _channelBinder = None
+  val mutable _channelType = TChan (vt)
+  val mutable _valueType = vt
   
   method channel = ch
-  method channelType = TChan (vt)
+  method channelType = _channelType
+  method setChannelType t = _channelType <- t
   method channelIndex = _channelIndex
+  method setChannelIndex i = _channelIndex <- i
   method channelBinder = _channelBinder
   method setChannelBinder (b : ast_binder_type) = _channelBinder <- Some (b)
-  method setChannelIndex i = _channelIndex <- i
   method value = v
   method valueType = _valueType
+  method setValueType t = _valueType <- t
   method toString = ch ^ "!" ^ (string_of_value v)
 end
 
@@ -154,23 +174,25 @@ let makeOutput ch v vt = Output (new out_action_repr ch v vt);;
 (** representation of Syntax.in_action_type *)
 class in_action_repr (ch : string) (v : string) (vt : valueType) = object(self)
   inherit ast_repr
+  val mutable _channelType = TChan (vt)
   val mutable _variableType = vt
   val mutable _channelIndex = -1
   val mutable _variableIndex = -1
   val mutable _channelBinder = None
   
   method channel = ch
-  method channelType = TChan (vt)
+  method channelType = _channelType
+  method setChannelType t = _channelType <- t
   method channelIndex = _channelIndex
   method setChannelIndex i = _channelIndex <- i
   method channelBinder = _channelBinder
   method setChannelBinder (b : ast_binder_type) = _channelBinder <- Some (b)
   method variable = v
   method variableType = _variableType
-  method variableIndex = _variableIndex
-  method fetchBinderType (b : string) = if b = self#variable then Some _variableType else None
-  method setVariableIndex i = _variableIndex <- i
   method setVariableType t = _variableType <- t
+  method variableIndex = _variableIndex
+  method setVariableIndex i = _variableIndex <- i
+  method fetchBinderType (b : string) = if b = self#variable then Some _variableType else None
   method toString = ch ^ "?(" ^ v ^ ":" ^ (string_of_valueType _variableType) ^ ")"
 end
 
@@ -180,6 +202,7 @@ let makeInput ch v vt = Input (new in_action_repr ch v vt);;
 (** representation of Syntax.tau_action_type *)
 class tau_action_repr = object
   inherit ast_repr
+  
   method toString = "tau" 
 end
 
@@ -191,11 +214,13 @@ class new_action_repr (v : string) (vt : valueType) = object(self)
   inherit ast_repr
   val mutable _variableType = vt
   val mutable _variableIndex = -1
+  val mutable _channelBinder = None
  
   method variable = v
   method variableType = _variableType
   method variableIndex = _variableIndex
   method setVariableIndex i = _variableIndex <- i
+  method setChannelBinder (b : ast_binder_type) = _channelBinder <- Some (b)
   method fetchBinderType (b : string) = if b = self#variable then Some _variableType else None
   method toString = "new(" ^ v ^ ":" ^ (string_of_valueType _variableType) ^ ")"
 end
@@ -213,6 +238,7 @@ class spawn_action_repr (m : string) (d : string) (vts : valueType list) (vs : v
   method arity = List.length vs
   method args = vs
   method argTypes = _argTypes
+  method setArgTypes vt = _argTypes <- vt
   method toString = "spawn{" ^ m ^ ":" ^ d ^ (string_of_collection "(" ")" "," string_of_value vs) ^ "}"
 end
 
@@ -229,6 +255,7 @@ class prim_action_repr (mname : string) (pname : string) (vts : valueType list) 
   method arity = List.length vs
   method args = vs
   method argTypes = _argTypes
+  method setArgTypes v = _argTypes <- v
   method toString = "#" ^ mname ^ ":" ^ pname ^ (string_of_collection "(" ")" "," string_of_value vs)
 end
 
@@ -249,6 +276,7 @@ class let_action_repr (v : string) (vt : valueType) (e : value) (et : valueType)
   method fetchBinderType (b : string) = if b = self#variable then Some _variableType else None
   method value = e
   method valueType = _valueType
+  method setValueType t = _valueType <- t
   method toString = "let(" ^ v ^ ":" ^ (string_of_valueType _variableType) ^ "=" ^ (string_of_value e) ^ ")"
 end
 
@@ -260,6 +288,7 @@ let makeLet var vartype e et = Let (new let_action_repr var vartype e et);;
 (** parent class of all the processes representations*)
 class virtual process_repr (m : string) (d : string) = object
   inherit ast_repr
+  
   method inModule = m
   method inDef = d
 end
@@ -267,6 +296,7 @@ end
 (** representation of Syntax.term_process_type *)
 class term_process_repr m d = object
   inherit process_repr m d
+
   method toString = "0"
 end
 
@@ -280,11 +310,11 @@ class call_process_repr m d (mname : string) (dname : string) (vts : valueType l
   
   method moduleName = mname
   method defName = dname
-  method arity = List.length vs
   method args = vs
+  method arity = List.length vs
   method argTypes = _argTypes
   method setArgTypes vts = _argTypes <- vts
-  method toString = mname ^ ":" ^ dname ^ (string_of_collection "(" ")" "," string_of_value vs) ^ (string_of_collection "r" "r" "," string_of_valueType vts)
+  method toString = mname ^ ":" ^ dname ^ (string_of_collection "(" ")" "," string_of_value vs)
 end
 
 (** constructor Call process *)
@@ -321,6 +351,7 @@ class choice_process_repr m d (bs : (process prefix_process_type) list) =
   let ar = List.length bs in
 object
   inherit process_repr m d
+  
   method branches = bs
   method arity = ar
   method toString = 

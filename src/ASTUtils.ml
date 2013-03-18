@@ -523,47 +523,47 @@ object(self)
   method primValue_val w m d p t v = n1#primValue_val () m d p t v ; n2#primValue_val w m d p t v
   method primValue w m d p t v rs = n1#primValue () m d p t v [] ; n2#primValue w m d p t v rs
 end
-
+  
 let fold_seq (n1:iter_fold_node) (n2:('a,'b) fold_node) = new seq_fold_node_repr n1 n2
-
+  
 let rec fold_seq_all ns n = match ns with
   | [] -> n
   | n'::ns' -> fold_seq n' (fold_seq_all ns' n)
-
+      
 (** fold_node "handler", apply the fold_node methods on a moduleDef and his definition list *)
-let rec module_fold (m:moduleDef) (n:('a,'b) fold_node) : 'b =
+let rec module_fold (m : moduleDef) (n : ('a, 'b) fold_node) : 'b =
   match m with
     | Module m' -> 
-      n#moduleDef m' (List.fold_left (fun ds d -> (definition_fold (n#moduleDef_val m') m' d n)::ds) [] m'#definitions)
+	n#moduleDef m' (List.fold_left (fun ds d -> (definition_fold (n#moduleDef_val m') m' d n)::ds) [] m'#definitions)
 	(* n#moduleDef: module_type -> 'b list -> 'b *)
 	
-and definition_fold (v:'a) (m:module_type) (def:definition) (n:('a,'b) fold_node) =
+and definition_fold (v : 'a) (m : module_type) (def : definition) (n : ('a, 'b) fold_node) =
   match def with
     | Def d ->
-      n#definition v m d (process_fold (n#definition_val v m d) m d d#process n)
-	(* n#definition: 'a -> module_type -> definition_type -> ('a, 'b) -> ('a, 'b) *)
-
-and process_fold (v:'a) (m:module_type) (d:definition_type) (proc:process) (n:('a,'b) fold_node) =
+	n#definition v m d (process_fold (n#definition_val v m d) m d d#process n)
+	  (* n#definition: 'a -> module_type -> definition_type -> ('a, 'b) -> ('a, 'b) *)
+	  
+and process_fold (v : 'a) (m : module_type) (d : definition_type) (proc : process) (n : ('a, 'b) fold_node) =
   match proc with
     | Term p -> term_process_fold v m d p n
     | Call p -> call_process_fold v m d p n
     | Choice p -> choice_process_fold v m d p n
+	
+and term_process_fold (v : 'a) (m : module_type) (d : definition_type) (p : term_process_type) (n : ('a, 'b) fold_node) =
+  n#term_val v m d p; n#term v m d p
 
-and term_process_fold (v:'a) (m:module_type) (d:definition_type) (p:term_process_type) (n:('a,'b) fold_node) =
-  n#term_val v m d p ; n#term v m d p
-
-and call_process_fold (v:'a) (m:module_type) (d:definition_type) (p:call_process_type) (n:('a,'b) fold_node) =
+and call_process_fold (v : 'a) (m : module_type) (d : definition_type) (p : call_process_type) (n : ('a, 'b) fold_node) =
   let call_val_computed = n#call_val v m d p in
-  n#call v m d p (List.fold_left (fun vs (t',v') -> (value_fold call_val_computed m d (p:>process_type) t' v' n)::vs) [] (List.combine p#argTypes p#args))
-
-and choice_process_fold (v:'a) (m:module_type) (d:definition_type) (p:process choice_process_type) (n:('a,'b) fold_node) =
+    n#call v m d p (List.fold_left (fun vs (t', v') -> (value_fold call_val_computed m d (p :> process_type) t' v' n)::vs) [] (List.combine p#argTypes p#args))
+      
+and choice_process_fold (v : 'a) (m : module_type) (d : definition_type) (p : process choice_process_type) (n : ('a, 'b) fold_node) =
   n#choice v m d p (list_fold_n (fun bs index branch -> (branch_process_fold (n#choice_val v m d p) m d p index branch n)::bs) [] p#branches)
-
-and branch_process_fold (v:'a) (m:module_type) (d:definition_type) (c:process choice_process_type) (index:int) (p:process prefix_process_type) (n:('a,'b) fold_node) =
-  let w = n#branch_val v m d c index p in
-  n#branch v m d c index p (value_fold w m d (p:>process_type) p#guardType p#guard n) (action_fold w m d p p#action n) (process_fold w m d p#continuation n)
-
-and action_fold (v:'a) (m:module_type) (d:definition_type) (p:process prefix_process_type) (act:action) (n:('a,'b) fold_node) =
+    
+and branch_process_fold (v : 'a) (m : module_type) (d : definition_type) (c : process choice_process_type) (index : int) (p : process prefix_process_type) (n : ('a, 'b) fold_node) =
+  let branch_val_computed = n#branch_val v m d c index p in
+    n#branch v m d c index p (value_fold branch_val_computed m d (p :> process_type) p#guardType p#guard n) (action_fold branch_val_computed m d p p#action n) (process_fold branch_val_computed m d p#continuation n)
+      
+and action_fold (v : 'a) (m : module_type) (d : definition_type) (p : process prefix_process_type) (act : action) (n : ('a, 'b) fold_node) =
   match act with
     | Tau a -> tau_action_fold v m d p a n
     | Output a -> out_action_fold v m d p a n
@@ -572,22 +572,32 @@ and action_fold (v:'a) (m:module_type) (d:definition_type) (p:process prefix_pro
     | Spawn a -> spawn_action_fold v m d p a n
     | Prim a ->  prim_action_fold v m d p a n
     | Let a -> let_action_fold v m d p a n
-and tau_action_fold (v:'a) (m:module_type) (d:definition_type) (p:process prefix_process_type) (a:tau_action_type) (n:('a,'b) fold_node) =
-  n#tauAction_val v m d p a ; n#tauAction v m d p a
-and out_action_fold (v:'a) (m:module_type) (d:definition_type) (p:process prefix_process_type) (a:out_action_type) (n:('a,'b) fold_node) =
-  n#outAction v m d p a (value_fold (n#outAction_val v m d p a) m d (p:>process_type) a#valueType a#value n)
-and in_action_fold (v:'a) (m:module_type) (d:definition_type) (p:process prefix_process_type) (a:in_action_type) (n:('a,'b) fold_node) =
-  n#inAction_val v m d p a ; n#inAction v m d p a
-and new_action_fold (v:'a) (m:module_type) (d:definition_type) (p:process prefix_process_type) (a:new_action_type) (n:('a,'b) fold_node) =
-  n#newAction_val v m d p a ; n#newAction v m d p a
-and spawn_action_fold (v:'a) (m:module_type) (d:definition_type) (p:process prefix_process_type) (a:spawn_action_type) (n:('a,'b) fold_node) =
-  n#spawnAction v m d p a (List.fold_left (fun vs (t',v') -> (value_fold (n#spawnAction_val v m d p a) m d (p:>process_type) t' v' n)::vs) [] (List.combine a#argTypes a#args))
-and prim_action_fold (v:'a) (m:module_type) (d:definition_type) (p:process prefix_process_type) (a:prim_action_type) (n:('a,'b) fold_node) =
-  n#primAction v m d p a (List.fold_left (fun vs (t',v') -> (value_fold (n#primAction_val v m d p a) m d (p:>process_type) t' v' n)::vs) [] (List.combine a#argTypes a#args))
 
+and tau_action_fold (v : 'a) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : tau_action_type) (n : ('a, 'b) fold_node) =
+  n#tauAction_val v m d p a; n#tauAction v m d p a
+
+and out_action_fold (v : 'a) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : out_action_type) (n : ('a, 'b) fold_node) =
+  let out_val_computed = n#outAction_val v m d p a in
+    n#outAction v m d p a (value_fold out_val_computed m d (p :> process_type) a#valueType a#value n)
+      
+and in_action_fold (v : 'a) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : in_action_type) (n : ('a, 'b) fold_node) =
+  n#inAction_val v m d p a; n#inAction v m d p a
+    
+and new_action_fold (v : 'a) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : new_action_type) (n : ('a, 'b) fold_node) =
+  n#newAction_val v m d p a; n#newAction v m d p a
+    
+and spawn_action_fold (v : 'a) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : spawn_action_type) (n : ('a, 'b) fold_node) =
+  let spawn_val_computed = n#spawnAction_val v m d p a in
+    n#spawnAction v m d p a (List.fold_left (fun vs (t', v') -> (value_fold spawn_val_computed m d (p :> process_type) t' v' n)::vs) [] (List.combine a#argTypes a#args))
+      
+and prim_action_fold (v : 'a) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : prim_action_type) (n : ('a, 'b) fold_node) =
+  let primAction_val_computed = n#primAction_val v m d p a in
+    n#primAction v m d p a (List.fold_left (fun vs (t', v') -> (value_fold primAction_val_computed m d (p :> process_type) t' v' n)::vs) [] (List.combine a#argTypes a#args))
+      
 and let_action_fold (v : 'a) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : let_action_type) (n : ('a, 'b) fold_node) =
-  n#letAction v m d p a (value_fold (n#letAction_val v m d p a) m d (p :> process_type) a#valueType a#value n)
-
+  let let_val_computed = n#letAction_val v m d p a in
+    n#letAction v m d p a (value_fold let_val_computed m d (p :> process_type) a#valueType a#value n)
+    
 and value_fold (w : 'a) (m : module_type) (d : definition_type) (p : process_type) (t : valueType) (value : value) (n : ('a, 'b) fold_node) =
   match value with
     | VTrue v -> n#trueValue_val w m d p t v; n#trueValue w m d p t v
@@ -599,10 +609,12 @@ and value_fold (w : 'a) (m : module_type) (d : definition_type) (p : process_typ
     | VPrim v -> prim_value_fold w m d p t v n
 	
 and tuple_value_fold (w : 'a) (m : module_type) (d : definition_type) (p : process_type) (t : valueType) (v : value tuple_value_type) (n : ('a, 'b) fold_node) =
-  n#tupleValue w m d p t v (List.fold_left (fun vs (t', v') -> (value_fold (n#tupleValue_val w m d p t v) m d (p :> process_type) t' v' n)::vs) [] (List.combine v#types v#elements))
-
+  let tuple_val_computed = n#tupleValue_val w m d p t v in
+    n#tupleValue w m d p t v (List.fold_left (fun vs (t', v') -> (value_fold tuple_val_computed m d (p :> process_type) t' v' n)::vs) [] (List.combine v#types v#elements))
+      
 and prim_value_fold (w : 'a) (m : module_type) (d : definition_type) (p : process_type) (t : valueType) (v : value prim_value_type) (n : ('a, 'b) fold_node) =
-  n#primValue w m d p t v (List.fold_left (fun vs (t', v') -> (value_fold (n#primValue_val w m d p t v) m d (p :> process_type) t' v' n)::vs) [] (List.combine v#argTypes v#args))
+  let primValue_val_computed = n#primValue_val w m d p t v in
+    n#primValue w m d p t v (List.fold_left (fun vs (t', v') -> (value_fold primValue_val_computed m d (p :> process_type) t' v' n)::vs) [] (List.combine v#argTypes v#args))
 
 let module_fold_3 (m : moduleDef) (n1 : ('a, 'b) fold_node) (n2 : ('c, 'd) fold_node) (n3 : ('e, 'f) fold_node) : ('b * 'd * 'f) =
   let (r1, (r2, r3)) = module_fold m (fold_compose n1 (fold_compose n2 n3)) in
