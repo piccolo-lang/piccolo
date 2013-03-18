@@ -39,12 +39,10 @@ object(self)
   (* module *)
   method moduleDef_val m = []
   method moduleDef m esizes =
-    self#echoln 3 ("\n[ESIZE_MODULE] env pass finished in Module: " ^ m#name);
     list_max esizes 
 
   (* definitions *)
   method definition_val _ m (d:definition_type) =
-    self#echoln 3 ("\n[ESIZE_DEF] Start : " ^ (d#name) ^ " env start : " );
     calledDefs <- [];
     newVar <- [];
     let (env, _) = List.split d#params in (* the start env contains only the parameters of the def *)
@@ -115,6 +113,7 @@ object(self)
       | _ -> env
   method branch env m d p i b s1 s2 s3 = 
     s1+s2+s3
+
   method call_val env m d p = env
   method call env m d p _ = 
     let Def(def_called) = try
@@ -174,9 +173,7 @@ object(self)
   method varValue_val env m d p t v =
     match (lookup env v#name) with
       | None -> ()
-	  (* generate an error and save in module errors ??? *)
       | Some n -> v#setIndex n 
-	  (* or in a further pass, just test if index is still -1 *)
   method varValue env m d p t v = 0
   method primValue_val env m d p t v = env
   method primValue env m d p t v rs = 0
@@ -203,7 +200,6 @@ object(self)
   (* definitions *)
   method definition_val _ m (d:definition_type) =
     calledDefs <- [];
-    self#echoln 3 ("\n[Commits_pass_DEF] Start : " ^ (d#name));
     ()
   method definition _ m d nbcommits=
     let max_of_called_defs = 
@@ -469,8 +465,9 @@ end
 
 (** Computing passes *)
 
-(* Debug tool *)
+
 (** Print the values of esize, csize, nbchannelmax, nbchoicemax for each definition *)
+(* Debug tool *)
 let print_values m =
   let defs = List.map (fun (Def (def)) -> def) m#definitions in
   List.iter (fun def -> print_string (
@@ -537,9 +534,9 @@ let compute_pass m verbosity =
   let csize_pass = new commitment_size_pass verbosity in
   let channel_pass = new channel_pass verbosity in
   let choice_pass = new choice_pass verbosity in
-  if verbosity >=1 then print_string "\nMiddleend passes start...";
+  if verbosity >=1 then print_string "\n < MIDDLEEND PASSES START >";
   fixpoint m esize_pass csize_pass channel_pass choice_pass verbosity;
-  if verbosity >=1 then print_string "\nMiddleend passes ended!\n";
+  if verbosity >=1 then print_string "\n < MIDDLEEND PASSES END >\n";
   if verbosity >= 2 then (
     let Module(m') = m in 
     print_values m');
