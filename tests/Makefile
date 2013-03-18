@@ -1,6 +1,6 @@
 
-INC=../../libpirt/libpirt/include
-LIB=../../libpirt/libpirt/src
+INC=../../libpirt/include
+LIB=../../libpirt/src
 
 PCC=../src/pcc #-debug
 CFLAGS= -g -Wall -std=c99
