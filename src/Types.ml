@@ -11,7 +11,8 @@ open Utils;;
 (** interface representing a tuple of a given type *)
 class type ['a] tuple_type = object
   method arity : int
-  method elements : 'a list
+  method els : 'a list
+  method setEls : 'a list -> unit
   method toString : string
 end
 	  
@@ -19,6 +20,7 @@ end
 class type ['a, 'b] prim_type = object
   method arity : int
   method params : 'a
+  method setParams : 'a -> unit
   method return : 'b
   method moduleName : string
   method primName : string
@@ -37,7 +39,7 @@ type valueType =
       
 (** string representing a valueType *)
 let rec string_of_valueType = function
-  | TUnknown -> "unknown"
+  | TUnknown -> "UNKNOWN"
   | TBool -> "bool"
   | TInt -> "int"
   | TString -> "string"
@@ -56,7 +58,7 @@ let rec checkTypeWellFormed u =
 	  if inPrim then raise (Ex_Type_Non_WellFormed t)
 	  else (List.for_all (fun t'' -> check t'' true) (t'#params))
             && check (t'#return) true
-      | TTuple t' -> List.for_all (fun t'' -> check t'' inPrim) (t'#elements)
+      | TTuple t' -> List.for_all (fun t'' -> check t'' inPrim) (t'#els)
       | TChan t' -> check t' inPrim
       | _ -> true
   in
@@ -69,7 +71,7 @@ let rec type_eq t1 t2 =
     | (TBool, TBool) -> true
     | (TInt, TInt) -> true
     | (TString, TString) -> true
-    | (TTuple t1, TTuple t2) -> t1#arity = t2#arity && List.for_all2 type_eq t1#elements t2#elements
+    | (TTuple t1, TTuple t2) -> t1#arity = t2#arity && List.for_all2 type_eq t1#els t2#els
     | (TChan t1, TChan t2) -> type_eq t1 t2
     | (TPrim t1, TPrim t2) -> t1#arity = t2#arity && (List.for_all2 type_eq t1#params t2#params) && (type_eq t1#return t2#return)
     | (_, _) -> false

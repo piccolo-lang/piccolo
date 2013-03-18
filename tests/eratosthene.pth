@@ -1,0 +1,23 @@
+-- Implementation of the Eratosthene's sieve
+
+module Test/Eratosthene
+
+def Gen(i:int, n:int, p: int, gen:chan<int>) =	
+  [#core/arith:less_than(i, n)] gen!i, Gen(#core/arith:add(i, p), n, p, gen)
+
+def PrimeFilter(n:int, in:chan<int>, out:chan<int>) =
+  in?(x), 
+  	[#core/arith:equals(#core/arith:modulo(x, n), 0)] tau, PrimeFilter(n, in, out) +
+	[true] out!x, PrimeFilter(n, in, out)
+
+def EndFilter(in:chan<int>, primes:chan<int>) =
+  in?(x), primes!x, new(out:chan<int>), spawn{PrimeFilter(x, in, out)}, EndFilter(out, primes)
+
+def Primes(primes:chan<int>, nb:int) =
+  new(gen:chan<int>), spawn{EndFilter(gen, primes)}, gen!2, Gen(3, nb, 2, gen)
+
+def Printer(primes:chan<int>) =
+  primes?(x), #core/io:print_int(x), Printer(primes)  
+
+def Main() =
+  new(primes:chan<int>), spawn{Primes(primes, 100)}, Printer(primes)
