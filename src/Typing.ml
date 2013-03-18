@@ -258,20 +258,11 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
   (* in action *)
   method inAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : in_action_type) : unit =
     self#echoln 2 "\n    < TYPING INPUT ACTION > started";
-    match d#fetchBinderType a#channel with 
-      | Some (TChan (vt)) -> 
-	  (a#setChannelBinder (d :> ast_binder_type);
-	   a#setVariableType vt; 
-	   self#echoln 5 (Printf.sprintf "=> input variable %s setted to type %s" a#variable (string_of_valueType vt)));
-      | Some _ -> a#setChannelBinder (a :> ast_binder_type) 
-      | None ->  failwith ("Error : Unbound value " ^ a#channel)
+    ()
 	  
   method inAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : in_action_type) : typeErrors =
     self#echoln 2 "\n    < TYPING INPUT ACTION > finished";
-    match d#fetchBinderType a#channel with 
-      | Some (TChan (vt)) -> []
-      | Some (_ as t) -> [TypeError (("Type Error : This expression has type " ^ (string_of_valueType t) ^ " but an expression was expected of type " ^ (string_of_valueType a#channelType), (a :> ast_type)))]
-      |	None -> failwith ("Error : Unbound value " ^ a#channel)
+    []
 	  
   (* tau action *)
   method tauAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : tau_action_type) : unit =
@@ -285,8 +276,6 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
   (* new action /!\ *)
   method newAction_val (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : new_action_type) : unit =
     self#echoln 2 "\n    < TYPING NEW ACTION > started";
-    a#setChannelBinder (d :> ast_binder_type);
-    d#extendEnv (a#variable);
     ()
       
   method newAction (env : typingEnv) (m : module_type) (d : definition_type) (p : process prefix_process_type) (a : new_action_type) : typeErrors =
@@ -413,13 +402,14 @@ class typing_pass_node (n : int) : [typingEnv, typeErrors] ASTUtils.fold_node = 
 	  (match lookup_env env a#channel with
 	     | Some ((TChan (var_ty)) as t, binder) ->
 		 (a#setChannelType t;
+		  a#setChannelBinder binder;
 		  self#echoln 5 (Printf.sprintf "=> variable %s of type %s added to environnement" a#variable (string_of_valueType a#variableType));
 		  SMap.add a#variable (var_ty, (a :> ast_binder_type)) env)
 	     | Some (_, binder)-> SMap.add a#variable (TBool, (a :> ast_binder_type)) env (* Erreur !!*)
 	     | None -> failwith ("Error : Unbound value " ^ a#channel))	  
       | New (a) -> 
 	  (self#echoln 5 (Printf.sprintf "=> variable %s of type %s added to environnement" a#variable (string_of_valueType a#variableType));
-	   SMap.add a#variable (a#variableType, (d :> ast_binder_type)) env)
+	   SMap.add a#variable (a#variableType, (a :> ast_binder_type)) env)
       | Let (a) ->
 	  (self#echoln 5 (Printf.sprintf "=> variable %s of type %s added to environnement" a#variable (string_of_valueType a#variableType));
 	   SMap.add a#variable (a#variableType, (a :> ast_binder_type)) env)

@@ -314,7 +314,7 @@ class call_process_repr m d (mname : string) (dname : string) (vts : valueType l
   method arity = List.length vs
   method argTypes = _argTypes
   method setArgTypes vts = _argTypes <- vts
-  method toString = mname ^ ":" ^ dname ^ (string_of_collection "(" ")" "," string_of_value vs) ^ (string_of_collection "r" "r" "," string_of_valueType vts)
+  method toString = mname ^ ":" ^ dname ^ (string_of_collection "(" ")" "," string_of_value vs)
 end
 
 (** constructor Call process *)

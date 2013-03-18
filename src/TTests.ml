@@ -172,7 +172,7 @@ let test_spawn7 = "def PingPong(i:int,o:bool,msg:string) = tau, end \n " ^
   "def Spawn7() = spawn{PingPong(#core/arith:add(1, 2), true, \"toto\")}, #core/io:print_str(\"titi\"), end";;
 
 let test_spawn8 = "def PingPong(i:int,o:bool,msg:string) = tau, end \n " ^
-  "def Spawn8(g:bool) = spawn{PingPong(#core/arith:add(1, 2), (g, #core/arith:add(4, 3)), \"toto\")}, #core/io:print_str(\"titi\"), end";; (* TUPLE AGAIN AGAIN *)
+  "def Spawn8(g:bool) = spawn{PingPong(#core/arith:add(1, 2), (g, #core/arith:add(4, 3)), \"toto\")}, #core/io:print_str(\"titi\"), end";;
 
 let ppstr1 = "def ErrPingPong(i2:chan<string>,msg:string) = i2?(msg), ErrPingPong(i2,msg)";; (* ok *)
 
@@ -190,15 +190,15 @@ let main = "def Main() = new(r:chan<int>), spawn{Fibonacci(3,4,5,r)},#core/io:pr
 
 let testmain = ParseUtils.parseFromString ("module Test/Fibonacci \n" ^ fibStr ^ "\n" ^ main );;
 
-let test = ParseUtils.parseFromString ("module Test/Test \n" ^ test_spawn1);;
+let test = ParseUtils.parseFromString ("module Test/Test \n" ^ test_prim_value1);;
 
 let fib = "def Fibonacci(n:int, m:int, p:int, r:chan<int>) = [#core/arith:equals(n, 0)] r!m, end + tau, Fibonacci(#core/arith:substract(n, 1), #core/arith:add(m, p), m, r)";;
 
-let hello = "def Main(r:chan<int>) = new(r:chan<int>), spawn{Fibonacci(5, 1, 1, r)}, spawn{Fibonacci(3, 1, 1, r)}, r?(x), #core/io:print_int(x), r?(x), #core/io:print_int(x), end";;
+let hello = "def Main() = new(r:chan<int>), spawn{Fibonacci(5, 1, 1, r)}, spawn{Fibonacci(3, 1, 1, r)}, r?(x), #core/io:print_int(x), r?(x), #core/io:print_int(x), end";;
 
-let fuck = ParseUtils.parseFromString ("module Test/Fibonacci \n" ^ fib ^ "\n" ^ hello);;
+let world = ParseUtils.parseFromString ("module Test/Fibonacci \n" ^ fib ^ "\n" ^ hello);;
 
-let check_pp () = Middleend.compute_pass fuck 5;;
+let check_pp () = Middleend.compute_pass world 5;;
 
 check_pp ();; 
 
