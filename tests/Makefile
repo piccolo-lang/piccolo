@@ -21,7 +21,7 @@ all: $(TARGETS)
 	gcc $(CFLAGS) -I $(INC) -c $< -o $@
 
 %.run:%.o $(OBJS)
-	gcc $(CFLAGS) -I $(INC) -lpthread $^ -o $@
+	gcc $(CFLAGS) -I $(INC) $^ -o $@ -lpthread
 
 clean:
 	rm -f *.c *~ *.o *.run
