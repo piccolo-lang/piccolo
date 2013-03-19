@@ -1,0 +1,14 @@
+module Test/FibonacciDF
+
+def FFib0(n:int, m:int, r:chan<int>) = 
+    let (x:int=#core/arith:add(n, m)), r!x, FFib0(m, x, r)
+
+def FFib(r:chan<int>) =
+  r!1, r!1, FFib0(1, 1, r)
+
+def Printer(r:chan<int>) =
+r?(x), #core/io:print_int(x), #core/io:print_str("\n"), Printer(r)
+
+def Main() = 
+    new(r:chan<int>), spawn{FFib(r)}, Printer(r)
+
