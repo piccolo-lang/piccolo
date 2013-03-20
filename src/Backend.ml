@@ -478,10 +478,9 @@ struct
   let compile_module (Module m) =
     let defs = m#definitions in 
     compiled_module := Some m;
-    let (Def d) = List.(find (fun (Def df) -> df#name = "Main") defs) in
-    d, Seq [Seq !eval_funs; 
-	    Seq (List.map (fun (Def d) -> def_sig m d []) defs);
-	    Seq (List.map (compile_def m) defs)]
+    Seq [Seq !eval_funs; 
+	 Seq (List.map (fun (Def d) -> def_sig m d []) defs);
+	 Seq (List.map (compile_def m) defs)]
       
 
   let print_piccType  = Printer.print_piccType

@@ -43,7 +43,7 @@ print_endline (string_of_module pp) ;;
 
 let _ =
   Printexc.record_backtrace true;
-  let _,c_code = CBackend.compile_module pp in
+  let c_code = CBackend.compile_module pp in
   CBackend.print_instr_list_std [c_code]
 (*
 let check_pp = checkAndInferTypes pp ;;
