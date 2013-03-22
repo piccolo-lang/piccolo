@@ -308,7 +308,7 @@ struct
       Assign (child_proc, Val (action#moduleName ^ "_" ^ action#defName, pdef));
       Assign (child_pc, Val pc_label_init);
       Assign (child_status, status_run);
-      CallProc (ready_queue_push, [Var sched_ready; Var child]);
+      CallProc (ready_queue_add, [Var sched_ready; Var child]);
       Assign (try_result, try_enabled)
     ]
 
