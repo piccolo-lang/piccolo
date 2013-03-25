@@ -12,5 +12,5 @@ def Ack(n: int, p:int, c:chan<int>) =
     Ack(n, #core/arith:substract(p, 1), c1)
 
 def Main() =
-  new(c:chan<int>), spawn{Ack(4, 2, c)}, c?(x), #core/io:print_int(x), end
+  new(c:chan<int>), spawn{Ack(1, 1, c)}, c?(x), #core/io:print_int(x), end
 

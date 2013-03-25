@@ -129,8 +129,9 @@ struct
       Assign (pt_fuel, fuel_init);
       Foreach (chan,
 	       (CallFun (knownSet_forget, [Var pt_known])),
-	       [CallProc (handle_dec_ref_count, [CallFun (get_handle, [Var chan])]);
-		CallProc (knownSet_forget_to_unknown, [Var pt_known; Var chan])]);
+	       (*interverted the functions because handale_dec_ref_count can free the ressource*)
+	       [CallProc (knownSet_forget_to_unknown, [Var pt_known; Var chan]);
+		CallProc (handle_dec_ref_count, [CallFun (get_handle, [Var chan])])]);
       Assign (pt_status, status_wait);
       CallProc (wait_queue_push, [Var sched_wait; Var pt]);
       CallProc (release, [Var pt_lock]);
@@ -144,8 +145,9 @@ struct
       Assign (pt_fuel, fuel_init);
       Foreach (chan,
 	       (CallFun (knownSet_forget, [Var pt_known])),
-	       [CallProc (handle_dec_ref_count, [CallFun (get_handle, [Var chan])]);
-		CallProc (knownSet_forget_to_unknown, [Var pt_known; Var chan])]);
+	       (*interverted the functions because handale_dec_ref_count can free the ressource*)
+	       [CallProc (knownSet_forget_to_unknown, [Var pt_known; Var chan]);
+		CallProc (handle_dec_ref_count, [CallFun (get_handle, [Var chan])])]);
       CallProc (ready_queue_add, [Var sched_ready; Var pt]);
       Assign (pt_status, status_run);
       return_void]

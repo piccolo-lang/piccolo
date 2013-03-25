@@ -1,6 +1,6 @@
 module Test/ChoiceTest
 
-def Testeur(i:chan<string> ,msg:string) =
+def Testeur(i:chan<string> ,o:chan<string>, msg:string) =
 [true] i?(x1), 
        [true] i!msg, end +
        [true] tau, 
@@ -10,3 +10,6 @@ def Testeur(i:chan<string> ,msg:string) =
 		     	    	   [true] c?(m2), end +
        			    	   [true] o!msg, end +
        			    	   [true] new(c1:chan<string>), end 
+
+def Main() =
+new(c1:chan<string>),new(c2:chan<string>),Testeur(c1, c2, "<TEST>")
