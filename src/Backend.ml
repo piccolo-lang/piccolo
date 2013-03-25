@@ -9,7 +9,6 @@
 module Make 
   (OutputTypes : SeqAST.OutputTypes) 
   (Names : SeqAST.Names) 
-  (Prims : SeqAST.Prims)
   (Printer: SeqAST.PrettyPrinter) =
 struct
   
@@ -18,9 +17,10 @@ struct
   open Syntax
   open SeqAST
   open Printer
+
   include SeqASTConstUtil.Sigs (OutputTypes) (Names)
 
-  module PrimUtils = PrimitiveUtils.Make(Prims)
+  module PrimUtils = PrimitiveUtils.Make(Names)
 
   let make_prim =
     fun module_name prim_name arity ->
@@ -78,20 +78,12 @@ struct
     in
     f (n - 1) []
 
-  let init_arg_list n =
-    let rec f n acc =
-      if n = 0 then Assign (args 0, Val arg_init_value) :: acc
-      else f (n - 1) (Assign (args n, Val arg_init_value) :: acc)
-    in
-    f (n - 1) []
-      
   let rec compile_prim0 destination (p: common_prim_type) =
     let f = make_prim p#moduleName p#primName p#arity in
     let arg_l = arg_list p#arity in
     let arg_l = if destination then (Var pt_val) :: arg_l else arg_l in
     Bloc[
       Declare (args p#arity);
-      (* Seq (init_arg_list p#arity); *)
       Seq (List.mapi begin fun i v ->
 	Seq [compile_value v;
 	    Assign (args i, Var pt_val)]
@@ -161,9 +153,9 @@ struct
       Assign (try_result, try_enabled)]
     
   let compile_try_in (action:in_action_type) = 
-    let ok = ok_name, commit_status_enum in
+    let ok = SimpleName ok_name, commit_status_enum in
     
-    (* let vl = vl_name, pt_value in *) 
+    (* let vl = SimpleName vl_name, pt_value in *) 
     
     let pt_env_x = pt_env action#variableIndex in
     let pt_env_c = pt_env action#channelIndex in
@@ -228,7 +220,7 @@ struct
 
 
   let compile_try_out (action:out_action_type) = 
-    let ok = ok_name, commit_status_enum in
+    let ok = SimpleName ok_name, commit_status_enum in
     let label_end_of_try = eot_label () in
     let pt_env_c = pt_env action#channelIndex in
     Seq[
@@ -345,7 +337,7 @@ struct
     | Choice p -> compile_choice m d p
 
   and compile_choice m d p = 
-    let nb_disabled = nb_disabled_name, prim_int
+    let nb_disabled = SimpleName nb_disabled_name, prim_int
     and def_label = def_label_pattern m#name d#name
     and choice_cont = Array.make p#arity 0
     in
