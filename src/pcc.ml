@@ -1,5 +1,5 @@
 
-module CBackend = Backend.Make (SeqASTConstC) (SeqASTConstC) (Prims) (SeqASTPrettyPrinterC)
+module CBackend = Backend.Make (SeqASTConstC) (SeqASTConstC) (SeqASTPrettyPrinterC)
 
 let _ = 
   Printexc.record_backtrace true;

@@ -196,39 +196,45 @@ let pt_fuel = "fuel"
 let pt_lock = "lock"
 let pt_chans = "chans"
 
-let try_result = SimpleName "tryresult", try_result_enum
+let try_result = "tryresult"
 let try_result_init = try_disabled
-let nb_disabled_name = SimpleName "nbdisabled"
 
-let ok_name = SimpleName "ok"
-let vl_name = SimpleName "val"
+let nb_disabled_name = "nbdisabled"
 
-let chan = SimpleName "chan", channel
-let chans = SimpleName "chans", knownSet
+let ok_name = "ok"
+let vl_name = "val"
+
+let chan = "chan"
+let chans = "chans"
+
+let d_entry = Val ("0", pc_label)
 
 
-let d_entry = Val ("0", prim_int)
-
-let ocommit_var = SimpleName "commit", commit
-let ocommit_thread = RecordName (ocommit_var, "thread"), pi_thread
-let ocommit_thread_val = RecordName (ocommit_thread, "val"), pt_value
+let ocommit_var = "commit"
+let ocommit_thread = "thread"
+let ocommit_thread_val = "val"
   
-let icommit_var = SimpleName "commit", commit 
-let icommit_thread = RecordName (icommit_var, "thread"), pi_thread 
-let icommit_in = RecordName (icommit_var, "content.in"), in_commit
-let icommit_refvar = RecordName (icommit_in, "refvar"), prim_int 
-let icommit_thread_env_rv = 
-  ArrayName (RecordName (icommit_thread, "env"), Var icommit_refvar), pt_value 
+let icommit_var = "commit"
+let icommit_thread = "thread"
+let icommit_in = "content.in"
+let icommit_refvar = "refvar"
+let icommit_thread_env_rv = "env"
 
 
-let args i= (ArrayName (SimpleName "args", Val (string_of_int i, prim_int)), pt_value)
-let arg_init_value = null
-let child = SimpleName "child", pi_thread
+let args = "args"
+let child = "child"
+let child_proc = "proc"
+let child_pc = "pc"
+let child_status = "status"
+let child_known = "knowns"
+let child_env = "env"
 
-let child_proc = (RecordName (child, "proc"), pdef)
-let child_pc = (RecordName (child, "pc"), pc_label)
-let child_status =(RecordName (child, "status"), status_enum)
-let child_known = (RecordName (child, "knowns"), knownSet)
-let child_env i = (ArrayName ((RecordName (child,"env") ), Val (string_of_int i, prim_int)), pt_value)
-
-
+(* Primitives *)
+let add_name = "PICC_Int_add";;
+let substract_name = "PICC_Int_substract";;
+let modulo_name = "PICC_Int_modulo";;
+let equals_name = "PICC_equals";;
+let less_than_name = "PICC_Int_less_than";;
+let print_info_name = "PICC_print_value_infos";;
+let print_str_name = "PICC_print_value";;
+let print_int_name = "PICC_print_value";;
