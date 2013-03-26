@@ -361,12 +361,13 @@ struct
 	      
 	      [make_it (Op (Equal, Var try_result, try_enabled))
 		  [p_dec pt_fuel;
-		   (* != with the spec : release moved before the test*)
+		   (* != with the spec : release and free moved before the test*)
 		   CallProc (release_all_channels, [Var chans]);
+		   CallProc (free_knownSet, [Var chans]);
 		   make_it (Op (Equal, Var pt_fuel, Val zero ))
 		     [(* CallProc (release_all_channels, [Var chans]); *)
-		      CallProc (free_knownSet, [Var chans]);
-		      Assign (chans, CallFun (empty_knownSet, []));
+		      (*CallProc (free_knownSet, [Var chans]);*)
+		      (*Assign (chans, CallFun (empty_knownSet, []));*)
 		      compile_yield cont_pc];
 		   Assign (pt_pc, cont_pc);
 		   Goto def_label]]
@@ -409,7 +410,7 @@ struct
        make_it ( Op (Equal, Var nb_disabled, Val (string_of_int p#arity, prim_int) ))
 	 [ CallProc (release_all_channels, [Var chans]);
 	   CallProc (free_knownSet, [Var chans]);
-	   Assign (chans, CallFun (empty_knownSet, []));
+	   (*Assign (chans, CallFun (empty_knownSet, []));*)
 	   compile_end status_blocked ];
        
        Seq (List.mapi action_mapper p#branches);
@@ -417,7 +418,7 @@ struct
        CallProc (acquire, [Var pt_lock]);
        CallProc (release_all_channels, [Var chans]);
        CallProc (free_knownSet, [Var chans]);
-       Assign (chans, CallFun (empty_knownSet, []));
+       (*Assign (chans, CallFun (empty_knownSet, []));*)
        compile_wait;
        
        Seq (List.mapi (fun i prefix -> 
