@@ -44,14 +44,14 @@ let _ =
   Hashtbl.add prefix_args_table SeqASTConstC.register_input_commitment [""; ad; ""; ""];
   Hashtbl.add prefix_args_table SeqASTConstC.register_output_commitment [""; ad; ""; ""];
 
-  Hashtbl.add prefix_args_table Prims.add_name [ad;ad;ad];
-  Hashtbl.add prefix_args_table Prims.substract_name [ad;ad;ad];
-  Hashtbl.add prefix_args_table Prims.modulo_name [ad;ad;ad];
-  Hashtbl.add prefix_args_table Prims.equals_name [ad;ad;ad];
-  Hashtbl.add prefix_args_table Prims.less_than_name [ad;ad;ad];
-  Hashtbl.add prefix_args_table Prims.print_str_name [ad];
-  (* Hashtbl.add prefix_args_table Prims.print_int_name [ad]; == print_str_name *)
-  Hashtbl.add prefix_args_table Prims.print_info_name [ad]
+  Hashtbl.add prefix_args_table SeqASTConstC.add_name [ad;ad;ad];
+  Hashtbl.add prefix_args_table SeqASTConstC.substract_name [ad;ad;ad];
+  Hashtbl.add prefix_args_table SeqASTConstC.modulo_name [ad;ad;ad];
+  Hashtbl.add prefix_args_table SeqASTConstC.equals_name [ad;ad;ad];
+  Hashtbl.add prefix_args_table SeqASTConstC.less_than_name [ad;ad;ad];
+  Hashtbl.add prefix_args_table SeqASTConstC.print_str_name [ad];
+  (* Hashtbl.add prefix_args_table SeqASTConstC.print_int_name [ad]; == print_str_name *)
+  Hashtbl.add prefix_args_table SeqASTConstC.print_info_name [ad]
   
     
 let prefixes n l =

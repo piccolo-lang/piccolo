@@ -9,7 +9,6 @@
 module Make 
   (OutputTypes : SeqAST.OutputTypes) 
   (Names : SeqAST.Names) 
-  (Prims : SeqAST.Prims)
   (Printer: SeqAST.PrettyPrinter) =
 struct
   
@@ -18,9 +17,10 @@ struct
   open Syntax
   open SeqAST
   open Printer
+
   include SeqASTConstUtil.Sigs (OutputTypes) (Names)
 
-  module PrimUtils = PrimitiveUtils.Make(Prims)
+  module PrimUtils = PrimitiveUtils.Make(Names)
 
   let make_prim =
     fun module_name prim_name arity ->
@@ -78,20 +78,12 @@ struct
     in
     f (n - 1) []
 
-  let init_arg_list n =
-    let rec f n acc =
-      if n = 0 then Assign (args 0, Val arg_init_value) :: acc
-      else f (n - 1) (Assign (args n, Val arg_init_value) :: acc)
-    in
-    f (n - 1) []
-      
   let rec compile_prim0 destination (p: common_prim_type) =
     let f = make_prim p#moduleName p#primName p#arity in
     let arg_l = arg_list p#arity in
     let arg_l = if destination then (Var pt_val) :: arg_l else arg_l in
     Bloc[
       Declare (args p#arity);
-      (* Seq (init_arg_list p#arity); *)
       Seq (List.mapi begin fun i v ->
 	Seq [compile_value v;
 	    Assign (args i, Var pt_val)]
@@ -129,8 +121,9 @@ struct
       Assign (pt_fuel, fuel_init);
       Foreach (chan,
 	       (CallFun (knownSet_forget, [Var pt_known])),
-	       [CallProc (handle_dec_ref_count, [CallFun (get_handle, [Var chan])]);
-		CallProc (knownSet_forget_to_unknown, [Var pt_known; Var chan])]);
+	       (*interverted the functions because handale_dec_ref_count can free the ressource*)
+	       [CallProc (knownSet_forget_to_unknown, [Var pt_known; Var chan]);
+		CallProc (handle_dec_ref_count, [CallFun (get_handle, [Var chan])])]);
       Assign (pt_status, status_wait);
       CallProc (wait_queue_push, [Var sched_wait; Var pt]);
       CallProc (release, [Var pt_lock]);
@@ -144,8 +137,9 @@ struct
       Assign (pt_fuel, fuel_init);
       Foreach (chan,
 	       (CallFun (knownSet_forget, [Var pt_known])),
-	       [CallProc (handle_dec_ref_count, [CallFun (get_handle, [Var chan])]);
-		CallProc (knownSet_forget_to_unknown, [Var pt_known; Var chan])]);
+	       (*interverted the functions because handale_dec_ref_count can free the ressource*)
+	       [CallProc (knownSet_forget_to_unknown, [Var pt_known; Var chan]);
+		CallProc (handle_dec_ref_count, [CallFun (get_handle, [Var chan])])]);
       CallProc (ready_queue_add, [Var sched_ready; Var pt]);
       Assign (pt_status, status_run);
       return_void]
@@ -159,9 +153,9 @@ struct
       Assign (try_result, try_enabled)]
     
   let compile_try_in (action:in_action_type) = 
-    let ok = ok_name, commit_status_enum in
+    let ok = SimpleName ok_name, commit_status_enum in
     
-    (* let vl = vl_name, pt_value in *) 
+    (* let vl = SimpleName vl_name, pt_value in *) 
     
     let pt_env_x = pt_env action#variableIndex in
     let pt_env_c = pt_env action#channelIndex in
@@ -226,7 +220,7 @@ struct
 
 
   let compile_try_out (action:out_action_type) = 
-    let ok = ok_name, commit_status_enum in
+    let ok = SimpleName ok_name, commit_status_enum in
     let label_end_of_try = eot_label () in
     let pt_env_c = pt_env action#channelIndex in
     Seq[
@@ -308,7 +302,7 @@ struct
       Assign (child_proc, Val (action#moduleName ^ "_" ^ action#defName, pdef));
       Assign (child_pc, Val pc_label_init);
       Assign (child_status, status_run);
-      CallProc (ready_queue_push, [Var sched_ready; Var child]);
+      CallProc (ready_queue_add, [Var sched_ready; Var child]);
       Assign (try_result, try_enabled)
     ]
 
@@ -343,7 +337,7 @@ struct
     | Choice p -> compile_choice m d p
 
   and compile_choice m d p = 
-    let nb_disabled = nb_disabled_name, prim_int
+    let nb_disabled = SimpleName nb_disabled_name, prim_int
     and def_label = def_label_pattern m#name d#name
     and choice_cont = Array.make p#arity 0
     in
@@ -367,12 +361,13 @@ struct
 	      
 	      [make_it (Op (Equal, Var try_result, try_enabled))
 		  [p_dec pt_fuel;
-		   (* != with the spec : release moved before the test*)
+		   (* != with the spec : release and free moved before the test*)
 		   CallProc (release_all_channels, [Var chans]);
+		   CallProc (free_knownSet, [Var chans]);
 		   make_it (Op (Equal, Var pt_fuel, Val zero ))
 		     [(* CallProc (release_all_channels, [Var chans]); *)
-		      CallProc (free_knownSet, [Var chans]);
-		      Assign (chans, CallFun (empty_knownSet, []));
+		      (*CallProc (free_knownSet, [Var chans]);*)
+		      (*Assign (chans, CallFun (empty_knownSet, []));*)
 		      compile_yield cont_pc];
 		   Assign (pt_pc, cont_pc);
 		   Goto def_label]]
@@ -415,7 +410,7 @@ struct
        make_it ( Op (Equal, Var nb_disabled, Val (string_of_int p#arity, prim_int) ))
 	 [ CallProc (release_all_channels, [Var chans]);
 	   CallProc (free_knownSet, [Var chans]);
-	   Assign (chans, CallFun (empty_knownSet, []));
+	   (*Assign (chans, CallFun (empty_knownSet, []));*)
 	   compile_end status_blocked ];
        
        Seq (List.mapi action_mapper p#branches);
@@ -423,7 +418,7 @@ struct
        CallProc (acquire, [Var pt_lock]);
        CallProc (release_all_channels, [Var chans]);
        CallProc (free_knownSet, [Var chans]);
-       Assign (chans, CallFun (empty_knownSet, []));
+       (*Assign (chans, CallFun (empty_knownSet, []));*)
        compile_wait;
        
        Seq (List.mapi (fun i prefix -> 
@@ -478,10 +473,9 @@ struct
   let compile_module (Module m) =
     let defs = m#definitions in 
     compiled_module := Some m;
-    let (Def d) = List.(nth defs ( (length defs) - 1) ) in
-    d, Seq [Seq !eval_funs; 
-	    Seq (List.map (fun (Def d) -> def_sig m d []) defs);
-	    Seq (List.map (compile_def m) defs)]
+    Seq [Seq !eval_funs; 
+	 Seq (List.map (fun (Def d) -> def_sig m d []) defs);
+	 Seq (List.map (compile_def m) defs)]
       
 
   let print_piccType  = Printer.print_piccType

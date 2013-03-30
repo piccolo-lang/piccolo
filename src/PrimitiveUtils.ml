@@ -67,7 +67,7 @@ let _ =
     ("coreio", "print_int")
     (makePrimTypeRepr "core/io" "print_int" [TInt] TString);;
     
-module Make (Prims : SeqAST.Prims) =
+module Make (Prims : SeqAST.Names) =
 struct
   
   (** The type of the value, represents the primitive with name, argument types, return type *)
