@@ -8,9 +8,9 @@ def Ack2(n:int, c:chan<int>, c1:chan<int>) =
 def Ack(n: int, p:int, c:chan<int>) =
   [#core/arith:equals(n, 0)] c!#core/arith:add(p, 1), end +
   [#core/arith:equals(p, 0)] tau, Ack(#core/arith:substract(n, 1), 1, c) +
-  [true] new(c1:chan<int>), spawn{Ack2(#core/arith:substract(n, 1), c, c1)},
+  [#core/arith:less_than(0, n)] new(c1:chan<int>), spawn{Ack2(#core/arith:substract(n, 1), c, c1)},
     Ack(n, #core/arith:substract(p, 1), c1)
 
 def Main() =
-  new(c:chan<int>), spawn{Ack(4, 2, c)}, c?(x), #core/io:print_int(x), end
+  new(c:chan<int>), spawn{Ack(3, 7, c)}, c?(x), #core/io:print_int(x), end
 
