@@ -46,22 +46,10 @@ type instr =
   | DoWhile of (instr list) * expr
 
 
-module type Prims =
-sig
-  val add_name : string
-  val substract_name : string
-  val modulo_name : string
-  val equals_name : string
-  val less_than_name : string
-  val print_info_name : string
-  val print_str_name : string
-  val print_int_name : string
-end
-
 module type OutputTypes =
 sig
   val void : piccType
-    (* primitive int the sense that it's a primitive type of the target language
+    (* primitive in the sense that it's a primitive type of the target language
      * for instance in C it's just the plain int
      *)
   val prim_bool : piccType
@@ -139,40 +127,16 @@ sig
   val make_string: varDescr
   val make_channel: varDescr 
     
-    (*malloc*)
+  (*malloc*)
   val create_string_handle : string -> expr
     
-    
-  val try_result : varDescr
   val try_result_init : expr
-  val nb_disabled_name : varName
-  val ok_name : varName
-  val vl_name : varName
+  val nb_disabled_name : string
+  val ok_name : string
+  val vl_name : string
 
-  val chan : varDescr (* tmp var used in foreach loops *) 
-  val chans : varDescr (* chan set *)
-  
   val d_entry : expr (* value of the definition entry point*)
 
-  val ocommit_var : varDescr
-  val ocommit_thread : varDescr
-  val ocommit_thread_val : varDescr
-    
-  val icommit_var : varDescr
-  val icommit_thread : varDescr
-  val icommit_refvar : varDescr
-  val icommit_thread_env_rv : varDescr
-    
-  val args : int -> varDescr
-  val arg_init_value : value_t
-  val child : varDescr
-
-  val child_proc : varDescr
-  val child_pc : varDescr
-  val child_status : varDescr
-  val child_known : varDescr
-  val child_env : int -> varDescr  
-    
   (* some key values *)
   val null:value_t
   val zero: value_t
@@ -262,7 +226,42 @@ sig
   val pt_fuel : string
   val pt_lock : string
   val pt_chans : string  
+   
+  (* misc local variables*)
+  val try_result : string
+
+  val chan : string (* tmp var used in foreach loops *) 
+  val chans : string (* chan set *)
+  
+  val ocommit_var : string
+  val ocommit_thread : string
+  val ocommit_thread_val : string
     
+  val icommit_var : string
+  val icommit_thread : string
+  val icommit_in : string
+  val icommit_refvar : string
+  val icommit_thread_env_rv : string
+    
+  val args : string
+  val child : string
+
+  val child_proc : string
+  val child_pc : string
+  val child_status : string
+  val child_known : string
+  val child_env :  string  
+
+  (* Primitives names *)
+  val add_name : string
+  val substract_name : string
+  val modulo_name : string
+  val equals_name : string
+  val less_than_name : string
+  val print_info_name : string
+  val print_str_name : string
+  val print_int_name : string
+
 end
 
 (**************************************)

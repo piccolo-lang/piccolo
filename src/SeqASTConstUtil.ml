@@ -95,7 +95,35 @@ struct
   let pt_lock = (RecordName (pt, Names.pt_lock), mutex)
   let pt_chans = (RecordName (pt, Names.pt_chans), knownSet)
 
+
+  (* local variables *)
+  
+  let try_result = SimpleName Names.try_result, try_result_enum
+
+  let chan = SimpleName Names.chan, channel
+  let chans = SimpleName Names.chans, knownSet
+ 
+
+  let ocommit_var = SimpleName Names.ocommit_var, commit
+  let ocommit_thread = RecordName (ocommit_var, Names.ocommit_thread), pi_thread
+  let ocommit_thread_val = RecordName (ocommit_thread, Names.ocommit_thread_val), pt_value
     
+  let icommit_var = SimpleName Names.icommit_var, commit 
+  let icommit_thread = RecordName (icommit_var, Names.icommit_thread), pi_thread 
+  let icommit_in = RecordName (icommit_var, Names.icommit_in), in_commit
+  let icommit_refvar = RecordName (icommit_in, Names.icommit_refvar), prim_int 
+  let icommit_thread_env_rv = 
+    ArrayName (RecordName (icommit_thread, Names.icommit_thread_env_rv), Var icommit_refvar), pt_value 
+
+
+  let args i= (ArrayName (SimpleName Names.args, Val (string_of_int i, prim_int)), pt_value)
+  let child = SimpleName Names.child, pi_thread
+  let child_proc = (RecordName (child, Names.child_proc), pdef)
+  let child_pc = (RecordName (child, Names.child_pc), pc_label)
+  let child_status =(RecordName (child, Names.child_status), status_enum)
+  let child_known = (RecordName (child, Names.child_known), knownSet)
+  let child_env i = (ArrayName ((RecordName (child, Names.child_env) ), Val (string_of_int i, prim_int)), pt_value)
+
 
   (* misc *)
   let return_void = Return (Val ("", void))
