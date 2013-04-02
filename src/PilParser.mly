@@ -1,6 +1,9 @@
 /* header */
 %{
   (** Parser for Pi-Thread *)
+ 
+  open Printf ;;
+
   open Utils ;;
 
   open Types ;;
@@ -10,6 +13,14 @@
 
   let current_module = ref "" ;;
   let current_definition = ref "" ;;
+
+  exception Fatal_Parse_Error of string ;;
+
+
+(*
+  let fatal_parse_error (msg:string) (start_pos:Lexing.position) (end_pos:Lexing.position) =
+    printf "Fatal parse error at line %d (character %d)\n  ==> %s\n" start_pos.pos_lnum start_pos.pos_cnum msg
+*)
 
 %}
 
@@ -58,6 +69,7 @@ moduleDef: moduleDeclaration definitions EOF { makeModule $1 $2 }
 
 moduleDeclaration :
 | MODULE moduleID { current_module := $2; $2 }
+| MODULE error { raise (Fatal_Parse_Error("Wrong module identifier")) }
 
 moduleID: 
 | IDENT { $1 }
@@ -80,6 +92,7 @@ params:
 param: 
 | IDENT COLON typeDef { ($1, $3) }
 | IDENT { ($1, TUnknown) }
+| error { raise (Fatal_Parse_Error("Wrong parameter")) }
 
 /* processes */
 
@@ -114,15 +127,17 @@ action:
 
 /* types */
 
-typeDefSingle: 
+typeAtomic: 
 | TBOOL { TBool }
 | TINT { TInt }
 | TSTRING { TString }
-| TCHAN INF typeDef SUP { TChan $3 }
+| error { raise (Fatal_Parse_Error("Unknown atomic type")) }
 
 typeDef: 
-| typeDefSingle { $1 }
+| TCHAN INF typeDef SUP { TChan $3 }
 | LPAREN types RPAREN { makeTupleType $2 }
+| typeAtomic { $1 }
+| error { raise (Fatal_Parse_Error("Wrong type")) }
 
 types : 
 | typeDef { [$1] }
@@ -143,5 +158,6 @@ value :
 | IDENT { (makeVVar TUnknown $1, TUnknown) }
 | SHARP moduleID COLON IDENT LPAREN RPAREN { (makeVPrim $2 $4 [] TUnknown [], TUnknown) }
 | SHARP moduleID COLON IDENT LPAREN values RPAREN { (makeVPrim $2 $4 (List.map snd $6) TUnknown (List.map fst $6), TUnknown) }
+| error { raise (Fatal_Parse_Error("Wrong value")) }
 
 %%
