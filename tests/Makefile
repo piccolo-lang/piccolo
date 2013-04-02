@@ -8,14 +8,14 @@ CFLAGS= -g -Wall -std=c99
 LIBFILES=$(wildcard $(LIB)/*.c)
 OBJS=$(subst .c,.o, $(LIBFILES))
 
-PTHFILES=$(wildcard *.pth)
-TARGETS=$(subst .pth,.run, $(PTHFILES))
+PTHFILES=$(wildcard *.pi)
+TARGETS=$(subst .pi,.run, $(PTHFILES))
 
 all: $(TARGETS)
 
 .PHONY: clean
 
-%.c:%.pth
+%.c:%.pi
 	$(PCC) $< -o $@
 %.o:%.c
 	gcc $(CFLAGS) -I $(INC) -c $< -o $@
