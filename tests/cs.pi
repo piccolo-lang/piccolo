@@ -1,0 +1,16 @@
+module Test/CSTest
+
+def CriticalSection(n:int, lock:chan<chan<int>>) =
+  lock?(door), door?(n), #core/io:print_str("Critical Section #"), #core/io:print_int(n), #core/io:print_str("\n"),
+               door!(n+1), end 
+
+def SpawnAll(n:int, lock:chan<chan<int>>, term:chan<bool>) =
+  if n>0 then [ spawn{CriticalSection(n, lock)}, SpawnAll(n-1, lock)
+  else term!true
+
+
+def Main() = 
+  new(lock:chan<chan<int>>), new(door:chan<int>), new(term:chan<bool>),
+  spawn{term?b, #core/io:print_str("Threads launched !\n"), lock!door, end}, SpawnAll(1000, lock, term)
+
+ 
