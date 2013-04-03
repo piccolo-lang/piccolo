@@ -8,7 +8,10 @@ def SpawnAll(n:int, lock:chan<chan<int>>, term:chan<bool>) =
   [#core/arith:less_than(0, n)] spawn{CriticalSection(n, lock)}, let (m:int=#core/arith:add(n, 1)), SpawnAll(m, lock, term)
   + [true] term!true, end
 
+def WaitSpawn(term:chan<bool>, door:chan<int>, lock:chan<chan<int>>) =
+  term?(b), #core/io:print_str("Threads launched !\n"), lock!door, end
+
 def Main() = 
   new(lock:chan<chan<int>>), new(door:chan<int>), new(term:chan<bool>),
-  spawn{term?(b), #core/io:print_str("Threads launched !\n"), lock!door, end}, SpawnAll(1000, lock, term)
+  spawn{WaitSpawn(term,door,lock)}, SpawnAll(10, lock, term)
 

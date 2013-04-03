@@ -122,6 +122,7 @@ action:
 | IDENT IN LPAREN IDENT RPAREN { makeInput $1 $4 TUnknown }
 | NEW LPAREN IDENT COLON typeDef RPAREN { makeNew $3 $5 }
 | SPAWN LCURLY call RCURLY { makeSpawnCall $3 }
+| SPAWN LCURLY error {  fatal_parse_error "Expecting call" (Parsing.rhs_start_pos 3) (Parsing.rhs_end_pos 3) }
 | SHARP moduleID COLON IDENT LPAREN RPAREN { makePrim $2 $4 [] [] }
 | SHARP moduleID COLON IDENT LPAREN values RPAREN { makePrim $2 $4 (List.map snd $6) (List.map fst $6) }
 | LET LPAREN IDENT COLON typeDef EQ value RPAREN { makeLet $3 $5 (fst $7) (snd $7) }
