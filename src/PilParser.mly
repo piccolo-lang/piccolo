@@ -3,6 +3,7 @@
   (** Parser for Pi-Thread *)
  
   open Printf ;;
+  open Lexing ;;
 
   open Utils ;;
 
@@ -17,10 +18,10 @@
   exception Fatal_Parse_Error of string ;;
 
 
-(*
-  let fatal_parse_error (msg:string) (start_pos:Lexing.position) (end_pos:Lexing.position) =
-    printf "Fatal parse error at line %d (character %d)\n  ==> %s\n" start_pos.pos_lnum start_pos.pos_cnum msg
-*)
+
+  let fatal_parse_error (msg:string) (start_pos:position) (end_pos:position) =
+    printf "Fatal parse error at line %d (character %d)\n  ==> %s\n" (start_pos.pos_lnum) (start_pos.pos_cnum - start_pos.pos_bol) msg ;
+    raise (Fatal_Parse_Error msg) ;;
 
 %}
 
@@ -158,6 +159,6 @@ value :
 | IDENT { (makeVVar TUnknown $1, TUnknown) }
 | SHARP moduleID COLON IDENT LPAREN RPAREN { (makeVPrim $2 $4 [] TUnknown [], TUnknown) }
 | SHARP moduleID COLON IDENT LPAREN values RPAREN { (makeVPrim $2 $4 (List.map snd $6) TUnknown (List.map fst $6), TUnknown) }
-| error { raise (Fatal_Parse_Error("Wrong value")) }
+| error { fatal_parse_error "Wrong value" (Parsing.symbol_start_pos ()) (Parsing.symbol_end_pos()) }
 
 %%

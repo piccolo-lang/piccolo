@@ -6,7 +6,7 @@ def CriticalSection(n:int, lock:chan<chan<int>>) =
 
 def SpawnAll(n:int, lock:chan<chan<int>>, term:chan<bool>) =
   [#core/arith:less_than(0, n)] spawn{CriticalSection(n, lock)}, let (m:int=#core/arith:add(n, 1)), SpawnAll(m, lock, term)
-  + [true] term!true
+  + [true] term!true, end
 
 def Main() = 
   new(lock:chan<chan<int>>), new(door:chan<int>), new(term:chan<bool>),
