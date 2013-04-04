@@ -70,7 +70,8 @@ moduleDef: moduleDeclaration definitions EOF { makeModule $1 $2 }
 
 moduleDeclaration :
 | MODULE moduleID { current_module := $2; $2 }
-| MODULE error { raise (Fatal_Parse_Error("Wrong module identifier")) }
+| MODULE error { fatal_parse_error "Wrong module identifier" (Parsing.rhs_start_pos 1) (Parsing.rhs_end_pos 1) }
+| error { fatal_parse_error "Missing module declaration" (Parsing.symbol_start_pos ()) (Parsing.symbol_end_pos()) }
 
 moduleID: 
 | IDENT { $1 }
