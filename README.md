@@ -1,10 +1,10 @@
-picc — the (parallel) pi-calculus compiler
-================================
+piccolo parallel compiler
+=========================
 
 How to use
 --------------
 
-First, compile the sources in src/ with make. Compile also the libpirt project with make in the libpirt directory.
+First, compile the sources in src/ with make. Compile also the libpiccort project with make in the libpiccort directory.
 
 Then, you will find some tests to run in the tests/ directory. To run a test, for example Fibonacci.pth, type (once in the tests directory):
 
@@ -32,4 +32,4 @@ The picc and libpirt directories must be located in the same parent directory. T
 
 Enjoy. 
 
-The Pi-Thread team
+The Piccolo team
