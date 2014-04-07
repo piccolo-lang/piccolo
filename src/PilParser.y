@@ -86,8 +86,8 @@ Process : 'end'         { PEnd $ tokenLoc $1 }
 Call :: { Process }
 Call : '#' ModuleID ':' an_ident '(' ')'        { PCall $2 (contentString $4) [] $ mkLoc $1 $6 }
      | '#' ModuleID ':' an_ident '(' Values ')' { PCall $2 (contentString $4) $6 $ mkLoc $1 $7 }
-     | an_ident '(' ')'                         { PCall "" (contentString $2) [] $ mkLoc $1 $3 }
-     | an_ident '(' Values ')'                  { PCall "" (contentString $2) $3 $ mkLoc $1 $4 }
+     | an_ident '(' ')'                         { PCall "" (contentString $1) [] $ mkLoc $1 $3 }
+     | an_ident '(' Values ')'                  { PCall "" (contentString $1) $3 $ mkLoc $1 $4 }
 
 ChoiceProcess :: { [Branch] }
 ChoiceProcess : Branch                   { [$1] }
