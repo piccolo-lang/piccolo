@@ -17,13 +17,12 @@ Each node of the AST is associated to a `Location`
 
 --}
 
-data Location = Location {
-  locOffset :: Int,
-  locStartColumn :: Int,
-  locEndColumn :: Int,
-  locStartLine :: Int,
-  locEndLine ::Int
-  } deriving (Eq, Show)
+data Location = Location { locOffset      :: !Int
+                         , locStartLine   :: !Int
+                         , locStartColumn :: !Int
+                         , locEndLine     :: !Int
+                         , locEndColumn   :: !Int
+                         } deriving (Eq, Show)
 
 {--
 
@@ -40,18 +39,16 @@ The type `TUnknown` is used as a placeholder for (local, naive) inference.
 
 --}
 
-data TypeExpr =
-  TUnknown
-  | TAtom TypeAtom Location
-  | TChannel TypeExpr Location
-  | TTuple [TypeExpr] Location
-  deriving (Show, Eq)
+data TypeExpr = TUnknown
+              | TAtom    { typAtom :: TypeAtom, typLoc :: Location }
+              | TChannel { typExpr :: TypeExpr, typLoc :: Location }
+              | TTuple   { typExprs :: [TypeExpr], typLoc :: Location }
+              deriving (Show, Eq)
            
-data TypeAtom =
-  TBool
-  | TInt
-  | TString
-  deriving (Show, Eq)
+data TypeAtom = TBool
+              | TInt
+              | TString
+              deriving (Show, Eq)
 
 {--
 
@@ -59,14 +56,14 @@ data TypeAtom =
 
 --}
 
-data Value =
-  VTrue Location
-  | VFalse Location
-  | VInt Int Location
-  | VString String Location
-  | VVar String Location -- <variable-name>
-  | VPrim String String [Value] Location  -- <lib-id> <primitive-id> [<arguments>]
-  deriving (Show, Eq)
+data Value = VTrue   { valLoc :: Location }
+           | VFalse  { valLoc :: Location }
+           | VInt    { valInt :: Int, valLoc :: Location }
+           | VString { valStr :: String, valLoc :: Location }
+           | VTuple  { valVals ::[Value], valLoc :: Location }
+           | VVar    { valVar :: String, valLoc :: Location }
+           | VPrim   { valModule :: String, valName :: String, valArgs :: [Value], valLoc :: Location }
+           deriving (Show, Eq)
 
 {--
 
@@ -74,28 +71,25 @@ data Value =
 
 --}
 
-data Process =
-  PEnd Location
-  | PLet [(String,Value)] Process Location -- [(<var>, <val>)] <proc>
-  | PChoice [Branch] Location
-  | PCall String String [Value] Location   -- tail call <module-id> <def-id> [<arguments>]
-  deriving (Show, Eq)
+data Process = PEnd    { procLoc :: Location }
+             | PChoice { procBranches :: [Branch], procLoc :: Location }
+             | PCall   { procModule :: String, procName :: String, procArgs :: [Value], procLoc ::  Location }
+             deriving (Show, Eq)
 
-data Branch = Branch {
-  bGuard :: Value,
-  bAction :: Action,
-  bCont :: Process,
-  bLoc :: Location
-  } deriving (Show, Eq)
+data Branch = Branch { bGuard  :: Value
+                     , bAction :: Action
+                     , bCont   :: Process
+                     , bLoc    :: Location
+                     } deriving (Show, Eq)
 
-data Action =
-  Tau Location
-  | Output String Value Location  -- <channel> <data> 
-  | Input String String Location -- <channel> <var>
-  | New String TypeExpr Location -- new <channel> <type>
-  | Spawn String String [Value] Location -- spawn call <module-id> <def-id> [<arguments>]
-  | Prim String String [Value] Location -- primitite call <lib-id> <def-id> [<arguments>]
-    deriving (Show, Eq)
+data Action = ATau    { actLoc :: Location }
+            | AOutput { actChan :: String, actData :: Value, actLoc :: Location }
+            | AInput  { actChan :: String, actBind :: String, actLoc :: Location }
+            | ANew    { actBind :: String, actTyp :: TypeExpr, actLoc :: Location }
+            | ALet    { actBind :: String, actTyp :: TypeExpr, actVal :: Value, actLoc :: Location }
+            | ASpawn  { actModule :: String, actName :: String, actArgs :: [Value], actLoc :: Location }
+            | APrim   { actModule :: String, actName :: String, actArgs :: [Value], actLoc :: Location }
+            deriving (Show, Eq)
 
 {--
 
@@ -103,11 +97,11 @@ data Action =
 
 --}
 
-data Definition = Definition {
-  defName :: String,
-  defParams :: [(String, TypeExpr, Location)],
-  defBody :: Process
-  }
+data Definition = Definition { defName   :: String
+                             , defParams :: [(String, TypeExpr, Location)]
+                             , defBody   :: Process
+                             , defLoc    :: Location
+                             }
 
 {--
 
@@ -115,9 +109,8 @@ data Definition = Definition {
 
 --}
 
-data ModuleDef = ModuleDef {
-  moduleName :: String,
-  moduleDefs :: [Definition],
-  moduleLoc :: Location
-  }
+data ModuleDef = ModuleDef { moduleName :: String
+                           , moduleDefs :: [Definition]
+                           , moduleLoc :: Location
+                           }
 
