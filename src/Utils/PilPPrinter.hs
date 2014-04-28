@@ -5,9 +5,9 @@
 
 --}
 
-module PrettyPrinter where
+module Utils.PilPPrinter where
 
-import ASTRepr
+import Front.AST
 
 import Text.PrettyPrint
 

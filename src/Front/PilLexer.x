@@ -1,7 +1,8 @@
 {
-module PilLexer where
+module Front.PilLexer where
 
-import ASTRepr
+import Front.AST
+import Utils.Location
 }
 
 %wrapper "monad"

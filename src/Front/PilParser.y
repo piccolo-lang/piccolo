@@ -1,8 +1,9 @@
 {
-module PilParser (parseModule) where
+module Front.PilParser (parseModule) where
 
-import ASTRepr
-import PilLexer
+import Front.AST
+import Front.PilLexer
+import Utils.Location
 }
 
 %name parse
