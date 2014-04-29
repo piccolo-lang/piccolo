@@ -2,7 +2,7 @@ module Back.Backend where
 
 import Back.SeqAST
 import Back.RTOptions
-import Utils.CodeEmitter
+import Back.CodeEmitter
 
 class (BackendTypes a, BackendNames a) => Backend a where
   emitName      :: Name a     -> EmitterM ()

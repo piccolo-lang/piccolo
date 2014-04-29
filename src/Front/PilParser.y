@@ -2,8 +2,8 @@
 module Front.PilParser (parseModule) where
 
 import Front.AST
+import Front.ASTUtils
 import Front.PilLexer
-import Utils.Location
 }
 
 %name parse
@@ -77,7 +77,7 @@ Params : Param            { [$1] }
 
 Param :: { (String,TypeExpr,Location) }
 Param : an_ident ':' TypeDef { (contentString $1, $3, mkLoc' (tokenLoc $1) (typLoc $3)) }
-      | an_ident             { (contentString $1, TUnknown, tokenLoc $1) }
+      | an_ident             { (contentString $1, TUnknown noLoc, tokenLoc $1) }
 
 Process :: { Process }
 Process : 'end'         { PEnd $ tokenLoc $1 }
@@ -99,7 +99,7 @@ Branch : '[' Value ']' Action ',' Process { Branch $2 $4 $6 $ mkLoc' (tokenLoc $
        | Action ',' Process               { let tLoc = actLoc $1 in
                                             let t = Location (locOffset tLoc) (locStartLine tLoc) (locStartColumn tLoc)
                                                                               (locStartLine tLoc) (locStartColumn tLoc) in
-                                            Branch (VTrue t) $1 $3 $ mkLoc' (actLoc $1) (procLoc $3) }
+                                            Branch (VTrue (TUnknown noLoc) t) $1 $3 $ mkLoc' (actLoc $1) (procLoc $3) }
 
 Action :: { Action }
 Action : 'tau'                                        { ATau $ tokenLoc $1 }
@@ -130,14 +130,14 @@ Values : Value            { [$1] }
        | Value ',' Values { $1:$3 }
 
 Value :: { Value }
-Value : 'true'                                   { VTrue $ tokenLoc $1 }
-      | 'false'                                  { VFalse $ tokenLoc $1 }
-      | an_int                                   { VInt (contentInt $1) (tokenLoc $1) }
-      | a_string                                 { VString (contentString $1) (tokenLoc $1) }
-      | '(' Values ')'                           { VTuple $2 $ mkLoc $1 $3 }
-      | an_ident                                 { VVar (contentString $1) (tokenLoc $1) }
-      | '#' ModuleID ':' an_ident '(' ')'        { VPrim $2 (contentString $4) [] $ mkLoc $1 $6 }
-      | '#' ModuleID ':' an_ident '(' Values ')' { VPrim $2 (contentString $4) $6 $ mkLoc $1 $7 }
+Value : 'true'                                   { VTrue (TUnknown noLoc) (tokenLoc $1) }
+      | 'false'                                  { VFalse (TUnknown noLoc) (tokenLoc $1) }
+      | an_int                                   { VInt (contentInt $1) (TUnknown noLoc) (tokenLoc $1) }
+      | a_string                                 { VString (contentString $1) (TUnknown noLoc) (tokenLoc $1) }
+      | '(' Values ')'                           { VTuple $2 (TUnknown noLoc) (mkLoc $1 $3) }
+      | an_ident                                 { VVar (contentString $1) (TUnknown noLoc) (tokenLoc $1) }
+      | '#' ModuleID ':' an_ident '(' ')'        { VPrim $2 (contentString $4) [] (TUnknown noLoc) (mkLoc $1 $6) }
+      | '#' ModuleID ':' an_ident '(' Values ')' { VPrim $2 (contentString $4) $6 (TUnknown noLoc) (mkLoc $1 $7) }
 
 {
 

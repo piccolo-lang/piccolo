@@ -10,7 +10,7 @@ import Back.RTOptions
 import Back.Backend
 import Back.GenericBackend
 import Back.CBackend
-import Utils.CodeEmitter
+import Back.CodeEmitter
 
 import System.Environment
 import System.Console.GetOpt

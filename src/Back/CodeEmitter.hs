@@ -1,4 +1,4 @@
-module Utils.CodeEmitter where
+module Back.CodeEmitter where
 
 import Control.Monad.Writer
 import Control.Monad.State

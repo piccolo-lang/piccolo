@@ -1,6 +1,6 @@
 module Back.SeqAST where
 
-import Utils.Location
+import qualified Front.AST as PilAST
 
 {--
  -
@@ -51,7 +51,7 @@ data Instr b
   | Switch (Expr b) [Case b]
   | SeqBloc [Instr b]                -- instr list handler
   | SemBloc (Instr b)                -- semantic bloc
-  | ComBloc Location (Instr b)       -- compilation bloc
+  | ComBloc PilAST.Location (Instr b)       -- compilation bloc
   | ProcCall (VarDescr b) [Expr b]   -- procedure call
   | DeclareVar (VarDescr b)
   | Assign (VarDescr b) (Expr b)

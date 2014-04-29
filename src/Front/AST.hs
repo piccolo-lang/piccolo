@@ -10,7 +10,12 @@ des arbres de syntaxe abstraite en sortie de Parsing.
 
 module Front.AST where
 
-import Utils.Location
+data Location = Location { locOffset      :: !Int
+                         , locStartLine   :: !Int
+                         , locStartColumn :: !Int
+                         , locEndLine     :: !Int
+                         , locEndColumn   :: !Int
+                         } deriving (Eq, Show)
 
 {--
 
@@ -28,10 +33,11 @@ The type `TUnknown` is used as a placeholder for (local, naive) inference.
 --}
 
 data TypeExpr
-  = TUnknown
+  = TUnknown { typLoc :: Location }
   | TAtom    { typAtom :: TypeAtom, typLoc :: Location }
   | TChannel { typExpr :: TypeExpr, typLoc :: Location }
   | TTuple   { typExprs :: [TypeExpr], typLoc :: Location }
+  | TPrim    { typArgs :: [TypeExpr], typRet :: TypeExpr, typLoc :: Location }
   deriving (Show, Eq)
            
 data TypeAtom
@@ -47,13 +53,13 @@ data TypeAtom
 --}
 
 data Value
-  = VTrue   { valLoc :: Location }
-  | VFalse  { valLoc :: Location }
-  | VInt    { valInt :: Int, valLoc :: Location }
-  | VString { valStr :: String, valLoc :: Location }
-  | VTuple  { valVals ::[Value], valLoc :: Location }
-  | VVar    { valVar :: String, valLoc :: Location }
-  | VPrim   { valModule :: String, valName :: String, valArgs :: [Value], valLoc :: Location }
+  = VTrue   { valTyp :: TypeExpr, valLoc :: Location }
+  | VFalse  { valTyp :: TypeExpr, valLoc :: Location }
+  | VInt    { valInt  :: Int,    valTyp :: TypeExpr, valLoc :: Location }
+  | VString { valStr  :: String, valTyp :: TypeExpr, valLoc :: Location }
+  | VTuple  { valVals ::[Value], valTyp :: TypeExpr, valLoc :: Location }
+  | VVar    { valVar  :: String, valTyp :: TypeExpr, valLoc :: Location }
+  | VPrim   { valModule :: String, valName :: String, valArgs :: [Value], valTyp :: TypeExpr, valLoc :: Location }
   deriving (Show, Eq)
 
 {--

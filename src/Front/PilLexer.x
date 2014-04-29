@@ -2,7 +2,6 @@
 module Front.PilLexer where
 
 import Front.AST
-import Utils.Location
 }
 
 %wrapper "monad"

@@ -4,7 +4,6 @@ module Back.GenericBackend where
 import Back.SeqAST
 import Back.Backend
 import Back.RTOptions
-import Utils.CodeEmitter
 
 import System.IO
 
