@@ -1,15 +1,40 @@
 module Middle.Typing where
 
 import Front.AST
+import Front.ASTUtils
 
 import Control.Monad.Error
 import Control.Monad.State
+import qualified Data.Map as Map
 
-data TypingError a = TypingError a TypeExpr TypeExpr
+data TypingError = TypingError { tErrExpr :: String
+                               , tErrLoc  :: Location
+                               , tErrExpected :: TypeExpr
+                               , tErrFound    :: TypeExpr
+                               }
 
-type TypingEnv = String
+instance Error TypingError where
+  noMsg  = undefined
+  strMsg = undefined
 
-type TypingM b a = ErrorT (TypingError b) (State TypingEnv) a
+type TypingDefsEnv = [Definition]
+type TypingVarsEnv = Map.Map String TypeExpr
+
+type TypingEnv = (TypingDefsEnv, TypingVarsEnv)
+
+type TypingM a = ErrorT TypingError (State TypingEnv) a
 
 typingPass :: ModuleDef -> ModuleDef
-typingPass mDef = error "TODO Middle.Typing.typingPass"
+typingPass mDef = case evalState (runErrorT tChecked) initEnv of
+  Left tErr  -> error "typing error!"
+  Right tAst -> tAst
+  where tChecked = tcModule mDef
+        initEnv  = (moduleDefs mDef, Map.empty)
+
+tcModule :: ModuleDef -> TypingM ModuleDef
+tcModule mDef = do
+  defs <- mapM tcDefinition $ moduleDefs mDef
+  return $ mDef { moduleDefs = defs }
+
+tcDefinition :: Definition -> TypingM Definition
+tcDefinition = error "TODO Middle.Typing.tcDefinition"

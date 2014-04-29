@@ -17,6 +17,6 @@ cabal-version:       >=1.8
 executable piccolo
   main-is:             Main.hs
   other-modules:       Front.PilLexer, Front.PilParser
-  build-depends:       base ==4.6.*, array, pretty, mtl
+  build-depends:       base ==4.6.*, array, pretty, mtl, containers
   build-tools:         alex, happy
   hs-source-dirs:      src
