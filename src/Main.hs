@@ -1,5 +1,7 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Main where
 
+import PiccError
 import Front.PilParser
 import Front.AST
 import Middle.Typing
@@ -16,42 +18,44 @@ import System.Environment
 import System.Console.GetOpt
 import System.IO
 import System.Exit
-import Control.Monad.Reader
+import Control.Monad.Error
 import Data.List
 
 
 main :: IO ()
 main = do
   (args, files) <- getArgs >>= parseArgs
-  mapM_ (handleFile args) files
+  handleFiles args files
 
-handleFile :: [Flag] -> String -> IO ()
-handleFile args file = do
-  content <- readFile file
-  case parseModule content of
-    Left  err -> do { putStrLn $ "error: " ++ err ; exitWith $ ExitFailure 1 }
-    Right moduleDef -> do
-      let typedModuleDef     = typingPass moduleDef
-      let completedModuleDef = computingIndexesPass typedModuleDef
-      if Generic `elem` args
-        then compileToGeneric completedModuleDef
-        else compileToC       completedModuleDef
-
-compileToGeneric :: ModuleDef -> IO ()
-compileToGeneric piAst = do
-  let seqAst = compilePass piAst :: Instr GenericBackend
-  rtOptions  <- defaultsRTOptions
-  hOut       <- openFile "out.gen" WriteMode
-  hPutStr hOut $ runEmitterM (emitCode rtOptions "Main" seqAst)
+handleFiles :: [Flag] -> [String] -> IO ()
+handleFiles args [] = return ()
+handleFiles args (f:fs) = do
+  content <- readFile f
+  rtOpts  <- defaultsRTOptions
+  result  <- reportResult $ handleData args content rtOpts 
+  hOut    <- openFile "a.out" WriteMode
+  hPutStr hOut result
   hClose hOut
+  putStrLn "successfully compiled piccolo file into a.out"
 
-compileToC :: ModuleDef -> IO ()
-compileToC piAst = do
-  let seqAst = compilePass piAst :: Instr CBackend
-  rtOptions  <- defaultsRTOptions
-  hOut       <- openFile "out.c" WriteMode
-  hPutStr hOut $ runEmitterM (emitCode rtOptions "Main" seqAst)
-  hClose hOut
+handleData :: [Flag] -> String -> RTOptions -> Either PiccError String
+handleData args input rtOpts = do
+  transfAst <- parseModule input >>= typingPass >>= computingIndexesPass
+  if Generic `elem` args
+    then compileToGeneric transfAst rtOpts
+    else compileToC       transfAst rtOpts
+
+compileToGeneric :: ModuleDef -> RTOptions -> Either PiccError String
+compileToGeneric piAst rtOpts = do
+  seqAst :: Instr GenericBackend <- compilePass piAst
+  let output = runEmitterM (emitCode rtOpts "Main" seqAst)
+  return output
+
+compileToC :: ModuleDef -> RTOptions -> Either PiccError String
+compileToC piAst rtOpts = do
+  seqAst :: Instr CBackend <- compilePass piAst
+  let output = runEmitterM (emitCode rtOpts "Main" seqAst)
+  return output
 
 data Flag
   = Help       -- -h

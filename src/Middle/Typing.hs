@@ -2,11 +2,16 @@ module Middle.Typing where
 
 import Front.AST
 import Front.ASTUtils
+import PiccError
 
 import Control.Monad.Error
 import Control.Monad.State
 import qualified Data.Map as Map
 
+typingPass :: ModuleDef -> Either PiccError ModuleDef
+typingPass = undefined
+
+{--
 data TypingError = TypingError { tErrExpr :: String
                                , tErrLoc  :: Location
                                , tErrExpected :: TypeExpr
@@ -38,3 +43,4 @@ tcModule mDef = do
 
 tcDefinition :: Definition -> TypingM Definition
 tcDefinition = error "TODO Middle.Typing.tcDefinition"
+-}

@@ -4,6 +4,9 @@ module Front.PilParser (parseModule) where
 import Front.AST
 import Front.ASTUtils
 import Front.PilLexer
+import PiccError
+
+import Control.Arrow
 }
 
 %name parse
@@ -163,7 +166,6 @@ mkLoc' loc1 loc2 = Location { locOffset      = locOffset loc1
 mkLoc :: Token -> Token -> Location
 mkLoc tok1 tok2 = mkLoc' (tokenLoc tok1) (tokenLoc tok2)
 
-parseModule :: String -> Either String ModuleDef
-parseModule s = runAlex s parse
-
+parseModule :: String -> Either PiccError ModuleDef
+parseModule s = left ParsingError $ runAlex s parse
 }
