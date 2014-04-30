@@ -36,7 +36,8 @@ handleFiles args (f:fs) = do
   hOut    <- openFile "a.out" WriteMode
   hPutStr hOut result
   hClose hOut
-  putStrLn "successfully compiled piccolo file into a.out"
+  putStrLn $ "successfully compiled " ++ f ++ " file into a.out"
+  handleFiles args fs
 
 handleData :: [Flag] -> String -> RTOptions -> Either PiccError String
 handleData args input rtOpts = do
