@@ -1,12 +1,19 @@
 module PiccError where
 
+import Front.AST
+
 import System.Exit
 import Control.Monad.Error
 
 data PiccError
   = SimpleError String
   | ParsingError String
-  | TypingError
+  | TypingError { tErrExpr     :: String
+                , tErrLoc      :: Location
+                , tErrExpected :: TypeExpr
+                , tErrActual   :: TypeExpr
+                }
+                 
 
 instance Error PiccError where
   noMsg  = strMsg ""
@@ -14,7 +21,10 @@ instance Error PiccError where
 
 instance Show PiccError where
   show (ParsingError str) = "parsing error: " ++ str
-  show TypingError = "typing error"
+  show (TypingError err loc tExp tAct) = "typing error (" ++ show loc ++ "):\n" ++
+    "  " ++ err  ++ " is not well-typed,\n" ++
+    "  " ++ "Expected type: " ++ show tExp ++ "\n" ++
+    "  " ++ "  Actual type: " ++ show tAct
 
 reportResult :: Either PiccError a -> IO a
 reportResult (Left err) = do
