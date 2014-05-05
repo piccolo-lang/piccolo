@@ -38,13 +38,22 @@ data TypeExpr
   | TChannel { typExpr :: TypeExpr, typLoc :: Location }
   | TTuple   { typExprs :: [TypeExpr], typLoc :: Location }
   | TPrim    { typArgs :: [TypeExpr], typRet :: TypeExpr, typLoc :: Location }
-  deriving (Show, Eq)
+  deriving (Show)
            
 data TypeAtom
   = TBool
   | TInt
   | TString
   deriving (Show, Eq)
+
+instance Eq TypeExpr where
+  (==) (TUnknown {})              (TUnknown {})              = True
+  (==) (TAtom { typAtom = a })    (TAtom { typAtom = b })    = a == b
+  (==) (TChannel { typExpr = a }) (TChannel { typExpr = b }) = a == b
+  (==) (TTuple { typExprs = a })  (TTuple { typExprs = b })  = a == b
+  (==) (TPrim { typArgs = a, typRet = r }) (TPrim { typArgs = b, typRet = s }) =
+    a == b && r == s
+  (==) _ _ = False
 
 {--
 
