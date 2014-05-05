@@ -10,11 +10,13 @@ import Control.Monad.State
 import qualified Data.Map as Map
 import Data.List (find)
 
+
 type TypingDefsEnv = [Definition]
 type TypingVarsEnv = Map.Map String TypeExpr
 type TypingEnv = (TypingDefsEnv, TypingVarsEnv)
 
 type TypingM a = ErrorT PiccError (State TypingEnv) a
+
 
 putVarType :: String -> TypeExpr -> TypingM ()
 putVarType v t = do
@@ -28,10 +30,12 @@ getVarType v = do
     Just t  -> return t
     Nothing -> throwError (SimpleError $ "var " ++ v ++ " not found")
 
+
 typingPass :: ModuleDef -> Either PiccError ModuleDef
 typingPass mDef = evalState (runErrorT tChecked) initEnv
   where initEnv  = (moduleDefs mDef, Map.empty)
         tChecked = tcModule mDef
+
 
 tcModule :: ModuleDef -> TypingM ModuleDef
 tcModule mDef = do
@@ -101,7 +105,22 @@ tcAction act@(ALet {}) = do
     then throwError (SimpleError $ "wrong type in let")
     else return ()
   return $ act { actVal = val }
-tcAction act@(ASpawn {}) = error "TODO"
+tcAction act@(ASpawn { actName = name }) = do
+  (defs,_) <- lift $ get
+  def <- case find (\d@(Definition { defName = n }) -> n == name) defs of
+           Nothing -> throwError (SimpleError $ "proc def " ++ name ++ " not found")
+           Just d  -> return d
+  let typParams = map (\(_,t,_) -> t) $ defParams def
+  args <- mapM tcValue $ actArgs act
+  let typArgs   = map valTyp args
+  if length typParams /= length typArgs
+    then throwError (SimpleError $ "bad arity when calling " ++ name ++ " proc")
+    else return ()
+  forM_ (zip typParams typArgs) (\(p,a) -> do
+    if p /= a
+      then throwError (SimpleError $ "bad type in spawn")
+      else return ())
+  return $ act { actArgs = args }
 tcAction act@(APrim { actModule = m, actName = n }) = do
   (_, typParams) <- case Map.lookup (m,n) primTypes of
     Nothing -> throwError (SimpleError $ "primitive not found " ++ m ++ "#" ++ n)
