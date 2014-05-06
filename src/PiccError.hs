@@ -13,6 +13,7 @@ data PiccError
                 , tErrExpected :: TypeExpr
                 , tErrActual   :: TypeExpr
                 }
+  | TodoError String
                  
 
 instance Error PiccError where
@@ -25,6 +26,7 @@ instance Show PiccError where
     "  " ++ err  ++ " is not well-typed,\n" ++
     "  " ++ "Expected type: " ++ show tExp ++ "\n" ++
     "  " ++ "  Actual type: " ++ show tAct
+  show (TodoError str) = "TODO: " ++ str
 
 reportResult :: Either PiccError a -> IO a
 reportResult (Left err) = do

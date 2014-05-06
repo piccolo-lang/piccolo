@@ -9,8 +9,86 @@ import System.IO
 
 data CBackend
 
+pointer :: (BackendTypes a) => PiccType a -> PiccType a
+pointer t = Pty "*" t
+
 instance BackendTypes CBackend where
-  btProcDef = error "TODO Back.CBackend BackendTypes instanciation"
+  void                       = Sty "void"
+  
+  primBool                   = Sty "bool"
+  primInt                    = Sty "int"
+  primString                 = pointer $ Sty "char"
+
+  ptValue                    = Sty "PICC_Value"
+  ptBool                     = pointer $ Sty "PICC_BoolValue"
+  ptInt                      = pointer $ Sty "PICC_IntValue"
+  ptString                   = pointer $ Sty "PICC_StringValue"
+  ptChannel                  = pointer $ Sty "PICC_ChannelValue"
+  ptNoValue                  = pointer $ Sty "PICC_NoValue"
+
+  channel                    = pointer $ Sty "PICC_Channel"
+  handle                     = pointer $ Sty "PICC_Handle"
+
+  schedPool                  = pointer $ Sty "PICC_SchedPool"
+  piThread                   = pointer $ Sty "PICC_PiThread"
+
+  mutex                      = pointer $ Sty "PICC_Mutex"
+  clock                      = Sty "PICC_Clock"
+
+  commit                     = pointer $ Sty "PICC_Commit"
+  inCommit                   = pointer $ Sty "PICC_InCommit"
+  outCommit                  = pointer $ Sty "PICC_OutCommit"
+
+  pcLabel                    = Sty "PICC_Label"
+  commitList                 = Sty "PICC_CommitList"
+
+  knownSet                   = pointer $ Sty "PICC_KnownSet"
+  knownValue                 = pointer $ Sty "PICC_KnownValue"
+
+  queue                      = Sty "PICC_Queue"
+  readyQueue                 = pointer $ Sty "PICC_ReadyQueue"
+  waitQueue                  = pointer $ Sty "PICC_WaitQueue"
+
+  pDef                       = Fun void [schedPool, piThread]
+  evalTy                     = Fun ptValue [piThread]
+  evalAsVar                  = (SimpleName (Name "evalFunc"), Sty "PICC_EvalFunction")
+
+  statusEnum                 = Sty "PICC_StatusKind"
+  statusCall                 = Val ("PICC_STATUS_RUN", statusEnum)
+  statusWait                 = Val ("PICC_STATUS_WAIT", statusEnum)
+  statusEnded                = Val ("PICC_STATUS_ENDED", statusEnum)
+  statusBlocked              = Val ("PICC_STATUS_BLOCKED", statusEnum)
+
+  tryEnum                    = Sty "PICC_TryResult"
+  tryEnabled                 = Val ("PICC_TRY_ENABLED", tryEnum)
+  tryDisabled                = Val ("PICC_TRY_DISABLED", tryEnum)
+  tryCommit                  = Val ("PICC_TRY_COMMIT", tryEnum)
+
+  commitStatusEnum           = Sty "PICC_CommitStatus"
+  commitCannotAcquire        = Val ("PICC_CANNOT_ACQUIRE", commitStatusEnum)
+  commitValid                = Val ("PICC_VALID_COMMIT", commitStatusEnum)
+  commitInvalid              = Val ("PICC_INVALID_COMMIT", commitStatusEnum)
+
+  fuelInit                   = Val ("PICC_FUEL_INIT", primInt)
+  invalidPC                  = Val ("PICC_INVALID_PC", pcLabel)
+
+  makeTrue                   = (SimpleName (Name "PICC_INIT_BOOL_TRUE"), Fun void [ptValue])
+  makeFalse                  = (SimpleName (Name "PICC_INIT_BOOL_FALSE"), Fun void [ptValue])
+  makeInt                    = (SimpleName (Name "PICC_INIT_INT_VALUE"), Fun void [ptValue, primInt])
+  makeString                 = (SimpleName (Name "PICC_INIT_STRING_VALUE"), Fun void [ptValue, primString])
+  makeChannel                = (SimpleName (Name "PICC_INIT_CHANNEL_VALUE"), Fun void [ptValue, channel])
+
+  createStringHandle str     = FunCall makeStrHndl [Val (str, primString)]
+                               where makeStrHndl = (SimpleName (Name "PICC_create_string_handle"), Fun handle [primString])
+
+  dEntry                     = Val ("0", pcLabel)
+
+  null                       = ("NULL", Sty "NULL")
+  zero                       = ("0", primInt)
+  primFalse                  = ("false", primBool)
+  primTrue                   = ("true", primBool)
+  pcLabelInit                = ("0", pcLabel)
+  tryResultInit              = tryDisabled
 
 instance BackendNames CBackend where
   bnScheduler = error "TODO Back.CBackend BackendNames instanciation"
