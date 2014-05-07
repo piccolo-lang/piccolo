@@ -1,7 +1,40 @@
-piccolo parallel compiler
+Piccolo
 =========================
 
+What is it?
+--------------
+
+TODO
+
+Pre-requisites
+--------------
+
+- The GHC compiler
+- cabal (>= 1.18)
+
+```
+cabal update
+cabal install alex happy
+
+```
+
 How to use
+--------------
+
+Compiling the piccolo compiler:
+
+```
+cabal configure
+cabal build
+```
+
+Using the piccolo compiler:
+
+```
+cabal run file.pi
+```
+
+Backup old version
 --------------
 
 First, compile the sources in src/ with make. Compile also the libpiccort project with make in the libpiccort directory.
