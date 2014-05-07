@@ -1,3 +1,10 @@
+{-|
+Module         :
+Description    :
+Stability      :
+
+Longer description
+-}
 module Primitives (primTypes) where
 
 import Front.AST

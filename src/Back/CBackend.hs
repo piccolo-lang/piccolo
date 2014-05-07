@@ -1,3 +1,10 @@
+{-|
+Module         :
+Description    :
+Stability      :
+
+Longer description
+-}
 {-# LANGUAGE EmptyDataDecls #-}
 module Back.CBackend where
 
@@ -54,7 +61,8 @@ instance BackendTypes CBackend where
   evalAsVar                  = (SimpleName (Name "evalFunc"), Sty "PICC_EvalFunction")
 
   statusEnum                 = Sty "PICC_StatusKind"
-  statusCall                 = Val ("PICC_STATUS_RUN", statusEnum)
+  statusCall                 = Val ("PICC_STATUS_CALL", statusEnum)
+  statusRun                  = Val ("PICC_STATUS_RUN", statusEnum)
   statusWait                 = Val ("PICC_STATUS_WAIT", statusEnum)
   statusEnded                = Val ("PICC_STATUS_ENDED", statusEnum)
   statusBlocked              = Val ("PICC_STATUS_BLOCKED", statusEnum)
@@ -91,8 +99,100 @@ instance BackendTypes CBackend where
   tryResultInit              = tryDisabled
 
 instance BackendNames CBackend where
-  bnScheduler = error "TODO Back.CBackend BackendNames instanciation"
-  bnPiThread = error "TODO Back.CBackend BackendNames instanciation"
+  copyValue                  = undefined
+  boolOfBoolValue            = undefined
+  outCommitsOfChannelValue   = undefined
+  inCommitsOfChannelValue    = undefined
+
+  evalFunOfOutCommit         = undefined
+
+  awake                      = undefined
+  canAwake                   = undefined
+
+  getHandle                  = undefined
+  acquireHandle              = undefined
+  handleGlobalRC             = undefined
+
+  handleDecRefCount          = undefined
+  handleIncRefCount          = undefined
+
+  fetchInputCommitment       = undefined
+  fetchOutputCommitment      = undefined
+  registerInputCommitment    = undefined
+  registerOutputCommitment   = undefined
+  commitListIsEmpty          = undefined
+
+  emptyKnownSet              = undefined
+  freeKnownSet               = undefined
+  knownSetAdd                = undefined
+  knownSetRegister           = undefined
+  knownSetForgetAll          = undefined
+  knownSetForgetToUnknown    = undefined
+  knownSetForget             = undefined
+  knownSetKnown              = undefined
+
+  waitQueuePush              = undefined
+  readyQueuePush             = undefined
+  readyQueueAdd              = undefined
+  releaseAllChannels         = undefined
+  acquire                    = undefined
+  release                    = undefined
+  lowLevelYield              = undefined
+
+  generateChannel            = undefined
+  generatePiThread           = undefined
+  scheduler                  = undefined
+  schedReady                 = undefined
+  schedWait                  = undefined
+
+  pt                         = undefined
+  ptStatus                   = undefined
+  ptEnabled                  = undefined
+  ptKnown                    = undefined
+  ptEnv                      = undefined
+  ptCommit                   = undefined
+  ptCommits                  = undefined
+  ptProc                     = undefined
+  ptPC                       = undefined
+  ptVal                      = undefined
+  ptClock                    = undefined
+  ptFuel                     = undefined
+  ptLock                     = undefined
+  ptChans                    = undefined
+
+  tryResult                  = undefined
+
+  chan                       = undefined
+  chans                      = undefined
+
+  outCommitVar               = undefined
+  outCommitThread            = undefined
+  outCommitThreadVal         = undefined
+
+  inCommitVar                = undefined
+  inCommitThread             = undefined
+  inCommitIn                 = undefined
+  inCommitRefVar             = undefined
+  inCommitThreadEnvRV        = undefined
+
+  args                       = undefined
+  child                      = undefined
+
+  childProc                  = undefined
+  childPC                    = undefined
+  childStatus                = undefined
+  childKnown                 = undefined
+  childEnv                   = undefined
+
+instance BackendPrims CBackend where
+  addName                    = undefined
+  substractName              = undefined
+  moduloName                 = undefined
+  equalsName                 = undefined
+  lessThanName               = undefined
+  printInfoName              = undefined
+  printStrName               = undefined
+  printIntName               = undefined
 
 instance Backend CBackend where
   emitName = error "TODO Back.CBackend Backend instanciation"

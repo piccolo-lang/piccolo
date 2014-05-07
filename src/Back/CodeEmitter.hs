@@ -1,3 +1,10 @@
+{-|
+Module         :
+Description    :
+Stability      :
+
+Longer description
+-}
 module Back.CodeEmitter where
 
 import Control.Monad.Writer

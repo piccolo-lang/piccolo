@@ -1,4 +1,11 @@
 {-# LANGUAGE EmptyDataDecls #-}
+{-|
+Module         :
+Description    :
+Stability      :
+
+Longer description
+-}
 module Back.GenericBackend where
 
 import Back.SeqAST
@@ -10,11 +17,11 @@ import System.IO
 data GenericBackend
 
 instance BackendTypes GenericBackend where
-  void                       = undefined
+  void                       = Sty "void"
   
-  primBool                   = undefined
-  primInt                    = undefined
-  primString                 = undefined
+  primBool                   = Sty "bool"
+  primInt                    = Sty "int"
+  primString                 = Sty "string"
 
   ptValue                    = undefined
   ptBool                     = undefined
@@ -26,18 +33,18 @@ instance BackendTypes GenericBackend where
   channel                    = undefined
   handle                     = undefined
 
-  schedPool                  = undefined
-  piThread                   = undefined
+  schedPool                  = Sty "SchedPool"
+  piThread                   = Sty "PiThread"
 
-  mutex                      = undefined
-  clock                      = undefined
+  mutex                      = Sty "Mutex"
+  clock                      = Sty "Clock"
 
-  commit                     = undefined
-  inCommit                   = undefined
-  outCommit                  = undefined
+  commit                     = Sty "Commit"
+  inCommit                   = Sty "InCommit"
+  outCommit                  = Sty "OutCommit"
 
-  pcLabel                    = undefined
-  commitList                 = undefined
+  pcLabel                    = Sty "Label"
+  commitList                 = Sty "CommitList"
 
   knownSet                   = undefined
   knownValue                 = undefined
@@ -50,24 +57,25 @@ instance BackendTypes GenericBackend where
   evalTy                     = undefined
   evalAsVar                  = undefined
 
-  statusEnum                 = undefined
-  statusCall                 = undefined
-  statusWait                 = undefined
-  statusEnded                = undefined
-  statusBlocked              = undefined
+  statusEnum                 = Sty "StatusEnum"
+  statusRun                  = Val ("StatusRun", statusEnum)
+  statusCall                 = Val ("StatusCall", statusEnum)
+  statusWait                 = Val ("StatusWait", statusEnum)
+  statusEnded                = Val ("StatusEnded", statusEnum)
+  statusBlocked              = Val ("StatusBlocked", statusEnum)
 
-  tryEnum                    = undefined
-  tryEnabled                 = undefined
-  tryDisabled                = undefined
-  tryCommit                  = undefined
+  tryEnum                    = Sty "TryResultEnum"
+  tryEnabled                 = Val ("TryEnabled", tryEnum)
+  tryDisabled                = Val ("TryDisabled", tryEnum)
+  tryCommit                  = Val ("TryCommit", tryEnum)
 
-  commitStatusEnum           = undefined
-  commitCannotAcquire        = undefined
-  commitValid                = undefined
-  commitInvalid              = undefined
+  commitStatusEnum           = Sty "CommitStatusEnum"
+  commitCannotAcquire        = Val ("CannotAcquire", commitStatusEnum)
+  commitValid                = Val ("ValidCommitment", commitStatusEnum)
+  commitInvalid              = Val ("InvalideCommitment", commitStatusEnum)
 
-  fuelInit                   = undefined
-  invalidPC                  = undefined
+  fuelInit                   = Val ("FuelInit", primInt)
+  invalidPC                  = Val ("InvalidPC", pcLabel)
 
   makeTrue                   = undefined
   makeFalse                  = undefined
@@ -87,8 +95,100 @@ instance BackendTypes GenericBackend where
   tryResultInit              = undefined
 
 instance BackendNames GenericBackend where
-  bnScheduler = error "TODO Back.GenericBackend BackendNames instanciation"
-  bnPiThread = error "TODO Back.GenericBackend BackendNames instanciation"
+  copyValue                  = undefined
+  boolOfBoolValue            = undefined
+  outCommitsOfChannelValue   = undefined
+  inCommitsOfChannelValue    = undefined
+
+  evalFunOfOutCommit         = undefined
+
+  awake                      = undefined
+  canAwake                   = undefined
+
+  getHandle                  = undefined
+  acquireHandle              = undefined
+  handleGlobalRC             = undefined
+
+  handleDecRefCount          = undefined
+  handleIncRefCount          = undefined
+
+  fetchInputCommitment       = undefined
+  fetchOutputCommitment      = undefined
+  registerInputCommitment    = undefined
+  registerOutputCommitment   = undefined
+  commitListIsEmpty          = undefined
+
+  emptyKnownSet              = undefined
+  freeKnownSet               = undefined
+  knownSetAdd                = undefined
+  knownSetRegister           = undefined
+  knownSetForgetAll          = undefined
+  knownSetForgetToUnknown    = undefined
+  knownSetForget             = undefined
+  knownSetKnown              = undefined
+
+  waitQueuePush              = undefined
+  readyQueuePush             = undefined
+  readyQueueAdd              = undefined
+  releaseAllChannels         = undefined
+  acquire                    = undefined
+  release                    = undefined
+  lowLevelYield              = undefined
+
+  generateChannel            = undefined
+  generatePiThread           = undefined
+  scheduler                  = undefined
+  schedReady                 = undefined
+  schedWait                  = undefined
+
+  pt                         = undefined
+  ptStatus                   = undefined
+  ptEnabled                  = undefined
+  ptKnown                    = undefined
+  ptEnv                      = undefined
+  ptCommit                   = undefined
+  ptCommits                  = undefined
+  ptProc                     = undefined
+  ptPC                       = undefined
+  ptVal                      = undefined
+  ptClock                    = undefined
+  ptFuel                     = undefined
+  ptLock                     = undefined
+  ptChans                    = undefined
+
+  tryResult                  = undefined
+
+  chan                       = undefined
+  chans                      = undefined
+
+  outCommitVar               = undefined
+  outCommitThread            = undefined
+  outCommitThreadVal         = undefined
+
+  inCommitVar                = undefined
+  inCommitThread             = undefined
+  inCommitIn                 = undefined
+  inCommitRefVar             = undefined
+  inCommitThreadEnvRV        = undefined
+
+  args                       = undefined
+  child                      = undefined
+
+  childProc                  = undefined
+  childPC                    = undefined
+  childStatus                = undefined
+  childKnown                 = undefined
+  childEnv                   = undefined
+
+instance BackendPrims GenericBackend where
+  addName                    = undefined
+  substractName              = undefined
+  moduloName                 = undefined
+  equalsName                 = undefined
+  lessThanName               = undefined
+  printInfoName              = undefined
+  printStrName               = undefined
+  printIntName               = undefined
 
 instance Backend GenericBackend where
   emitName = error "TODO Back.GenericBackend Backend instanciation"

@@ -138,7 +138,7 @@ Value : 'true'                                   { VTrue (TUnknown noLoc) (token
       | an_int                                   { VInt (contentInt $1) (TUnknown noLoc) (tokenLoc $1) }
       | a_string                                 { VString (contentString $1) (TUnknown noLoc) (tokenLoc $1) }
       | '(' Values ')'                           { VTuple $2 (TUnknown noLoc) (mkLoc $1 $3) }
-      | an_ident                                 { VVar (contentString $1) (TUnknown noLoc) (tokenLoc $1) }
+      | an_ident                                 { VVar (contentString $1) (TUnknown noLoc) (tokenLoc $1) (-1) }
       | '#' ModuleID ':' an_ident '(' ')'        { VPrim $2 (contentString $4) [] (TUnknown noLoc) (mkLoc $1 $6) }
       | '#' ModuleID ':' an_ident '(' Values ')' { VPrim $2 (contentString $4) $6 (TUnknown noLoc) (mkLoc $1 $7) }
 

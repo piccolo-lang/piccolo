@@ -1,3 +1,10 @@
+{-|
+Module         :
+Description    :
+Stability      :
+
+Longer description
+-}
 module Middle.Typing (typingPass) where
 
 import Front.AST

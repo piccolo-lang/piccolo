@@ -1,3 +1,10 @@
+{-|
+Module         :
+Description    :
+Stability      :
+
+Longer description
+-}
 module Back.SeqAST where
 
 import qualified Front.AST as PilAST

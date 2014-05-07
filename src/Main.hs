@@ -1,4 +1,17 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-|
+Module         : Main
+Description    : Entry point of the piccolo compiler
+Stability      : experimental
+
+The piccolo can be invoked with the following options:
+
+  * --help or -h    prints the help
+
+  * --generic or -g produces generic code
+
+It waits for one or more pi-file names and produces by default C code in a.out.
+-}
 module Main where
 
 import PiccError
@@ -9,7 +22,7 @@ import Middle.IndexesComputations
 import Middle.Compilation
 import Back.SeqAST
 import Back.RTOptions
-import Back.Backend
+import Back.Backend hiding (null)
 import Back.GenericBackend
 import Back.CBackend
 import Back.CodeEmitter
@@ -21,12 +34,13 @@ import System.Exit
 import Control.Monad.Error
 import Data.List
 
-
+-- | Main function
 main :: IO ()
 main = do
   (args, files) <- getArgs >>= parseArgs
   handleFiles args files
 
+-- | The 'handleFiles' function takes a list of flags and a list of files and compiles them
 handleFiles :: [Flag] -> [String] -> IO ()
 handleFiles args [] = return ()
 handleFiles args (f:fs) = do
@@ -39,6 +53,8 @@ handleFiles args (f:fs) = do
   putStrLn $ "successfully compiled " ++ f ++ " file into a.out"
   handleFiles args fs
 
+-- | The 'handleData' function takes a list of flags and a string representing a
+-- piccolo program and compile it
 handleData :: [Flag] -> String -> RTOptions -> Either PiccError String
 handleData args input rtOpts = do
   transfAst <- parseModule input >>= typingPass >>= computingIndexesPass
@@ -46,23 +62,27 @@ handleData args input rtOpts = do
     then compileToGeneric transfAst rtOpts
     else compileToC       transfAst rtOpts
 
+-- | The 'compileToGeneric' function compiles a piccolo AST using the generic backend
 compileToGeneric :: ModuleDef -> RTOptions -> Either PiccError String
 compileToGeneric piAst rtOpts = do
   seqAst :: Instr GenericBackend <- compilePass piAst
   let output = runEmitterM (emitCode rtOpts "Main" seqAst)
   return output
 
+-- | The 'compileToC' function compiles a piccolo AST using the C backend
 compileToC :: ModuleDef -> RTOptions -> Either PiccError String
 compileToC piAst rtOpts = do
   seqAst :: Instr CBackend <- compilePass piAst
   let output = runEmitterM (emitCode rtOpts "Main" seqAst)
   return output
 
+-- | Various flags for compiler options
 data Flag
-  = Help       -- -h
-  | Generic    -- -g
+  = Help       -- ^ \--help or -h
+  | Generic    -- ^ \--generic or -g
   deriving Eq
 
+-- | Flags description to parse with "System.Console.GetOpt" module
 flags :: [OptDescr Flag]
 flags =
   [ Option ['h'] ["help"] (NoArg Help)
@@ -71,6 +91,7 @@ flags =
       "Produce generic code instead of C code"
   ]
 
+-- | The function 'parseArgs' use the "System.Console.GetOpt" module to parse executable options
 parseArgs :: [String] -> IO ([Flag], [String])
 parseArgs argv = case getOpt Permute flags argv of
   (args,fs,[]) -> do

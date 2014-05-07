@@ -1,3 +1,10 @@
+{-|
+Module         :
+Description    :
+Stability      :
+
+Longer description
+-}
 module PiccError where
 
 import Front.AST
@@ -21,6 +28,7 @@ instance Error PiccError where
   strMsg = SimpleError
 
 instance Show PiccError where
+  show (SimpleError str)  = "error: " ++ str
   show (ParsingError str) = "parsing error: " ++ str
   show (TypingError err loc tExp tAct) = "typing error (" ++ show loc ++ "):\n" ++
     "  " ++ err  ++ " is not well-typed,\n" ++

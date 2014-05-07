@@ -15,7 +15,6 @@ Pre-requisites
 ```
 cabal update
 cabal install alex happy
-
 ```
 
 How to use

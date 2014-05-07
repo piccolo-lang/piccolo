@@ -1,37 +1,31 @@
+{-|
+Module         : Front.AST
+Description    : Piccolo AST datatypes
+Stability      : experimental
 
-{--
-
-# AST Representation #
-
-The module `ASTRepr` fournit la représentation
-des arbres de syntaxe abstraite en sortie de Parsing.
-
---}
-
+This module defines the datatypes for piccolo ASTs description. Each type of the module
+is marked with a location data, to print better error messages and track code locations
+during the whole compilation process.
+-}
 module Front.AST where
 
-data Location = Location { locOffset      :: !Int
-                         , locStartLine   :: !Int
-                         , locStartColumn :: !Int
-                         , locEndLine     :: !Int
-                         , locEndColumn   :: !Int
+-- | The 'Location' type is a record of line and columns informations
+data Location = Location { locOffset      :: !Int  -- ^ absolute offset of the block in the file
+                         , locStartLine   :: !Int  -- ^ line of the beginning of the block
+                         , locStartColumn :: !Int  -- ^ column of the beginning of the block
+                         , locEndLine     :: !Int  -- ^ line of the end of the block
+                         , locEndColumn   :: !Int  -- ^ column of the end of the block
                          } deriving (Eq, Show)
-
-{--
-
-## Type expressions ##
-
-In the core piccolo language the type expressions are
-very simple. There are :
-
- - *atomic types* such as `Bool`, `Int` or `String`,
- - *channel types* of the form `<T>` where `T` is a type expression,
- - *tuple types* of the form `T1*T2*...*TN`
-
-The type `TUnknown` is used as a placeholder for (local, naive) inference.
 
 --}
 
+-- | In the core piccolo language type expressions are simple. There are:
+--
+--   * atomic types suc has Bool, Int or String,
+--
+--   * channel types of the form \<T\> where T is a type expression,
+--
+--   * tuple types of the form T1\*...*TN.
 data TypeExpr
   = TUnknown { typLoc :: Location }
   | TAtom    { typAtom :: TypeAtom, typLoc :: Location }
@@ -39,13 +33,15 @@ data TypeExpr
   | TTuple   { typExprs :: [TypeExpr], typLoc :: Location }
   | TPrim    { typArgs :: [TypeExpr], typRet :: TypeExpr, typLoc :: Location }
   deriving (Show)
-           
+
+-- | Atomic types are in the separate datatype 'TypeAtom' that is used by 'TypeExpr'
 data TypeAtom
   = TBool
   | TInt
   | TString
   deriving (Show, Eq)
 
+-- | 'TypeExpr' expressions are compared upto location data
 instance Eq TypeExpr where
   (==) (TUnknown {})              (TUnknown {})              = True
   (==) (TAtom { typAtom = a })    (TAtom { typAtom = b })    = a == b
@@ -67,7 +63,7 @@ data Value
   | VInt    { valInt  :: Int,    valTyp :: TypeExpr, valLoc :: Location }
   | VString { valStr  :: String, valTyp :: TypeExpr, valLoc :: Location }
   | VTuple  { valVals ::[Value], valTyp :: TypeExpr, valLoc :: Location }
-  | VVar    { valVar  :: String, valTyp :: TypeExpr, valLoc :: Location }
+  | VVar    { valVar  :: String, valTyp :: TypeExpr, valLoc :: Location, valIndex :: Int }
   | VPrim   { valModule :: String, valName :: String, valArgs :: [Value], valTyp :: TypeExpr, valLoc :: Location }
   deriving (Show, Eq)
 
