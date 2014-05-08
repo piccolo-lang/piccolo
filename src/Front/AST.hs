@@ -51,12 +51,11 @@ instance Eq TypeExpr where
     a == b && r == s
   (==) _ _ = False
 
-{--
-
-## Value expressions ##
-
---}
-
+-- | 'Value' expressions are manipulated by piccolo processes
+-- They can be boolean, integers or string values,
+-- variable or primitive call.
+-- Each value is tagged with its type and location in the piccolo program.
+-- Moreover, variables are tagged with an index in current environment for nameless compilation.
 data Value
   = VTrue   { valTyp :: TypeExpr, valLoc :: Location }
   | VFalse  { valTyp :: TypeExpr, valLoc :: Location }
@@ -67,18 +66,21 @@ data Value
   | VPrim   { valModule :: String, valName :: String, valArgs :: [Value], valTyp :: TypeExpr, valLoc :: Location }
   deriving (Show, Eq)
 
-{--
-
-## Process expressions ##
-
---}
-
+-- | A piccolo program is made of processes. A process expression can be:
+--
+--   * an inert process 'PEnd'
+--
+--   * a guarded choice 'PChoice'
+--
+--   * a call to a process definition 'PCall'
 data Process
   = PEnd    { procLoc :: Location }
   | PChoice { procBranches :: [Branch], procLoc :: Location }
   | PCall   { procModule :: String, procName :: String, procArgs :: [Value], procLoc ::  Location }
   deriving (Show, Eq)
 
+-- | A 'Branch' is a possible continuation for a choice process.
+-- It is guarded by a boolean value and an action.
 data Branch
   = Branch { bGuard  :: Value
            , bAction :: Action
@@ -86,6 +88,11 @@ data Branch
            , bLoc    :: Location
            } deriving (Show, Eq)
 
+-- | 'Action' datatype represents the atomic actions of the piccolo language.
+-- As contrary as traditionnal presentation of pi-calculus,
+-- the "new" constructor is also a prefix action.
+-- Moreover, to manipulate value expressions, we defines a "let" and a primitive call action.
+-- 'ASpawn' action is used to spawn a parallel process which will be executing the given piccolo process definition.
 data Action
   = ATau    { actLoc :: Location }
   | AOutput { actChan :: String, actData :: Value, actLoc :: Location }
@@ -96,12 +103,8 @@ data Action
   | APrim   { actModule :: String, actName :: String, actArgs :: [Value], actLoc :: Location }
   deriving (Show, Eq)
 
-{--
-
-## Process definitions ##
-
---}
-
+-- | To spawn or (possibly recursively) call a process definition, the 'Definition' type defines
+-- a process definition attached with parameter names and types.
 data Definition
   = Definition { defName   :: String
                , defParams :: [(String, TypeExpr, Location)]
@@ -109,12 +112,9 @@ data Definition
                , defLoc    :: Location
                }
 
-{--
-
-## Modules definitions ##
-
---}
-
+-- | 'ModuleDef' defines the main node of a piccolo AST. It contains several process definitions.
+-- If a "Main" definition is defined, it is the entry point when the compiled version of the module
+-- will be executed.
 data ModuleDef
   = ModuleDef { moduleName :: String
               , moduleDefs :: [Definition]

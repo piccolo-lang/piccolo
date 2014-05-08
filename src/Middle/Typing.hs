@@ -1,9 +1,11 @@
 {-|
-Module         :
-Description    :
-Stability      :
+Module         : Middle.Typing
+Description    : Typing module for the piccolo language
+Stability      : experimental
 
-Longer description
+Since types are explicitly written in the code when introducing a new variable (via a "let", a "new",
+or process definition parameters), the typing pass of the piccolo compiler only check types through
+a traversal of the AST and tag each value with its types for compilation pass.
 -}
 module Middle.Typing (typingPass) where
 
@@ -37,7 +39,8 @@ getVarType v = do
     Just t  -> return t
     Nothing -> throwError (SimpleError $ "var " ++ v ++ " not found")
 
-
+-- | The 'typingPass' function typechecks each definition of a module,
+-- and return either a 'PiccError' or the type annotated version of this module.
 typingPass :: ModuleDef -> Either PiccError ModuleDef
 typingPass mDef = evalState (runErrorT tChecked) initEnv
   where initEnv  = (moduleDefs mDef, Map.empty)
