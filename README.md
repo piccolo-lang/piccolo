@@ -33,6 +33,11 @@ Using the piccolo compiler:
 cabal run file.pi
 ```
 
+Generating the documentation of the internals of the piccolo compiler:
+```
+cabal haddock --executables
+```
+
 Backup old version
 --------------
 
