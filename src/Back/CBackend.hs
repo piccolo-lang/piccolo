@@ -1,11 +1,11 @@
-{-|
-Module         :
-Description    :
-Stability      :
-
-Longer description
--}
 {-# LANGUAGE EmptyDataDecls #-}
+{-|
+Module         : Back.CBackend
+Description    : A C backend module
+Stability      : experimental
+
+This backend targets C code.
+-}
 module Back.CBackend where
 
 import Back.SeqAST
@@ -14,8 +14,10 @@ import Back.RTOptions
 
 import System.IO
 
+-- | 'CBackend' is the empty datatype used in the place of the phantom type in sequential AST.
 data CBackend
 
+-- | 'pointer' is a function to easily create C pointer types for sequential AST.
 pointer :: (BackendTypes a) => PiccType a -> PiccType a
 pointer t = Pty "*" t
 

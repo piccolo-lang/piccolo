@@ -1,5 +1,12 @@
 {
-module Front.PilLexer where
+{-|
+Module         : Front.PilLexer
+Description    : Piccolo lexer
+Stability      : experimental
+
+This module uses Alex lexing tool to lex piccolo file.
+-}
+module Front.PilLexer (Token(..), Alex, alexError, alexMonadScan, runAlex) where
 
 import Front.AST
 }
@@ -53,7 +60,7 @@ tokens :-
   @ident                                       { tok $ flip TokenIdent     }
 
 {
-
+-- | Tokens used in a piccolo program
 data Token = TokenVInt    { tokenLoc :: Location, contentInt :: Int }
            | TokenVString { tokenLoc :: Location, contentString :: String }
            | TokenVBool   { tokenLoc :: Location, contentBool :: Bool }

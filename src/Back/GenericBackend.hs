@@ -1,10 +1,11 @@
 {-# LANGUAGE EmptyDataDecls #-}
 {-|
-Module         :
-Description    :
-Stability      :
+Module         : Back.GenericBackend
+Description    : A generic backend module
+Stability      : experimental
 
-Longer description
+This backend targets pseudo-code, as the one in which compilation schemes of the documentation
+are written.
 -}
 module Back.GenericBackend where
 
@@ -14,6 +15,7 @@ import Back.RTOptions
 
 import System.IO
 
+-- | 'GenericBackend' is the empty datatype used in the place of the phantom type in sequential AST.
 data GenericBackend
 
 instance BackendTypes GenericBackend where

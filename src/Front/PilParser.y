@@ -1,4 +1,11 @@
 {
+{-|
+Module         : Front.PilParser
+Description    : Piccolo parser
+Stability      : experimental
+
+This module uses Happy parsing tool to parse piccolo file.
+-}
 module Front.PilParser (parseModule) where
 
 import Front.AST
@@ -166,6 +173,8 @@ mkLoc' loc1 loc2 = Location { locOffset      = locOffset loc1
 mkLoc :: Token -> Token -> Location
 mkLoc tok1 tok2 = mkLoc' (tokenLoc tok1) (tokenLoc tok2)
 
+-- | The 'parseModule' function takes a 'String' argument containing a piccolo program
+-- and returns either a parsing error, or the corresponding 'Front.AST.ModuleDef'.
 parseModule :: String -> Either PiccError ModuleDef
 parseModule s = left ParsingError $ runAlex s parse
 }

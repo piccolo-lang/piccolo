@@ -32,12 +32,12 @@ putVarType v t = do
   (defs,vars) <- lift $ get
   lift $ put (defs, Map.insert v t vars)
 
-getVarType :: String -> TypingM TypeExpr
-getVarType v = do
+getVarType :: String -> Location -> TypingM TypeExpr
+getVarType v loc = do
   (defs,vars) <- lift $ get
   case Map.lookup v vars of
     Just t  -> return t
-    Nothing -> throwError (SimpleError $ "var " ++ v ++ " not found")
+    Nothing -> throwError $ VarNotFoundError v loc
 
 -- | The 'typingPass' function typechecks each definition of a module,
 -- and return either a 'PiccError' or the type annotated version of this module.
@@ -66,13 +66,13 @@ tcProcess proc@(PChoice {}) = do
 tcProcess proc@(PCall { procName = name }) = do
   (defs,_) <- lift $ get
   def <- case find (\d@(Definition { defName = n }) -> n == name) defs of
-           Nothing -> throwError (SimpleError $ "proc def " ++ name ++ " not found")
+           Nothing -> throwError $ DefNotFoundError name (localize proc)
            Just d  -> return d
   let typParams = map (\(_,t,_) -> t) $ defParams def
   args <- mapM tcValue $ procArgs proc
   let typArgs   = map valTyp args
   if length typParams /= length typArgs
-    then throwError (SimpleError $ "bad arity when calling " ++ name ++ " proc")
+    then throwError $ ArityError name (localize proc) (length typParams) (length typArgs)
     else return ()
   forM_ (zip typParams typArgs) (\(p,a) -> do
     if p /= a
@@ -90,14 +90,14 @@ tcBranch branch = do
 tcAction :: Action -> TypingM Action
 tcAction act@(ATau {}) = return act
 tcAction act@(AOutput { actChan = actChan, actData = actData }) = do
-  chanTyp <- getVarType actChan
+  chanTyp <- getVarType actChan (localize act)
   dat     <- tcValue actData
   if chanTyp /= TChannel (valTyp dat) noLoc
     then throwError (SimpleError "bad channel type for output")
     else return ()
   return $ act { actData = dat }
 tcAction act@(AInput {}) = do
-  chanTyp <- getVarType $ actChan act
+  chanTyp <- getVarType (actChan act) (localize act)
   dataTyp <- case chanTyp of
     TChannel { typExpr = typExpr } -> return typExpr
     _ -> throwError (SimpleError $ "input on a variable that is not a channel")
@@ -124,7 +124,7 @@ tcAction act@(ASpawn { actName = name }) = do
   args <- mapM tcValue $ actArgs act
   let typArgs   = map valTyp args
   if length typParams /= length typArgs
-    then throwError (SimpleError $ "bad arity when calling " ++ name ++ " proc")
+    then throwError $ ArityError name (localize act) (length typParams) (length typArgs)
     else return ()
   forM_ (zip typParams typArgs) (\(p,a) -> do
     if p /= a
@@ -138,7 +138,7 @@ tcAction act@(APrim { actModule = m, actName = n }) = do
   args <- mapM tcValue $ actArgs act
   let typArgs = map valTyp args
   if length typParams /= length typArgs
-    then throwError (SimpleError $ "bad arity when calling " ++ m ++ "#" ++ n ++ " primitive")
+    then throwError $ ArityError (m ++ "#" ++ n) (localize act) (length typParams) (length typArgs)
     else return ()
   forM_ (zip typParams typArgs) (\(p,a) -> do
     if p /= a
@@ -156,7 +156,7 @@ tcValue val@(VTuple { valVals = vs }) = do
   let tuplTyp = TTuple (map valTyp typedVals) noLoc
   return $ val { valVals = typedVals, valTyp = tuplTyp }
 tcValue val@(VVar { valVar = v }) = do
-  typ <- getVarType v
+  typ <- getVarType v (localize val)
   return $ val { valTyp = typ }
 tcValue val@(VPrim { valModule = m, valName = n }) = do
   (typRet, typParams) <- case Map.lookup (m,n) primTypes of
@@ -165,7 +165,7 @@ tcValue val@(VPrim { valModule = m, valName = n }) = do
   args <- mapM tcValue $ valArgs val
   let typArgs = map valTyp args
   if length typParams /= length typArgs
-    then throwError (SimpleError $ "bad arity when calling " ++ m ++ "#" ++ n ++ " primitive")
+    then throwError $ ArityError (m ++ "#" ++ n) (localize val) (length typParams) (length typArgs)
     else return ()
   forM_ (zip typParams typArgs) (\(p,a) -> do
     if p /= a

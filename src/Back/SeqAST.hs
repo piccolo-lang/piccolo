@@ -1,47 +1,49 @@
 {-|
-Module         :
-Description    :
-Stability      :
+Module         : Back.SeqAST
+Description    : The sequential AST for code generation
+Stability      : experimental
 
-Longer description
+Piccolo programs are first compiled into sequential AST. This intermediate representation allows
+multiple backends modules for further code generation. Note that each type in this module has
+a phantom type attached to specify which backend will be used at code generation, since backend
+interface in 'Back.Backend' is described in the form of typeclasses.
 -}
 module Back.SeqAST where
 
 import qualified Front.AST as PilAST
 
-{--
- -
- - Sequential AST types definitions
- -
- - Sequential AST forms an intermediate language to allow output in multiple backend languages.
- - Each type in this file has a phantom type to specify which backend will be used at code generation.
- -
- --}
-
+-- | The 'Name' datatype is used in the other part of the 'SeqAST'
+-- to represent String with the phantom type attached.
 data Name b
   = Name { name :: String }
 
+-- | Variable name datatype
 data VarName b
-  = SimpleName (Name b)               -- name
-  | RecordName (VarDescr b) (Name b)  -- name.field
-  | ArrayName (VarName b) (Expr b)    -- name[i] or name.field[i]
+  = SimpleName (Name b)               -- ^ Simple name
+  | RecordName (VarDescr b) (Name b)  -- ^ Fully quelified record name of the form name.field
+  | ArrayName (VarName b) (Expr b)    -- ^ Array cell variable of the form name.[epxr]
 
+-- | A variable description is made of a variable name and its type
 type VarDescr b = (VarName b,PiccType b)
 
+-- | Types for sequential AST
 data PiccType b
-  = Sty String                      -- simple type
-  | Pty String (PiccType b)         -- parameterized type
-  | Fun (PiccType b) [PiccType b]   -- function type
+  = Sty String                        -- ^ Atomic type
+  | Pty String (PiccType b)           -- ^ Parameterized type
+  | Fun (PiccType b) [PiccType b]     -- ^ Function type
 
+-- | Values manipulated by the backend are strings in the generated code, with their types
 type Value b = (String,PiccType b)
 
+-- | Sequential AST expressions
 data Expr b
-  = Val (Value b)
-  | Var (VarDescr b)
-  | Op (Binop b) (Expr b) (Expr b)
-  | OpU (Unop b) (Expr b)
-  | FunCall (VarDescr b) [Expr b]
+  = Val (Value b)                     -- ^  Value
+  | Var (VarDescr b)                  -- ^ Variable
+  | Op (Binop b) (Expr b) (Expr b)    -- ^ Binary operation applied on two 'Expr'
+  | OpU (Unop b) (Expr b)             -- ^ Unary operation applied on an 'Expr'
+  | FunCall (VarDescr b) [Expr b]     -- ^ Function call
 
+-- | Binary operations that must be supported by the backend language
 data Binop b
   = Sum
   | Minus
@@ -49,26 +51,29 @@ data Binop b
   | Div
   | Equal
 
+-- | Unary operations that must be supported by the backend language
 data Unop b
   = Not
 
+-- | 'Instr' datatype is the entry point of a sequential AST description
 data Instr b
-  = Comment String
-  | Debug String
-  | Switch (Expr b) [Case b]
-  | SeqBloc [Instr b]                -- instr list handler
-  | SemBloc (Instr b)                -- semantic bloc
-  | ComBloc PilAST.Location (Instr b)       -- compilation bloc
-  | ProcCall (VarDescr b) [Expr b]   -- procedure call
-  | DeclareVar (VarDescr b)
-  | Assign (VarDescr b) (Expr b)
-  | DeclareFun (VarDescr b) [String] (Instr b)
-  | ForEach (VarDescr b) (Expr b) (Instr b)
-  | If (Expr b) (Instr b) (Instr b)
-  | Label String
-  | Goto String
-  | Return (Expr b)
-  | DoWhile (Instr b) (Expr b)
+  = Comment String                                -- ^ Comment
+  | Debug String                                  -- ^ Debugging information
+  | Switch (Expr b) [Case b]                      -- ^ Switch/case instruction
+  | SeqBloc [Instr b]                             -- ^ List of sequential instructions
+  | SemBloc (Instr b)                             -- ^ Semantic bloc of instructions
+  | ComBloc PilAST.Location (Instr b)             -- ^ Compilation bloc of instructions (represents the compilation of a single piccolo action)
+  | ProcCall (VarDescr b) [Expr b]                -- ^ Function call
+  | DeclareVar (VarDescr b)                       -- ^ Variable declaration
+  | Assign (VarDescr b) (Expr b)                  -- ^ Variable assignation
+  | DeclareFun (VarDescr b) [String] (Instr b)    -- ^ Function declaration
+  | ForEach (VarDescr b) (Expr b) (Instr b)       -- ^ ForEach loop
+  | If (Expr b) (Instr b) (Instr b)               -- ^ If instruction
+  | Label String                                  -- ^ Label for goto
+  | Goto String                                   -- ^ Goto
+  | Return (Expr b)                               -- ^ Function return
+  | DoWhile (Instr b) (Expr b)                    -- ^ DoWhile loop
 
+-- | 'Case' values are used by 'Switch' instructions to describe the cases
 data Case b
   = Case (Expr b) (Instr b)

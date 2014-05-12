@@ -1,9 +1,9 @@
 {-|
-Module         :
-Description    :
-Stability      :
+Module         : Back.Backend
+Description    : Backend interface
+Stability      : experimental
 
-Longer description
+This module defines the typeclasses that a backend must be instanciated.
 -}
 module Back.Backend where
 
@@ -11,6 +11,8 @@ import Back.SeqAST
 import Back.RTOptions
 import Back.CodeEmitter
 
+
+-- | The main typeclass of a backend. Contains sequential AST code generation functions.
 class (BackendTypes a, BackendNames a, BackendPrims a) => Backend a where
   emitName      :: Name a     -> EmitterM ()
   emitVarName   :: VarName a  -> EmitterM ()
@@ -22,6 +24,7 @@ class (BackendTypes a, BackendNames a, BackendPrims a) => Backend a where
   emitCase      :: Case a     -> EmitterM ()
   emitCode      :: RTOptions -> String -> Instr a -> EmitterM ()
 
+-- | The 'BackendTypes' class forces to specify the various types used by the runtime.
 class BackendTypes a where
   void                       :: PiccType a
 
@@ -111,6 +114,7 @@ class BackendTypes a where
   tryResultInit              :: Expr a
 
 
+-- | The 'BackendNames' class forces to specify the various names used by a runtime.
 class BackendNames a where
   copyValue                  :: Name a
   boolOfBoolValue            :: Name a
@@ -201,6 +205,8 @@ class BackendNames a where
   childKnown                 :: Name a
   childEnv                   :: Name a
 
+
+-- | The 'BackendPrims' class forces to specify the various primitive names used by a runtime.
 class BackendPrims a where
   addName                    :: Name a
   substractName              :: Name a
