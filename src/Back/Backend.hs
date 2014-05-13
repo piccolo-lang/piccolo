@@ -13,7 +13,8 @@ import Back.CodeEmitter
 
 
 -- | The main typeclass of a backend. Contains sequential AST code generation functions.
-class (BackendTypes a, BackendNames a, BackendPrims a) => Backend a where
+--class (BackendTypes a, BackendNames a, BackendPrims a) => Backend a where
+class Backend a where
   emitName      :: Name a     -> EmitterM ()
   emitVarName   :: VarName a  -> EmitterM ()
   emitPiccType  :: PiccType a -> EmitterM ()
@@ -21,11 +22,79 @@ class (BackendTypes a, BackendNames a, BackendPrims a) => Backend a where
   emitBinop     :: Binop a    -> EmitterM ()
   emitUnop      :: Unop a     -> EmitterM ()
   emitInstr     :: Instr a    -> EmitterM ()
-  emitCase      :: Case a     -> EmitterM ()
   emitCode      :: RTOptions -> String -> Instr a -> EmitterM ()
+  
+  void :: Expr a
+  void = undefined
+
+  -- proc def function type
+  pDef :: PiccType a
+  pDef = undefined
+
+  -- scheduler name and type
+  scheduler :: VarDescr a
+  scheduler = undefined
+
+  -- pithread name and type
+  pt :: VarDescr a
+  pt = undefined
+  -- pithread fields
+  ptPC :: VarDescr a
+  ptPC = undefined
+  ptKnown :: VarDescr a
+  ptKnown = undefined
+  ptStatus :: VarDescr a
+  ptStatus = undefined
+  ptVal :: VarDescr a
+  ptVal = undefined
+  ptEnv :: Int -> VarDescr a
+  ptEnv = undefined
+
+  -- a channel var
+  chan :: VarDescr a
+  chan = undefined
+  
+  -- status enum and values
+  statusEnum :: PiccType a
+  statusEnum = undefined
+  statusRun :: Expr a
+  statusRun = undefined
+  statusCall :: Expr a
+  statusCall = undefined
+  statusWait :: Expr a
+  statusWait = undefined
+  statusEnded :: Expr a
+  statusEnded = undefined
+  statusBlocked :: Expr a
+  statusBlocked = undefined
+
+  knownSetKnown :: VarDescr a
+  knownSetKnown = undefined
+  knownSetForget :: VarDescr a
+  knownSetForget = undefined
+
+  handleDecRefCount :: VarDescr a
+  handleDecRefCount = undefined
+  getHandle :: VarDescr a
+  getHandle = undefined
+  
+  -- value constructors
+  makeTrue :: VarDescr a
+  makeTrue = undefined
+  makeFalse :: VarDescr a
+  makeFalse = undefined
+  makeInt :: VarDescr a
+  makeInt = undefined
+  makePrimInt :: Int -> Value a
+  makePrimInt = undefined
+
+  -- case label for entry point
+  dEntry :: Expr a
+  dEntry = undefined
+  
 
 -- | The 'BackendTypes' class forces to specify the various types used by the runtime.
-class BackendTypes a where
+{-class BackendTypes a where
   void                       :: PiccType a
 
   -- primitive types (of the target language)
@@ -111,11 +180,11 @@ class BackendTypes a where
   primFalse                  :: Value a
   primTrue                   :: Value a
   pcLabelInit                :: Value a
-  tryResultInit              :: Expr a
+  tryResultInit              :: Expr a-}
 
 
 -- | The 'BackendNames' class forces to specify the various names used by a runtime.
-class BackendNames a where
+{-class BackendNames a where
   copyValue                  :: Name a
   boolOfBoolValue            :: Name a
   outCommitsOfChannelValue   :: Name a
@@ -203,11 +272,11 @@ class BackendNames a where
   childPC                    :: Name a
   childStatus                :: Name a
   childKnown                 :: Name a
-  childEnv                   :: Name a
+  childEnv                   :: Name a-}
 
 
 -- | The 'BackendPrims' class forces to specify the various primitive names used by a runtime.
-class BackendPrims a where
+{-class BackendPrims a where
   addName                    :: Name a
   substractName              :: Name a
   moduloName                 :: Name a
@@ -215,5 +284,5 @@ class BackendPrims a where
   lessThanName               :: Name a
   printInfoName              :: Name a
   printStrName               :: Name a
-  printIntName               :: Name a
+  printIntName               :: Name a-}
 

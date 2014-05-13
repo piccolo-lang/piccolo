@@ -133,7 +133,7 @@ tcAction act@(ASpawn { actName = name }) = do
   return $ act { actArgs = args }
 tcAction act@(APrim { actModule = m, actName = n }) = do
   (_, typParams) <- case Map.lookup (m,n) primTypes of
-    Nothing -> throwError (SimpleError $ "primitive not found " ++ m ++ "#" ++ n)
+    Nothing -> throwError $ PrimNotFoundError ("#" ++ m ++ ":" ++ n) (localize act)
     Just t  -> return t
   args <- mapM tcValue $ actArgs act
   let typArgs = map valTyp args
@@ -160,7 +160,7 @@ tcValue val@(VVar { valVar = v }) = do
   return $ val { valTyp = typ }
 tcValue val@(VPrim { valModule = m, valName = n }) = do
   (typRet, typParams) <- case Map.lookup (m,n) primTypes of
-    Nothing -> throwError (SimpleError $ "primitive not found " ++ m ++ "#" ++ n)
+    Nothing -> throwError $ PrimNotFoundError ("#" ++ m ++ ":" ++ n) (localize val)
     Just t  -> return t
   args <- mapM tcValue $ valArgs val
   let typArgs = map valTyp args

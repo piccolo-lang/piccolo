@@ -18,6 +18,7 @@ data PiccError
   = SimpleError String                        -- ^ error that does not fit into other categories
   | VarNotFoundError String Location          -- ^ error occuring when looking for a variable and not finding it
   | DefNotFoundError String Location          -- ^ error occuring when looking for a process definition and not finding it
+  | PrimNotFoundError String Location         -- ^ error occuring when looking for a primitive definition and not finding it
   | ArityError     { aErrName     :: String
                    , aErrLoc      :: Location
                    , aErrExpected :: Int
@@ -41,6 +42,8 @@ instance Show PiccError where
   show (VarNotFoundError var loc) = "error (" ++ show loc ++ "): variable '" ++ var ++ "' not found"
 
   show (DefNotFoundError def loc) = "error (" ++ show loc ++ "): definition '" ++ def ++ "' not found"
+
+  show (PrimNotFoundError prim loc) = "error (" ++ show loc ++ "): definition '" ++ prim ++ "' not found"
 
   show (ArityError n loc aExp aAct) = "arity error (" ++ show loc ++ "):\n" ++
     "  " ++ n ++ " is called with bad arity,\n" ++

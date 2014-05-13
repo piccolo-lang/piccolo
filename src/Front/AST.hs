@@ -15,7 +15,11 @@ data Location = Location { locOffset      :: !Int  -- ^ absolute offset of the b
                          , locStartColumn :: !Int  -- ^ column of the beginning of the block
                          , locEndLine     :: !Int  -- ^ line of the end of the block
                          , locEndColumn   :: !Int  -- ^ column of the end of the block
-                         } deriving (Eq, Show)
+                         } deriving (Eq)
+
+instance Show Location where
+  show loc = show (locStartLine loc) ++ ":" ++ show (locStartColumn loc) ++ "->" ++
+             show (locEndLine loc)   ++ ":" ++ show (locEndColumn loc)
 
 --}
 
@@ -64,7 +68,6 @@ data Value
   | VTuple  { valVals ::[Value], valTyp :: TypeExpr, valLoc :: Location }
   | VVar    { valVar  :: String, valTyp :: TypeExpr, valLoc :: Location, valIndex :: Int }
   | VPrim   { valModule :: String, valName :: String, valArgs :: [Value], valTyp :: TypeExpr, valLoc :: Location }
-  deriving (Show, Eq)
 
 -- | A piccolo program is made of processes. A process expression can be:
 --
@@ -77,7 +80,6 @@ data Process
   = PEnd    { procLoc :: Location }
   | PChoice { procBranches :: [Branch], procLoc :: Location }
   | PCall   { procModule :: String, procName :: String, procArgs :: [Value], procLoc ::  Location }
-  deriving (Show, Eq)
 
 -- | A 'Branch' is a possible continuation for a choice process.
 -- It is guarded by a boolean value and an action.
@@ -86,7 +88,7 @@ data Branch
            , bAction :: Action
            , bCont   :: Process
            , bLoc    :: Location
-           } deriving (Show, Eq)
+           }
 
 -- | 'Action' datatype represents the atomic actions of the piccolo language.
 -- As contrary as traditionnal presentation of pi-calculus,
@@ -101,7 +103,6 @@ data Action
   | ALet    { actBind :: String, actTyp :: TypeExpr, actVal :: Value, actLoc :: Location }
   | ASpawn  { actModule :: String, actName :: String, actArgs :: [Value], actLoc :: Location }
   | APrim   { actModule :: String, actName :: String, actArgs :: [Value], actLoc :: Location }
-  deriving (Show, Eq)
 
 -- | To spawn or (possibly recursively) call a process definition, the 'Definition' type defines
 -- a process definition attached with parameter names and types.

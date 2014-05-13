@@ -18,10 +18,10 @@ import System.IO
 data CBackend
 
 -- | 'pointer' is a function to easily create C pointer types for sequential AST.
-pointer :: (BackendTypes a) => PiccType a -> PiccType a
-pointer t = Pty "*" t
+{-pointer :: (BackendTypes a) => PiccType a -> PiccType a
+pointer t = Pty "*" t-}
 
-instance BackendTypes CBackend where
+{-instance BackendTypes CBackend where
   void                       = Sty "void"
   
   primBool                   = Sty "bool"
@@ -194,7 +194,7 @@ instance BackendPrims CBackend where
   lessThanName               = undefined
   printInfoName              = undefined
   printStrName               = undefined
-  printIntName               = undefined
+  printIntName               = undefined-}
 
 instance Backend CBackend where
   emitName = error "TODO Back.CBackend Backend instanciation"
@@ -204,5 +204,4 @@ instance Backend CBackend where
   emitBinop = error "TODO Back.CBackend Backend instanciation"
   emitUnop = error "TODO Back.CBackend Backend instanciation"
   emitInstr = error "TODO Back.CBackend Backend instanciation"
-  emitCase = error "TODO Back.CBackend Backend instanciation"
   emitCode = error "TODO Back.CBackend Backend instanciation"

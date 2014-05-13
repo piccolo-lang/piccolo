@@ -18,7 +18,7 @@ import System.IO
 -- | 'GenericBackend' is the empty datatype used in the place of the phantom type in sequential AST.
 data GenericBackend
 
-instance BackendTypes GenericBackend where
+{-instance BackendTypes GenericBackend where
   void                       = Sty "void"
   
   primBool                   = Sty "bool"
@@ -190,7 +190,7 @@ instance BackendPrims GenericBackend where
   lessThanName               = undefined
   printInfoName              = undefined
   printStrName               = undefined
-  printIntName               = undefined
+  printIntName               = undefined-}
 
 instance Backend GenericBackend where
   emitName = error "TODO Back.GenericBackend Backend instanciation"
@@ -200,5 +200,4 @@ instance Backend GenericBackend where
   emitBinop = error "TODO Back.GenericBackend Backend instanciation"
   emitUnop = error "TODO Back.GenericBackend Backend instanciation"
   emitInstr = error "TODO Back.GenericBackend Backend instanciation"
-  emitCase = error "TODO Back.GenericBackend Backend instanciation"
   emitCode = error "TODO Back.GenericBackend Backend instanciation"

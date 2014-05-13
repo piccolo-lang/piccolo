@@ -59,14 +59,15 @@ data Unop b
 data Instr b
   = Comment String                                -- ^ Comment
   | Debug String                                  -- ^ Debugging information
-  | Switch (Expr b) [Case b]                      -- ^ Switch/case instruction
+  | Switch (Expr b) (Instr b)                     -- ^ Switch/case instruction
+  | Case (Expr b) (Instr b)                       -- ^ Case for switch instruction
   | SeqBloc [Instr b]                             -- ^ List of sequential instructions
   | SemBloc (Instr b)                             -- ^ Semantic bloc of instructions
   | ComBloc PilAST.Location (Instr b)             -- ^ Compilation bloc of instructions (represents the compilation of a single piccolo action)
   | ProcCall (VarDescr b) [Expr b]                -- ^ Function call
   | DeclareVar (VarDescr b)                       -- ^ Variable declaration
   | Assign (VarDescr b) (Expr b)                  -- ^ Variable assignation
-  | DeclareFun (VarDescr b) [String] (Instr b)    -- ^ Function declaration
+  | DeclareFun (VarDescr b) [VarDescr b] (Instr b)    -- ^ Function declaration
   | ForEach (VarDescr b) (Expr b) (Instr b)       -- ^ ForEach loop
   | If (Expr b) (Instr b) (Instr b)               -- ^ If instruction
   | Label String                                  -- ^ Label for goto
@@ -74,6 +75,3 @@ data Instr b
   | Return (Expr b)                               -- ^ Function return
   | DoWhile (Instr b) (Expr b)                    -- ^ DoWhile loop
 
--- | 'Case' values are used by 'Switch' instructions to describe the cases
-data Case b
-  = Case (Expr b) (Instr b)
