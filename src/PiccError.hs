@@ -8,6 +8,7 @@ This module defines the various types of errors that can occur during the compil
 module PiccError where
 
 import Front.AST
+import Front.ASTUtils
 
 import System.Exit
 import Control.Monad.Error
@@ -46,13 +47,13 @@ instance Show PiccError where
   show (PrimNotFoundError prim loc) = "error (" ++ show loc ++ "): definition '" ++ prim ++ "' not found"
 
   show (ArityError n loc aExp aAct) = "arity error (" ++ show loc ++ "):\n" ++
-    "  " ++ n ++ " is called with bad arity,\n" ++
+    "  '" ++ n ++ "' is called with bad arity,\n" ++
     "  " ++ "Expected arity: " ++ show aExp ++ "\n" ++
     "  " ++ "  Actual arity: " ++ show aAct
 
   show (ParsingError str) = "parsing error: " ++ str
   show (TypingError err loc tExp tAct) = "typing error (" ++ show loc ++ "):\n" ++
-    "  " ++ err  ++ " is not well-typed,\n" ++
+    "  '" ++ err  ++ "' is not well-typed,\n" ++
     "  " ++ "Expected type: " ++ show tExp ++ "\n" ++
     "  " ++ "  Actual type: " ++ show tAct
   show (TodoError str) = "TODO: " ++ str

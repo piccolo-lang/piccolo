@@ -137,13 +137,12 @@ tcAction act@(APrim { actModule = m, actName = n }) = do
     Nothing -> throwError $ PrimNotFoundError ("#" ++ m ++ ":" ++ n) (localize act)
     Just t  -> return t
   args <- mapM tcValue $ actArgs act
-  let typArgs = map valTyp args
-  if length typParams /= length typArgs
-    then throwError $ ArityError (m ++ "#" ++ n) (localize act) (length typParams) (length typArgs)
+  if length typParams /= length args
+    then throwError $ ArityError (m ++ "#" ++ n) (localize act) (length typParams) (length args)
     else return ()
-  forM_ (zip typParams typArgs) (\(p,a) -> do
-    if p /= a
-      then throwError (SimpleError $ "bad type in prim")
+  forM_ (zip typParams args) (\(p,a) -> do
+    if p /= valTyp a
+      then throwError $ TypingError (show a) (localize a) p (valTyp a)
       else return ())
   return $ act { actArgs = args }
 

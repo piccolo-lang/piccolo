@@ -36,14 +36,13 @@ data TypeExpr
   | TChannel { typExpr :: TypeExpr, typLoc :: Location }
   | TTuple   { typExprs :: [TypeExpr], typLoc :: Location }
   | TPrim    { typArgs :: [TypeExpr], typRet :: TypeExpr, typLoc :: Location }
-  deriving (Show)
 
 -- | Atomic types are in the separate datatype 'TypeAtom' that is used by 'TypeExpr'
 data TypeAtom
   = TBool
   | TInt
   | TString
-  deriving (Show, Eq)
+  deriving (Eq)
 
 -- | 'TypeExpr' expressions are compared upto location data
 instance Eq TypeExpr where

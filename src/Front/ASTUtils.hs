@@ -10,6 +10,8 @@ module Front.ASTUtils where
 
 import Front.AST
 
+import Data.List (intercalate)
+
 -- | The 'AST' typeclass is usefull to define common function on each 'Front.AST' datatype
 class AST a where
   localize :: a -> Location  -- ^ extract location information from an AST data
@@ -46,3 +48,25 @@ noLoc = Location (-1) (-1) (-1) (-1) (-1)
 -- that was not on the programmer's version of a piccolo program.
 isNoLoc :: Location -> Bool
 isNoLoc = (noLoc ==)
+
+instance Show TypeExpr where
+  show typ@(TUnknown {}) = "unknown"
+  show typ@(TAtom {})    = show $ typAtom typ
+  show typ@(TChannel {}) = "chan<" ++ show (typExpr typ) ++ ">"
+  show typ@(TTuple {})   = "(" ++ intercalate "," (map show (typExprs typ)) ++ ")"
+  show typ@(TPrim {})    = "[" ++ intercalate "," (map show (typArgs typ)) ++ "] -> " ++ show (typRet typ)
+
+instance Show TypeAtom where
+  show TBool   = "bool"
+  show TInt    = "int"
+  show TString = "string"
+
+instance Show Value where
+  show val@(VTrue {})   = "true"
+  show val@(VFalse {})  = "false"
+  show val@(VInt {})    = show $ valInt val
+  show val@(VString {}) = "\"" ++ valStr val ++ "\""
+  show val@(VTuple {})  = "(" ++ intercalate "," (map show $ valVals val) ++ "\""
+  show val@(VVar {})    = valVar val
+  show val@(VPrim {})   = "#" ++ valModule val ++ "/" ++ valName val
+
