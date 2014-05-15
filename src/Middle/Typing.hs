@@ -114,6 +114,7 @@ tcAction act@(ALet {}) = do
   if actTyp act /= valTyp val
     then throwError (SimpleError $ "wrong type in let")
     else return ()
+  putVarType (actBind act) (actTyp act)
   return $ act { actVal = val }
 tcAction act@(ASpawn { actName = name }) = do
   (defs,_) <- lift $ get
