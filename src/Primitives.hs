@@ -19,14 +19,14 @@ import qualified Data.Map as Map
 -- 'TypeExpr' of its arguments.
 primTypes :: Map.Map (String,String) (TypeExpr, [TypeExpr])
 primTypes = Map.fromList
-  [ (("corearith", "add"),       (tInt, [tInt, tInt]))
-  , (("corearith", "substract"), (tInt, [tInt, tInt]))
-  , (("corearith", "modulo"),    (tInt, [tInt, tInt]))
-  , (("corearith", "equals"),    (tBool, [tInt, tInt]))
-  , (("corearith", "less_than"), (tBool, [tInt, tInt]))
-  , (("coreio", "print_info"),   (tString, [tString]))
-  , (("coreio", "print_str"),    (tString, [tString]))
-  , (("coreio", "print_int"),    (tString, [tInt]))
+  [ (("core/arith", "add"),       (tInt, [tInt, tInt]))
+  , (("core/arith", "substract"), (tInt, [tInt, tInt]))
+  , (("core/arith", "modulo"),    (tInt, [tInt, tInt]))
+  , (("core/arith", "equals"),    (tBool, [tInt, tInt]))
+  , (("core/arith", "less_than"), (tBool, [tInt, tInt]))
+  , (("core/io", "print_info"),   (tString, [tString]))
+  , (("core/io", "print_str"),    (tString, [tString]))
+  , (("core/io", "print_int"),    (tString, [tInt]))
   ]
 
 tBool   :: TypeExpr

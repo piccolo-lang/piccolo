@@ -54,7 +54,7 @@ tcModule mDef = do
 
 tcDefinition :: Definition -> TypingM Definition
 tcDefinition def = do
-  let vars = Map.fromList $ map (\(v,t,_) -> (v,t)) (defParams def)
+  mapM_ (\(v,t,_) -> putVarType v t) (defParams def)
   proc <- tcProcess $ defBody def
   return $ def { defBody = proc }
 
