@@ -10,7 +10,6 @@ module Back.CBackend where
 
 import Back.SeqAST
 import Back.Backend
-import Back.RTOptions
 
 import System.IO
 

@@ -11,7 +11,6 @@ module Back.GenericBackend where
 
 import Back.SeqAST
 import Back.Backend
-import Back.RTOptions
 
 import System.IO
 

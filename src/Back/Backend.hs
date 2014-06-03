@@ -8,7 +8,6 @@ This module defines the typeclasses that a backend must be instanciated.
 module Back.Backend where
 
 import Back.SeqAST
-import Back.RTOptions
 import Back.CodeEmitter
 
 
@@ -22,7 +21,7 @@ class Backend a where
   emitBinop     :: Binop a    -> EmitterM ()
   emitUnop      :: Unop a     -> EmitterM ()
   emitInstr     :: Instr a    -> EmitterM ()
-  emitCode      :: RTOptions -> String -> Instr a -> EmitterM ()
+  emitCode      :: String -> Instr a -> EmitterM ()
   
   void :: Expr a
   void = undefined

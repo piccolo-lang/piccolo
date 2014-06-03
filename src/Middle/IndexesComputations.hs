@@ -1,9 +1,10 @@
 {-|
-Module         :
-Description    :
-Stability      :
+Module         : Middle.IndexesComputation
+Description    : Index of variable computation pass
+Stability      : experimental
 
-Longer description
+In runtime, process environment have a fixed size, and each variable is called using an index in this environment.
+This module computes these indexes and decorates the AST/
 -}
 module Middle.IndexesComputations where
 

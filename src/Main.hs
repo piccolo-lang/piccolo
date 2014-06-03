@@ -21,7 +21,6 @@ import Middle.Typing
 import Middle.IndexesComputations
 import Middle.Compilation
 import Back.SeqAST
-import Back.RTOptions
 import Back.Backend hiding (null)
 import Back.GenericBackend
 import Back.CBackend
@@ -45,8 +44,7 @@ handleFiles :: [Flag] -> [String] -> IO ()
 handleFiles args [] = return ()
 handleFiles args (f:fs) = do
   content <- readFile f
-  rtOpts  <- defaultsRTOptions
-  result  <- reportResult $ handleData args content rtOpts 
+  result  <- reportResult $ handleData args content
   hOut    <- openFile "a.out" WriteMode
   hPutStr hOut result
   hClose hOut
@@ -55,25 +53,25 @@ handleFiles args (f:fs) = do
 
 -- | The 'handleData' function takes a list of flags and a string representing a
 -- piccolo program and compile it
-handleData :: [Flag] -> String -> RTOptions -> Either PiccError String
-handleData args input rtOpts = do
+handleData :: [Flag] -> String -> Either PiccError String
+handleData args input = do
   transfAst <- parseModule input >>= typingPass >>= computingIndexesPass
   if Generic `elem` args
-    then compileToGeneric transfAst rtOpts
-    else compileToC       transfAst rtOpts
+    then compileToGeneric transfAst
+    else compileToC       transfAst
 
 -- | The 'compileToGeneric' function compiles a piccolo AST using the generic backend
-compileToGeneric :: ModuleDef -> RTOptions -> Either PiccError String
-compileToGeneric piAst rtOpts = do
+compileToGeneric :: ModuleDef -> Either PiccError String
+compileToGeneric piAst = do
   seqAst :: Instr GenericBackend <- compilePass piAst
-  let output = runEmitterM (emitCode rtOpts "Main" seqAst)
+  let output = runEmitterM (emitCode "Main" seqAst)
   return output
 
 -- | The 'compileToC' function compiles a piccolo AST using the C backend
-compileToC :: ModuleDef -> RTOptions -> Either PiccError String
-compileToC piAst rtOpts = do
+compileToC :: ModuleDef -> Either PiccError String
+compileToC piAst = do
   seqAst :: Instr CBackend <- compilePass piAst
-  let output = runEmitterM (emitCode rtOpts "Main" seqAst)
+  let output = runEmitterM (emitCode "Main" seqAst)
   return output
 
 -- | Various flags for compiler options
