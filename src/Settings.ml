@@ -16,6 +16,7 @@ let std_gc_fuel = ref 2
 let quick_gc_fuel = ref 2
 let active_factor = ref 2
 let debug = ref false
+let output_ast = ref false
 
 let options = Arg.align [
   "-v", Arg.Unit (fun () -> incr verbose), "increase verbosity";
@@ -24,7 +25,8 @@ let options = Arg.align [
   "-sgf", Arg.Set_int std_gc_fuel, "set the number of times the scheduler can continuasely execute a pi_thread without a garbege collection (2 by default)";
   "-qgf", Arg.Set_int quick_gc_fuel, "set the number of times the scheduler can continuasely execute a pi_thread without a garbege collection after an unsuccessful garbege collection (2 by default)";
   "-af", Arg.Set_int active_factor, "set the ratio between the total waiting threads and the active waiting threads that when exceded involves a garbege collection (2 by default)";
-  "-debug", Arg.Set debug, "put debugging trace in the generated code"
+  "-debug", Arg.Set debug, "put debugging trace in the generated code";
+  "-ast", Arg.Set output_ast, "output Abstract Syntax Tree (AST)"
 ]
 
 let usage =
