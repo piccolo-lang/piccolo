@@ -111,6 +111,7 @@ call:
 
 choiceProcess:
 | branch { [$1] }
+| LPAREN branch RPAREN PLUS choiceProcess { $2::$5 }
 | branch PLUS choiceProcess { $1::$3 }
 
 branch:

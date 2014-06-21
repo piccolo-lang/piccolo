@@ -358,7 +358,7 @@ object
     if(ar = 1)then
       (List.hd bs)#toString 
     else
-      string_of_collection "" "" "+" (function x -> x#toString) bs
+      string_of_collection "Choice{\n" "}" "  +" (function x -> "  [ " ^ (x#toString) ^ " ]\n") bs
 end
     
 (** constructor Choice process *)
@@ -429,7 +429,7 @@ object
     in
       search _params
   method toString =
-    "def " ^ n ^ (string_of_collection "(" ")" "," (fun p -> p#toString) _params) ^ " = " ^ (string_of_process p)
+    "def " ^ n ^ (string_of_collection "(" ")" "," (fun p -> p#toString) _params) ^ " =\n  " ^ (string_of_process p) ^ "\n"
 end
 
 (** constructor Definition *)
