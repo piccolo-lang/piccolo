@@ -110,9 +110,10 @@ call:
 | IDENT LPAREN values RPAREN { makeCall !current_module !current_definition !current_module $1 (List.map snd $3) (List.map fst $3) }
 
 choiceProcess:
-| branch { [$1] }
 | LPAREN branch RPAREN PLUS choiceProcess { $2::$5 }
 | branch PLUS choiceProcess { $1::$3 }
+| LPAREN branch RPAREN { [$2] }
+| branch { [$1] }
 
 branch:
 | LBRACKET value RBRACKET action COMMA process { (fst $2, snd $2, $4, $6) }

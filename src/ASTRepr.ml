@@ -358,7 +358,8 @@ object
     if(ar = 1)then
       (List.hd bs)#toString 
     else
-      string_of_collection "Choice{\n" "}" "  +" (function x -> "  [ " ^ (x#toString) ^ " ]\n") bs
+      string_of_collection " " "" "\n  +" (function x -> "  [ " ^ (x#toString) ^ " ]") bs
+      (* string_of_collection "Choice{\n" "}" "\n  +" (function x -> "  [ " ^ (x#toString) ^ " ]") bs *)
 end
     
 (** constructor Choice process *)
