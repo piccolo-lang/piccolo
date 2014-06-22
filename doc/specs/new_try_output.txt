@@ -1,0 +1,49 @@
+
+TryOutputAction(pt:PiThread, c:Integer, chans: Set[Channel], tryresult: &{ COMMIT, DISABLED, ENABLED }) : InCommit
+begin
+  if SetAdd(chans, pt.env[c]) then
+    Acquire(pt.env[c].lock)
+  endif
+  if pt.env[c].globalrc = 1 then
+    tryresult &<- DISABLED
+    return NULL
+  endif
+
+  var commit : InCommit
+  var ok : { CANNOT_ACQUIRE, VALID_COMMITMENT, INVALID_COMMITMENT }
+
+  do
+    commit <- FetchInputCommitment(pt.env[c])
+    if commit == NULL then
+      tryresult &<- COMMIT
+      return NULL
+    endif
+
+    do
+      ok <- CanAwake(commit.thread, commit)
+      if ok == CANNOT_ACQUIRE then
+        LowLevelYield()
+      endif
+    while ok = CANNOT_ACQUIRE
+
+    if ok = INVALID_COMMITMENT then
+      tryresult &<- ENABLED
+      return commit
+    endif
+
+  while pt.env[c].incommits != {}
+
+  DeadCodeReachedError()
+end
+
+
+CompileTryAction(c!v:T, chans: Set[Channel]) ->
+
+  var commit : inCommit
+  inCommit <- TryOutputAction(pt, c, chans, &tryresult)
+  if tryresult = ENABLED then
+    CompileExpr(v)
+    commit.thread.env[commit.refval] <- pt.val
+    Awake(scheduler, commit.thread, commit)
+  endif
+
