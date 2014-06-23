@@ -10,6 +10,8 @@ The piccolo can be invoked with the following options:
 
   * --generic or -g produces generic code
 
+  * --sast or -s    print AST in s-expressions style for debugging purposes
+
 It waits for one or more pi-file names and produces by default C code in a.out.
 -}
 module Main where
@@ -30,6 +32,7 @@ import System.Environment
 import System.Console.GetOpt
 import System.IO
 import System.Exit
+import Control.Monad
 import Control.Monad.Error
 import Data.List
 
@@ -43,22 +46,19 @@ main = do
 handleFiles :: [Flag] -> [String] -> IO ()
 handleFiles args [] = return ()
 handleFiles args (f:fs) = do
-  content <- readFile f
-  result  <- reportResult $ handleData args content
-  hOut    <- openFile "a.out" WriteMode
-  hPutStr hOut result
+  content   <- readFile f
+  ast       <- reportResult $ parseModule content
+  when (SAST `elem` args) $ print ast
+  typedAst  <- reportResult $ typingPass ast
+  transfAst <- reportResult $ computingIndexesPass typedAst
+  emittedCode <- reportResult $ if Generic `elem` args
+    then compileToGeneric transfAst
+    else compileToC       transfAst
+  hOut <- openFile "a.out" WriteMode
+  hPutStr hOut emittedCode
   hClose hOut
   putStrLn $ "successfully compiled " ++ f ++ " file into a.out"
   handleFiles args fs
-
--- | The 'handleData' function takes a list of flags and a string representing a
--- piccolo program and compile it
-handleData :: [Flag] -> String -> Either PiccError String
-handleData args input = do
-  transfAst <- parseModule input >>= typingPass >>= computingIndexesPass
-  if Generic `elem` args
-    then compileToGeneric transfAst
-    else compileToC       transfAst
 
 -- | The 'compileToGeneric' function compiles a piccolo AST using the generic backend
 compileToGeneric :: ModuleDef -> Either PiccError String
@@ -78,15 +78,18 @@ compileToC piAst = do
 data Flag
   = Help       -- ^ \--help or -h
   | Generic    -- ^ \--generic or -g
+  | SAST       -- ^ \--sast or -s
   deriving Eq
 
 -- | Flags description to parse with "System.Console.GetOpt" module
 flags :: [OptDescr Flag]
 flags =
-  [ Option ['h'] ["help"] (NoArg Help)
+  [ Option "h" ["help"] (NoArg Help)
       "Print this help message"
-  , Option ['g'] ["generic"] (NoArg Generic)
+  , Option "g" ["generic"] (NoArg Generic)
       "Produce generic code instead of C code"
+  , Option "s" ["sast"] (NoArg SAST)
+      "Print AST in s-epxressions style for debugging purposes"
   ]
 
 -- | The function 'parseArgs' use the "System.Console.GetOpt" module to parse executable options
@@ -96,10 +99,10 @@ parseArgs argv = case getOpt Permute flags argv of
     let files = if null fs then ["-"] else fs
     if Help `elem` args
       then do putStrLn $ usageInfo header flags
-              exitWith ExitSuccess
+              exitSuccess
       else return (nub args, files)
   (_,_,errs) -> do
     putStrLn (concat errs ++ usageInfo header flags)
     exitWith $ ExitFailure 1
-  where header = "Usage: piccolo [-h] [file ...]"
+  where header = "Usage: piccolo [-hgs] [file ...]"
 

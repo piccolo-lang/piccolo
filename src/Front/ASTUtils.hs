@@ -49,6 +49,9 @@ noLoc = Location (-1) (-1) (-1) (-1) (-1)
 isNoLoc :: Location -> Bool
 isNoLoc = (noLoc ==)
 
+indent :: Int -> String
+indent n = intercalate "" $ replicate n " "
+
 instance Show TypeExpr where
   show typ@(TUnknown {}) = "unknown"
   show typ@(TAtom {})    = show $ typAtom typ
@@ -65,8 +68,65 @@ instance Show Value where
   show val@(VTrue {})   = "true"
   show val@(VFalse {})  = "false"
   show val@(VInt {})    = show $ valInt val
-  show val@(VString {}) = "\"" ++ valStr val ++ "\""
-  show val@(VTuple {})  = "(" ++ intercalate "," (map show $ valVals val) ++ "\""
+  show val@(VString {}) = valStr val
+  show val@(VTuple {})  = "(tuple " ++ unwords (map show $ valVals val) ++ ")"
   show val@(VVar {})    = valVar val
-  show val@(VPrim {})   = "#" ++ valModule val ++ "/" ++ valName val
+  show val@(VPrim {})   = "(prim #" ++ valModule val ++ "/" ++ valName val ++ args ++ ")"
+    where args = if null (valArgs val)
+                   then ""
+                   else " " ++ unwords (map show $ valArgs val)
+
+instance Show Process where
+  show = showProc 0
+
+showProc :: Int -> Process -> String
+showProc n (proc@PEnd {}) = indent n ++ "(end)"
+showProc n (proc@PChoice {procBranches = []}) = error "empty choice"
+showProc n (proc@PChoice {procBranches = [br]}) = showBranch n br
+showProc n (proc@PChoice {}) = indent n ++ "(+ \n" ++ brs ++ "\n" ++ indent n ++ ")"
+  where brs = intercalate "\n" (map (showBranch (n+3)) (procBranches proc))
+showProc n (proc@PCall {}) = indent n ++ "(call #" ++ procModule proc ++ "/" ++ procName proc ++ args ++ ")"
+  where args = if null (procArgs proc)
+                 then ""
+                 else " " ++ unwords (map show $ procArgs proc)
+
+instance Show Branch where
+  show = showBranch 0
+
+showBranch :: Int -> Branch -> String
+showBranch n branch = indent n ++ "(-> " ++ g ++ " " ++ a ++ "\n" ++ p ++ ")"
+  where g = show $ bGuard branch
+        a = show $ bAction branch
+        p = showProc (n+4) $ bCont branch
+
+instance Show Action where
+  show = showAct 0
+
+showAct n (act@ATau {})    = "(tau)"
+showAct n (act@AOutput {}) = "(output " ++ actChan act ++ " " ++ show (actData act) ++ ")"
+showAct n (act@AInput {})  = "(input " ++ actChan act ++ " " ++ actBind act ++ ")"
+showAct n (act@ANew {})    = "(new " ++ actBind act ++ ")"
+showAct n (act@ALet {})    = "(let " ++ actBind act ++ " " ++ show (actVal act) ++ ")"
+showAct n (act@ASpawn {})  = "(spawn #" ++ actModule act ++ "/" ++ actName act ++ args ++ ")"
+  where args = if null (actArgs act)
+                 then ""
+                 else " " ++ unwords (map show $ actArgs act)
+showAct n (act@APrim {})   = "(prim #" ++ actModule act ++ "/" ++ actName act ++ args ++ ")"
+  where args = if null (actArgs act)
+                 then ""
+                 else " " ++ unwords (map show $ actArgs act)
+
+instance Show Definition where
+  show = showDef 0
+
+showDef :: Int -> Definition -> String
+showDef n def = indent n ++ "(def (" ++ defName def ++ params ++ ")\n" ++ showProc (n+5) (defBody def) ++ "\n" ++ indent n ++ ")"
+  where params = if null (defParams def)
+                   then ""
+                   else " " ++ unwords (map (\(x,_,_) -> x) (defParams def))
+
+instance Show ModuleDef where
+  show mDef = "(module " ++ moduleName mDef ++ "\n" ++ ds ++ "\n" ++ ")"
+    where ds = intercalate "\n\n" (map (showDef 8) defs)
+          defs = moduleDefs mDef
 
