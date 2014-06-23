@@ -62,6 +62,6 @@ instance Show PiccError where
 -- or print the error and quit the program.
 reportResult :: Either PiccError a -> IO a
 reportResult (Left err) = do
-  putStrLn (show err)
+  print err
   exitWith (ExitFailure 42)
 reportResult (Right result) = return result

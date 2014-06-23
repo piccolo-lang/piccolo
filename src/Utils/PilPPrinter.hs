@@ -1,8 +1,9 @@
+{-|
+Module         : Utils.PilPrinter
+Description    : Piccolo AST pretty printing module
+Stability      : experimental
 
-{--
-
-# AST Pretty Printer #
-
+...
 --}
 
 module Utils.PilPPrinter where
@@ -22,7 +23,7 @@ ppTypeExpr TAtom { typAtom = atom } = ppTypeAtom atom
 ppTypeExpr TChannel { typExpr = expr } =
   text "chan" <> char '<' <> ppTypeExpr expr <> char '>'
 ppTypeExpr TTuple { typExprs = exprs } =
-  char '(' <> (hsep $ punctuate (text " * ") $ map ppTypeExpr exprs) <> char ')'
+  char '(' <> hsep (punctuate (text " * ") $ map ppTypeExpr exprs) <> char ')'
 
 instance PrettyPrintable TypeExpr where
   prettyPrint = render . ppTypeExpr
@@ -43,7 +44,7 @@ ppValue VFalse {} = text "false"
 ppValue VInt { valInt = i } = int i
 ppValue VString { valStr = s } = char '"' <> text s <> char '"'
 ppValue VTuple { valVals = vs } =
-  char '(' <> (hsep $ punctuate (text ", ") $ map ppValue vs) <> char ')'
+  char '(' <> hsep (punctuate (text ", ") $ map ppValue vs) <> char ')'
 ppValue VVar { valVar = x } = text x
 ppValue VPrim { valModule = m, valName = n, valArgs = args } =
   char '#' <> text m <> char ':' <> text n <> char '(' <> argsDoc <> char ')'

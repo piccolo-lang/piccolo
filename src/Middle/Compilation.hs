@@ -60,7 +60,7 @@ compileProcess proc@(PChoice {}) = throwError $ TodoError "Middle.Compilation.co
 compileProcess proc@(PCall {})   = throwError $ TodoError "Middle.Compilation.compileProcess PCall"
 
 compileEnd :: (B.Backend a) => S.Expr a -> CompilingM (S.Instr a)
-compileEnd status = do
+compileEnd status =
    return $ S.SeqBloc [ S.ForEach B.chan (S.FunCall B.knownSetKnown [S.Var B.ptKnown])
                         (S.SeqBloc [S.ProcCall B.handleDecRefCount [S.FunCall B.getHandle [S.Var B.chan]]])
                       , S.ForEach B.chan (S.FunCall B.knownSetForget [S.Var B.ptKnown])
