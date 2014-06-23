@@ -712,14 +712,27 @@ $ $\newline
 \begin{program}
   \compiletime{CompileTryAction($c!v$:T, $chans$ : Set[\myref{Channel}]) $\rightarrow$} \\ \\
   \kw{begin} \\
-  \pindent\compiletime{\kw{cvar} $label\_endoftry$ : \kw{label}} \\
-  \>\compiletime{$label\_endoftry \leftarrow$ GenerateLabel()} \\
-  \>\kw{if} SetAdd($chans, pt.env[c]$) \kw{then} \\
-  \>\pindent\synchro{Acquire($pt.env[c].lock$)} \\
+  \pindent\kw{var} $commit$ : \myref{InCommit} \\
+  \> $commit \leftarrow$ TryOutputAction($pt$, $c$, $chans$, $\& tryResult$)\\
+  \>\kw{if} $tryResult$ = ENABLED \kw{then} \\
+  \>\pindent\compiletime{\myref{CompileExpr}($v$)} \\
+  \>\>$commit.thread.env[commit.refval] \leftarrow pt.val$ \\
+  \>\>\myref{Awake}($scheduler$, $commit.thread$, $commit$) \\
+  \> \kw{endif}\\
+  \kw{end}
+\end{program}
+
+\algosection{Runtime : try output action}
+\begin{program}
+  \kw{type} TryResult = \{ DISABLED, ENABLED, COMMIT \} \\
+\\
+  \kw{function} TryOutputAction($pt$ : \myref{PiThread}, $chanRef$ : int, $chans$: Set[\myref{Channel}], $tryResult$: \&TryResyult) : \myref{InCommit} \\
+  \pindent \kw{if} SetAdd($chans, pt.env[chanRef]$) \kw{then} \\
+  \>\pindent\synchro{Acquire($pt.env[chanRef].lock$)} \\
   \>\kw{endif} \\
-  \>\kw{if} $c.globalrc = 1$ \kw{then} \\
-  \>\pindent$tryresult \leftarrow$ DISABLED \\
-  \>\>\kw{goto} $@label\_endoftry$ \\
+  \>\kw{if} $pt.env[chanRef].globalrc = 1$ \kw{then} \\
+  \>\pindent$tryResult \leftarrow$ DISABLED \\
+  \>\>\kw{return} \kw{null} \\
   \>\kw{endif} \\
   \>\kw{var} $commit$ : \myref{InCommit} \\
   \>\kw{var} $ok$ : \{CANNOT\_ACQUIRE, VALID\_COMMITMENT, INVALID\_COMMITMENT\} \\
@@ -728,32 +741,30 @@ $ $\newline
   \>\pindent$commit \leftarrow$ \myref{FetchInputCommitment}($pt.env[c]$) \\
   \>\>\kw{if} $commit =$ \kw{null} \kw{then} \\
   \>\>\pindent$tryresult \leftarrow$ COMMIT \\
-  \>\>\>\kw{goto} $@label\_endoftry$ \\
+  \>\>\>\kw{return} \kw{null} \\
   \>\>\kw{endif} \\
+
   \>\>\kw{do} \\
   \>\>\pindent$ok \leftarrow$ \myref{CanAwake}($commit.thread, commit$) \\
   \>\>\>\kw{if} $ok =$ CANNOT\_ACQUIRE \kw{then} \\
-  \>\>\>\pindent\synchro{low\_level\_yield()} \\
+  \>\>\>\pindent\synchro{lowLevelYield()} \\
   \>\>\>\kw{endif} \\
   \>\>\kw{while} $ok =$ CANNOT\_ACQUIRE \\
   \>\>\\
   \>\>\kw{if} $ok =$ VALID\_COMMITMENT \kw{then} \\
-  \>\>\pindent\compiletime{\myref{CompileExpr}($v$)} \\
-  \>\>\>$commit.thread.env[commit.refval] \leftarrow pt.val$ \\
-  \>\>\>\myref{Awake}($scheduler, commit.thread, commit$) \\
-  \>\>\>$tryresult \leftarrow$ ENABLED \\
-  \>\>\>\kw{goto} $@label\_endoftry$ \\
+  \>\>\> $tryResult \leftarrow$ ENABLED \\
+  \>\>\> \kw{return} commit \\
   \>\>\kw{endif} \\
   \>\kw{while} $pt.env[c].incommits \neq \{\}$ \\
-  \>$@label\_endoftry$ \\
-  \kw{end}
+  errorDeadCodeReached() \\
+  \kw{endfunction}
 \end{program}
 
 \newpage
 
 \algosection{Compilation outline for input prefix try}
 \begin{program}
-  \compiletime{CompileTryAction($c?x$:T, Set[\myref{Channel}]) $\rightarrow$} \\ \\
+  \compiletime{CompileTryAction($c?x$:T, $chans$:Set[\myref{Channel}]) $\rightarrow$} \\ \\
   \kw{begin} \\
   \pindent\compiletime{\kw{cvar} $label\_endoftry$ : \kw{label}} \\
   \>\compiletime{$label\_endoftry \leftarrow$ GenerateLabel()} \\
@@ -797,6 +808,7 @@ $ $\newline
   \>$@label\_endoftry$ \\
   \kw{end}
 \end{program}
+
 
 \newpage
 

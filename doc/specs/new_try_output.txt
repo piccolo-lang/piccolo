@@ -26,7 +26,7 @@ begin
       endif
     while ok = CANNOT_ACQUIRE
 
-    if ok = INVALID_COMMITMENT then
+    if ok = VALID_COMMITMENT then
       tryresult &<- ENABLED
       return commit
     endif
