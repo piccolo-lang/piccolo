@@ -1,9 +1,9 @@
 \documentclass[a4paper,11pt]{article}
 
 \usepackage[utf8]{inputenc}
-\usepackage{color}
+\usepackage{xcolor}
 \usepackage{graphicx}
-\usepackage[pdfborder = {0 0 0}]{hyperref}
+\usepackage[hidelinks=true, pdfborder = {0 0 .1}, linkbordercolor= {gray}]{hyperref}
 
 \definecolor{compilecolor}{gray}{0.45}
 \definecolor{synchrocolor}{rgb}{0.1, 0.2, 0.8}
@@ -552,8 +552,7 @@ $ $\newline
 \label{CompileWait}
 \algosection{Compilation outline for wait}
 \begin{program}
-  \compiletime{CompileWait($chans$ : \kw{Set}[\kw{record} Channel]) $\rightarrow$} \\ \\
-  /* \kw{property} : $chans \cap knows.FORGET = \{\}$ */ \\
+  \compiletime{CompileWait() $\rightarrow$} \\ \\
   $pt.pc \leftarrow$ INVALID\_PC \\
   $pt.fuel \leftarrow$ FUEL\_INIT \\
   \kw{foreach} $chan$ : \myref{Channel} in \myref{KnowsSetForget}($pt.knows$) \\
@@ -592,21 +591,22 @@ $ $\newline
   \>\kw{var} $nbdisabled$ : \kw{int} \\
   \>$nbdisabled \leftarrow 0$ \\
   \>\compiletime{\kw{cvar} $choice\_cont$ : Array[\kw{dynLabel}]} \\
-  \>\kw{var} $chans$ : Set[\myref{Channel}] \\
-  \>$chans \leftarrow \{\}$ \\
+  \>\kw{var} $chans$ : Array[\myref{Channel}]($n$) \\
+  \>\kw{var} $nbchans$ : \kw{int} \\
+  \>$nbchans \leftarrow 0$ \\
   \>\compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $0$ \kw{to} $n-1$} \\
   \>\pindent\compiletime{$choice\_cont[i] \leftarrow$ GenerateLabel()} \\
   \>\>\compiletime{\myref{CompileExpr}($g_i$)} \\
   \>\>$pt.enabled[i] \leftarrow pt.val$ \\
   \>\>\kw{if} $pt.enabled[i]$ \kw{then} \\
-  \>\>\pindent\compiletime{\myref{CompileTryAction}($\alpha_i, chans$)} \\
+  \>\>\pindent\compiletime{\myref{CompileTryAction}($\alpha_i$)}[$chans$, $nbchans$,$tryResult$] \\
   \>\>\>\kw{if} $tryresult =$ DISABLED \kw{then} \\
   \>\>\>\pindent$pt.enabled[i] \leftarrow$ \kw{false} \\
   \>\>\>\>$nbdisabled \leftarrow nbdisabled + 1$ \\
   \>\>\>\kw{else} \kw{if} $tryresult =$ ENABLED \kw{then} \\
   \>\>\>\pindent$pt.fuel \leftarrow pt.fuel - 1$ \\
   \>\>\>\>\kw{if} $pt.fuel = 0$ \kw{then} \\
-  \>\>\>\>\pindent\synchro{\myref{ReleaseAllChannels}($chans$)} \\
+  \>\>\>\>\pindent\synchro{\myref{ReleaseAllChannels}($chans$, $nbchans$)} \\
   \>\>\>\>\>\compiletime{\myref{CompileYield}($choice\_cont[i]$)} \\
   \>\>\>\>\kw{endif} \\
   \>\>\>\>\kw{goto} $@choice\_cont[i]$ \\
@@ -616,7 +616,7 @@ $ $\newline
   \>\>\kw{endif} \\
   \>\compiletime{\kw{cendfor}} \\
   \>\kw{if} $nbdisabled = n$ \kw{then} \\
-  \>\pindent\synchro{\myref{ReleaseAllChannels}($chans$)} \\
+  \>\pindent\synchro{\myref{ReleaseAllChannels}($chans$, $nbchans$)} \\
   \>\>\compiletime{Compile(\kw{end}, STATUS\_BLOCKED)} \\
   \>\kw{endif} \\
   \>\compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $0$ \kw{to} $n-1$} \\
@@ -635,7 +635,7 @@ $ $\newline
   \>\>\kw{endif} \\
   \>\compiletime{\kw{cendfor}} \\
   \>\synchro{Acquire($pt.lock$)} \\
-  \>\synchro{\myref{ReleaseAllChannels}($chans$)} \\
+  \>\synchro{\myref{ReleaseAllChannels}($chans$, $nbchans$)} \\
   \>\compiletime{\myref{CompileWait()}} \\
   \>\compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $0$ \kw{to} $n-1$} \\
   \>\pindent \kw{case} $@choice\_cont[i]:$ \\
@@ -653,17 +653,18 @@ $ $\newline
   \>\compiletime{$choice\_cont \leftarrow$ GenerateLabel()} \\
   \>\compiletime{\kw{cvar} $choice\_stuck$ : \kw{dynLabel}} \\
   \>\compiletime{$choice\_stuck \leftarrow$ GenerateLabel()} \\
-  \>\kw{var} $chans$ : Set[\myref{Channel}] \\
-  \>$chans \leftarrow \{\}$ \\
+  \>\kw{var} $chans$ : Array[\myref{Channel}]($1$) \\
+  \>\kw{var} $nbchans$ : \kw{int} \\
+  \>$nbchans \leftarrow 0$ \\
   \>\compiletime{\myref{CompileExpr}($g_i$)} \\
   \>\kw{if} $pt.val$ \kw{then} \\
-  \>\pindent\compiletime{\myref{CompileTryAction}($\alpha_i, chans$)} \\
+  \>\pindent\compiletime{\myref{CompileTryAction}($\alpha_i$)}[$chans$, $nbchans$,$tryresult$] \\
   \>\>\kw{if} $tryresult =$ DISABLED \kw{then} \\
   \>\>\pindent\kw{goto} $@choice\_stuck$ \\
   \>\>\kw{else} \kw{if} $tryresult =$ ENABLED \kw{then} \\
   \>\>\pindent$pt.fuel \leftarrow pt.fuel - 1$ \\
   \>\>\>\kw{if} $pt.fuel = 0$ \kw{then} \\
-  \>\>\>\pindent\synchro{\myref{ReleaseAllChannels}($chans$)} \\
+  \>\>\>\pindent\synchro{\myref{ReleaseAllChannels}($chans$, $nbchans$)} \\
   \>\>\>\>\compiletime{\myref{CompileYield}($choice\_cont$)} \\
   \>\>\>\kw{endif} \\
   \>\>\>\kw{goto} $@choice\_cont$ \\
@@ -683,10 +684,10 @@ $ $\newline
   \>\>\myref{RegisterInputCommitment}($pt, pt.env[c], x, choice\_cont$) \\
   \>\compiletime{\kw{cendif}} \\
   \>\synchro{Acquire($pt.lock$)} \\
-  \>\synchro{\myref{ReleaseAllChannels}($chans$)} \\
+  \>\synchro{\myref{ReleaseAllChannels}($chans$, $nbchans$)} \\
   \>\compiletime{\myref{CompileWait()}} \\
   \> \kw{case} $@choice\_stuck:$ \\
-  \>\>\synchro{\myref{ReleaseAllChannels}($chans$)} \\
+  \>\>\synchro{\myref{ReleaseAllChannels}($chans$, $nbchans$)} \\
   \>\>\compiletime{Compile(\kw{end}, STATUS\_BLOCKED)} \\
   \>\kw{case} $@choice\_cont:$ \\
   \>\>\compiletime{Compile($P$)} \\
@@ -696,7 +697,7 @@ $ $\newline
 \label{CompileTryAction}
 \algosection{Compilation outline for tau prefix try}
 \begin{program}
-  \compiletime{CompileTryAction(\kw{tau}, $chans$ : Set[\myref{Channel}]) $\rightarrow$} \\ \\
+  \compiletime{CompileTryAction(\kw{tau})}[\ldots $tryresult$:\{ENABLED, DISABLED, COMMIT\}] $\rightarrow$ \\ \\
   $tryresult \leftarrow$ ENABLED \\
 \end{program}
 
@@ -704,10 +705,10 @@ $ $\newline
 
 \algosection{Compilation outline for output prefix try}
 \begin{program}
-  \compiletime{CompileTryAction($c!v$:T, $chans$ : Set[\myref{Channel}]) $\rightarrow$} \\ \\
+  \compiletime{CompileTryAction($c!v$:T)}[$chans$ : Array[\myref{Channel}], $nbchans$ : \kw{int}, $tryresult$:\{ENABLED, DISABLED, COMMIT\}] $\rightarrow$ \\ \\
   \kw{begin} \\
   \pindent\kw{var} $commit$ : \myref{InCommit} \\
-  \> $commit \leftarrow$ TryOutputAction($pt$, $c$, $chans$, $\& tryResult$)\\
+  \> $commit \leftarrow$ TryOutputAction($pt$, $c$, $chans$, $\&nbchans$, $\& tryResult$)\\
   \>\kw{if} $tryResult$ = ENABLED \kw{then} \\
   \>\pindent\compiletime{\myref{CompileExpr}($v$)} \\
   \>\>$commit.thread.env[commit.refval] \leftarrow pt.val$ \\
@@ -720,11 +721,14 @@ $ $\newline
 \begin{program}
   \kw{type} TryResult = \{ DISABLED, ENABLED, COMMIT \} \\
 \\
-  \kw{function} TryOutputAction($pt$ : \myref{PiThread}, $chanRef$ : int, $chans$: Set[\myref{Channel}], $tryResult$: \&TryResyult) : \myref{InCommit} \\
-  \pindent \kw{if} SetAdd($chans, pt.env[chanRef]$) \kw{then} \\
-  \>\pindent\synchro{Acquire($pt.env[chanRef].lock$)} \\
+  \kw{function} TryOutputAction(\=$pt$ : \myref{PiThread}, $chanRef$ : int, $chans$: Array[\myref{Channel}], $nbchans$ : \&\kw{int},\\
+\> $tryResult$: \&TryStatus) : \myref{InCommit} \\
+  \pindent \kw{var} $outchan$ : \myref{Channel} \\
+  \> $outchan \leftarrow$ $pt$.$env$[$chanRef$] \\
+  \pindent \kw{if} ChanArrayAdd($outchan$, $chans$, $\&nbchans$) \kw{then} \\
+  \>\pindent\synchro{Acquire($outchan.lock$)} \\
   \>\kw{endif} \\
-  \>\kw{if} $pt.env[chanRef].globalrc = 1$ \kw{then} \\
+  \>\kw{if} $outchan.globalrc = 1$ \kw{then} \\
   \>\pindent$tryResult \leftarrow$ DISABLED \\
   \>\>\kw{return} \kw{null} \\
   \>\kw{endif} \\
@@ -732,7 +736,7 @@ $ $\newline
   \>\kw{var} $ok$ : \{CANNOT\_ACQUIRE, VALID\_COMMITMENT, INVALID\_COMMITMENT\} \\
   \>\\
   \>\kw{do} \\
-  \>\pindent$commit \leftarrow$ \myref{FetchInputCommitment}($pt.env[c]$) \\
+  \>\pindent$commit \leftarrow$ \myref{FetchInputCommitment}($outchan$) \\
   \>\>\kw{if} $commit =$ \kw{null} \kw{then} \\
   \>\>\pindent$tryresult \leftarrow$ COMMIT \\
   \>\>\>\kw{return} \kw{null} \\
@@ -749,12 +753,30 @@ $ $\newline
   \>\>\> $tryResult \leftarrow$ ENABLED \\
   \>\>\> \kw{return} commit \\
   \>\>\kw{endif} \\
-  \>\kw{while} $pt.env[c].incommits \neq \{\}$ \\
+  \>\kw{while} $outchan.incommits \neq \{\}$ \\
   errorDeadCodeReached() \\
   \kw{endfunction}
 \end{program}
 
 \newpage
+
+\algosection{Runtime : add channel in (statically allocated) array set}
+\begin{program}
+  \kw{function} ChanArrayAdd($newchan$ : \myref{Channel}, $chans$: Array[\myref{Channel}], $nbchans$ : \&\kw{int}) : \kw{bool} \\
+  \pindent \kw{var} $i$ : \kw{int} \\
+  \> $i \leftarrow$ 0 \\
+  \> \kw{while} $i$ $<$ $nbchans$ \kw{do}\\
+  \> \pindent \kw{if} $chans$[$i$] = $newchan$ \kw{then} \\
+  \> \> \pindent \kw{return} false \\
+  \> \> \kw{endif} \\
+  \> \> $i \leftarrow$ $i$ + 1 \\
+  \> \kw{endwhile} \\
+  \> $chans$[$nbchans$] = $newchan$ \\
+  \> $nbchans \leftarrow$ $nbchans$ + 1 \\
+  \> \kw{return} true
+  \kw{endfunction}
+\end{program}
+
 
 \algosection{Compilation outline for input prefix try}
 \begin{program}
@@ -779,10 +801,12 @@ $ $\newline
   \kw{type} TryResult = \{ DISABLED, ENABLED, COMMIT \} \\
 \\
   \kw{function} TryInputAction($pt$ : \myref{PiThread}, $chanRef$ : int, $chans$: Set[\myref{Channel}], $tryResult$: \&TryResyult) : \myref{OutCommit} \\
-  \pindent \kw{if} SetAdd($chans, pt.env[chanRef]$) \kw{then} \\
-  \>\pindent\synchro{Acquire($pt.env[chanRef].lock$)} \\
+  \pindent \kw{var} $inchan$ : \myref{Channel} \\
+  \> $inchan \leftarrow$ $pt$.$env$[$chanRef$] \\
+  \> \kw{if} ChanArrayAdd($inchan$, $chans$, $\&nbchans$) \kw{then} \\
+  \>\pindent\synchro{Acquire($inchan.lock$)} \\
   \>\kw{endif} \\
-  \>\kw{if} $pt.env[chanRef].globalrc = 1$ \kw{then} \\
+  \>\kw{if} $inchan.globalrc = 1$ \kw{then} \\
   \>\pindent$tryResult \leftarrow$ DISABLED \\
   \>\>\kw{return} \kw{null} \\
   \>\kw{endif} \\
@@ -790,7 +814,7 @@ $ $\newline
   \>\kw{var} $ok$ : \{CANNOT\_ACQUIRE, VALID\_COMMITMENT, INVALID\_COMMITMENT\} \\
   \>\\
   \>\kw{do} \\
-  \>\pindent$commit \leftarrow$ \myref{FetchOutputCommitment}($pt.env[chanRef]$) \\
+  \>\pindent$commit \leftarrow$ \myref{FetchOutputCommitment}($inchan$) \\
   \>\>\kw{if} $commit =$ \kw{null} \kw{then} \\
   \>\>\pindent$tryresult \leftarrow$ COMMIT \\
   \>\>\>\kw{return} \kw{null} \\
@@ -807,7 +831,7 @@ $ $\newline
   \>\>\> $tryResult \leftarrow$ ENABLED \\
   \>\>\> \kw{return} commit \\
   \>\>\kw{endif} \\
-  \>\kw{while} $pt.env[chanRef].outcommits \neq \{\}$ \\
+  \>\kw{while} $inchan.outcommits \neq \{\}$ \\
   errorDeadCodeReached() \\
   \kw{endfunction}
 \end{program}
