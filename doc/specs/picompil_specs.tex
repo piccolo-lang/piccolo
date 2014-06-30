@@ -23,6 +23,7 @@
 \newcommand{\pindent}{\hspace{2em}\=}
 \newcommand{\compiletime}[1]{\textcolor{compilecolor}{#1}}
 \newcommand{\synchro}[1]{\textcolor{synchrocolor}{#1}}
+\newcommand{\code}[1]{\textsf{#1}}
 
 \newcommand{\algotitle}[1]{\noindent\\ \noindent#1\par\nobreak\vspace{3pt}\hrule\vspace{6pt}}
 \newcommand{\algosection}[1]{
@@ -435,7 +436,36 @@ $ $\newline
   \kw{endfunction}
 \end{program}
 
-\newpage
+%%%%%%%%%%%%%%% Section SYNTAX %%%%%%%%%%%%%%%
+
+\section{Syntax}
+
+
+\begin{tabular}{llll}
+Module & ::= & \kw{module} $moduleId$ Definition$+$ & (module definition) \\
+\\
+Definition & ::= &  \kw{def} $D(x_1:T_1, ..., x_n:T_n) = $ Process & (process definition) \\
+\\
+Process & ::= & PrefixProcess & (prefixed process) \\
+        &    &  $|$ ChoiceProcess & (choice process) \\
+        &    &  $|$ $D(v_1$:T$_1, ..., v_n$:T$_n)$ & (tail-call process) \\
+        &    &  $|$ \kw{end} & (end process) \\
+\\
+PrefixProcess & ::= & $chan$\code{!}$val$ \code{,} Process & (output prefix) \\
+              &     & $|$ $chan$\code{?}$(x:T)$ \code{,} Process & (input prefix) \\
+              &     & $|$ \kw{new}$(chan:T)$ \code{,} Process & (new channel prefix) \\
+              &     & $|$ \kw{spawn}\code{\{}$(D(v_1$:T$_1, ..., v_n$:T$_n))$\code{\}} \code{,} Process & (spawn process prefix) \\
+              &     & $|$ \kw{let}$(x:T=v)$\code{,} Process & (let prefix) \\
+              &     & $|$ \code{\#}$prim(v_1$:T$_1, ..., v_n$:T$_n)$\code{,} Process & (primitive call prefix) \\
+\\
+ChoiceProcess & ::= & $\sum_{i=0}^{n-1}$\code{[}Guard$_i$\code{]} ProcessBranch$_i$ \\
+\\
+ProcessBranch & ::= & \kw{tau} \code{,} Process & (silent branch) \\
+              &     & $|$ $chan$\code{!}$val$ \code{,} Process & (output branch) \\
+              &     & $|$ $chan$\code{?}$(x:T)$ \code{,} Process & (input branch) \\
+            
+\end{tabular}
+
 
 %%%%%%%%%%%%%%% Section COMPILATION %%%%%%%%%%%%%%%
 \section{Compilation outlines and runtime functions}
