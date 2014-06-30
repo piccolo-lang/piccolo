@@ -10,12 +10,13 @@ during the whole compilation process.
 module Front.AST where
 
 -- | The 'Location' type is a record of line and columns informations
-data Location = Location { locOffset      :: !Int  -- ^ absolute offset of the block in the file
-                         , locStartLine   :: !Int  -- ^ line of the beginning of the block
-                         , locStartColumn :: !Int  -- ^ column of the beginning of the block
-                         , locEndLine     :: !Int  -- ^ line of the end of the block
-                         , locEndColumn   :: !Int  -- ^ column of the end of the block
-                         } deriving (Eq)
+data Location
+  = Location { locOffset      :: !Int  -- ^ absolute offset of the block in the file
+  , locStartLine   :: !Int  -- ^ line of the beginning of the block
+  , locStartColumn :: !Int  -- ^ column of the beginning of the block
+  , locEndLine     :: !Int  -- ^ line of the end of the block
+  , locEndColumn   :: !Int  -- ^ column of the end of the block
+  } deriving (Eq)
 
 instance Show Location where
   show loc = show (locStartLine loc) ++ ":" ++ show (locStartColumn loc) ++ "->" ++
@@ -37,7 +38,7 @@ data TypeExpr
   | TTuple   { typExprs :: [TypeExpr], typLoc :: Location }
   | TPrim    { typArgs :: [TypeExpr], typRet :: TypeExpr, typLoc :: Location }
 
--- | Atomic types are in the separate datatype 'TypeAtom' that is used by 'TypeExpr'
+-- | Atomic types are in the separate datatype 'TypeAtom' which is used by 'TypeExpr'
 data TypeAtom
   = TBool
   | TInt
@@ -68,26 +69,16 @@ data Value
   | VVar    { valVar  :: String, valTyp :: TypeExpr, valLoc :: Location, valIndex :: Int }
   | VPrim   { valModule :: String, valName :: String, valArgs :: [Value], valTyp :: TypeExpr, valLoc :: Location }
 
--- | A piccolo program is made of processes. A process expression can be:
---
---   * an inert process 'PEnd'
---
---   * a guarded choice 'PChoice'
---
---   * a call to a process definition 'PCall'
 data Process
   = PEnd    { procLoc :: Location }
+  | PPrefix { procPref :: Action, procCont :: Process, procLoc :: Location }
   | PChoice { procBranches :: [Branch], procLoc :: Location }
   | PCall   { procModule :: String, procName :: String, procArgs :: [Value], procLoc ::  Location }
 
--- | A 'Branch' is a possible continuation for a choice process.
--- It is guarded by a boolean value and an action.
 data Branch
-  = Branch { bGuard  :: Value
-           , bAction :: Action
-           , bCont   :: Process
-           , bLoc    :: Location
-           }
+  = BTau    { brGuard :: Value, brCont :: Process, brLoc :: Location }
+  | BOutput { brGuard :: Value, brChan :: String, brData :: Value, brChanIndex :: Int, brCont :: Process, brLoc :: Location }
+  | BInput  { brGuard :: Value, brChan :: String, brBind :: String, brChanIndex :: Int, brBindIndex :: Int, brCont :: Process, brLoc :: Location }
 
 -- | 'Action' datatype represents the atomic actions of the piccolo language.
 -- As contrary as traditionnal presentation of pi-calculus,
@@ -95,29 +86,29 @@ data Branch
 -- Moreover, to manipulate value expressions, we defines a "let" and a primitive call action.
 -- 'ASpawn' action is used to spawn a parallel process which will be executing the given piccolo process definition.
 data Action
-  = ATau    { actLoc :: Location }
-  | AOutput { actChan :: String, actData :: Value, actLoc :: Location }
-  | AInput  { actChan :: String, actBind :: String, actLoc :: Location }
-  | ANew    { actBind :: String, actTyp :: TypeExpr, actLoc :: Location }
-  | ALet    { actBind :: String, actTyp :: TypeExpr, actVal :: Value, actLoc :: Location }
+  = AOutput { actChan :: String, actData :: Value, actChanIndex :: Int, actLoc :: Location }
+  | AInput  { actChan :: String, actBind :: String, actChanIndex :: Int, actBindIndex :: Int, actLoc :: Location }
+  | ANew    { actBind :: String, actBindIndex :: Int, actTyp :: TypeExpr, actLoc :: Location }
+  | ALet    { actBind :: String, actBindIndex :: Int, actTyp :: TypeExpr, actVal :: Value, actLoc :: Location }
   | ASpawn  { actModule :: String, actName :: String, actArgs :: [Value], actLoc :: Location }
   | APrim   { actModule :: String, actName :: String, actArgs :: [Value], actLoc :: Location }
 
 -- | To spawn or (possibly recursively) call a process definition, the 'Definition' type defines
 -- a process definition attached with parameter names and types.
 data Definition
-  = Definition { defName   :: String
-               , defParams :: [(String, TypeExpr, Location)]
-               , defBody   :: Process
-               , defLoc    :: Location
+  = Definition { defName    :: String
+               , defParams  :: [(String, TypeExpr, Location)]
+               , defBody    :: Process
+               , defEnvSize :: Int
+               , defLoc     :: Location
                }
 
 -- | 'ModuleDef' defines the main node of a piccolo AST. It contains several process definitions.
 -- If a "Main" definition is defined, it is the entry point when the compiled version of the module
 -- will be executed.
-data ModuleDef
-  = ModuleDef { moduleName :: String
-              , moduleDefs :: [Definition]
-              , moduleLoc  :: Location
-              }
+data Modul
+  = Modul { modName :: String
+          , modDefs :: [Definition]
+          , modLoc  :: Location
+          }
 

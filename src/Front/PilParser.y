@@ -2,7 +2,8 @@
 {-|
 Module         : Front.PilParser
 Description    : Piccolo parser
-Stability      : experimental
+Sanalysinguin718
+stability      : experimental
 
 This module uses Happy parsing tool to parse piccolo file.
 -}
@@ -63,8 +64,8 @@ import Control.Arrow
 
 %%
 
-ModuleDef :: { ModuleDef }
-ModuleDef : 'module' ModuleID Definitions { ModuleDef $2 $3 $ mkLoc' (defLoc $ head $3) (defLoc $ last $3) }
+ModuleDef :: { Modul }
+ModuleDef : 'module' ModuleID Definitions { Modul $2 $3 $ mkLoc' (defLoc $ head $3) (defLoc $ last $3) }
 
 ModuleID :: { String }
 ModuleID : an_ident              { contentString $1 }
@@ -75,7 +76,7 @@ Definitions : Definition             { [$1] }
             | Definition Definitions { $1:$2 }
 
 Definition :: { Definition }
-Definition : 'def' an_ident ParamList '=' Process { Definition (contentString $2) $3 $5 $ mkLoc' (tokenLoc $1) (procLoc $5) }
+Definition : 'def' an_ident ParamList '=' Process { Definition (contentString $2) $3 $5 (-1) $ mkLoc' (tokenLoc $1) (procLoc $5) }
 
 ParamList :: { [(String,TypeExpr,Location)] }
 ParamList : '(' ')'        { [] }
@@ -92,7 +93,8 @@ Param : an_ident ':' TypeDef { (contentString $1, $3, mkLoc' (tokenLoc $1) (typL
 Process :: { Process }
 Process : 'end'         { PEnd $ tokenLoc $1 }
         | Call          { $1 }
-        | ChoiceProcess { PChoice $1 $ mkLoc' (bLoc $ head $1) (bLoc $ last $1) }
+        | ChoiceProcess { PChoice $1 $ mkLoc' (brLoc $ head $1) (brLoc $ last $1) }
+        | PrefixProcess { let (act,cont) = $1 in PPrefix act cont $ mkLoc' (actLoc act) (procLoc cont) }
 
 Call :: { Process }
 Call : '#' ModuleID ':' an_ident '(' ')'        { PCall $2 (contentString $4) [] $ mkLoc $1 $6 }
@@ -105,18 +107,18 @@ ChoiceProcess : Branch                   { [$1] }
               | Branch '+' ChoiceProcess { $1:$3 }
 
 Branch :: { Branch }
-Branch : '[' Value ']' Action ',' Process { Branch $2 $4 $6 $ mkLoc' (tokenLoc $1) (procLoc $6) }
-       | Action ',' Process               { let tLoc = actLoc $1 in
-                                            let t = Location (locOffset tLoc) (locStartLine tLoc) (locStartColumn tLoc)
-                                                                              (locStartLine tLoc) (locStartColumn tLoc) in
-                                            Branch (VTrue (TUnknown noLoc) t) $1 $3 $ mkLoc' (actLoc $1) (procLoc $3) }
+Branch : '[' Value ']' 'tau' ',' Process                         { BTau $2 $6 $ mkLoc' (tokenLoc $1) (procLoc $6) }
+       | '[' Value ']' an_ident '!' Value ',' Process            { BOutput $2 (contentString $4) $6 (-1) $8 $ mkLoc' (tokenLoc $1) (procLoc $8) }
+       | '[' Value ']' an_ident '?' '(' an_ident ')' ',' Process { BInput $2 (contentString $4) (contentString $7) (-1) (-1) $10 $ mkLoc' (tokenLoc $1) (procLoc $10) }
+
+PrefixProcess :: { (Action, Process) }
+PrefixProcess : Action ',' Process { ($1, $3) }
 
 Action :: { Action }
-Action : 'tau'                                        { ATau $ tokenLoc $1 }
-       | an_ident '!' Value                           { AOutput (contentString $1) $3 $ mkLoc' (tokenLoc $1) (valLoc $3) }
-       | an_ident '?' '(' an_ident ')'                { AInput (contentString $1) (contentString $4) $ mkLoc $1 $5 }
-       | 'new' '(' an_ident ':' TypeDef ')'           { ANew (contentString $3) $5 $ mkLoc $1 $6 }
-       | 'let' '(' an_ident ':' TypeDef '=' Value ')' { ALet (contentString $3) $5 $7 $ mkLoc $1 $8 }
+Action : an_ident '!' Value                           { AOutput (contentString $1) $3 (-1) $ mkLoc' (tokenLoc $1) (valLoc $3) }
+       | an_ident '?' '(' an_ident ')'                { AInput (contentString $1) (contentString $4) (-1) (-1) $ mkLoc $1 $5 }
+       | 'new' '(' an_ident ':' TypeDef ')'           { ANew (contentString $3) (-1) $5 $ mkLoc $1 $6 }
+       | 'let' '(' an_ident ':' TypeDef '=' Value ')' { ALet (contentString $3) (-1) $5 $7 $ mkLoc $1 $8 }
        | 'spawn' '{' Call '}'                         { let PCall m k vs _ = $3 in ASpawn m k vs $ mkLoc $1 $4 }
        | '#' ModuleID ':' an_ident '(' ')'            { APrim $2 (contentString $4) [] $ mkLoc $1 $6 }
        | '#' ModuleID ':' an_ident '(' Values ')'     { APrim $2 (contentString $4) $6 $ mkLoc $1 $7 }
@@ -174,7 +176,7 @@ mkLoc :: Token -> Token -> Location
 mkLoc tok1 tok2 = mkLoc' (tokenLoc tok1) (tokenLoc tok2)
 
 -- | The 'parseModule' function takes a 'String' argument containing a piccolo program
--- and returns either a parsing error, or the corresponding 'Front.AST.ModuleDef'.
-parseModule :: String -> Either PiccError ModuleDef
+-- and returns either a parsing error, or the corresponding 'Front.AST.Modul'.
+parseModule :: String -> Either PiccError Modul
 parseModule s = left ParsingError $ runAlex s parse
 }

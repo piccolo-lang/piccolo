@@ -6,11 +6,11 @@ Stability      : experimental
 
 The piccolo can be invoked with the following options:
 
-  * --help or -h    prints the help
+  * --help or -h                   prints the help
 
-  * --generic or -g produces generic code
+  * --generic or -g                produces generic code
 
-  * --sast or -s    print AST in s-expressions style for debugging purposes
+  * --sast<level> or -s<level>     print AST<level> in s-expressions style for debugging purposes
 
 It waits for one or more pi-file names and produces by default C code in a.out.
 -}
@@ -19,8 +19,9 @@ module Main where
 import PiccError
 import Front.PilParser
 import Front.AST
+import Front.ASTUtils
 import Middle.Typing
-import Middle.IndexesComputations
+import Middle.Environments
 import Middle.Compilation
 import Back.SeqAST
 import Back.Backend hiding (null)
@@ -46,18 +47,28 @@ main = do
 handleFiles :: [Flag] -> [String] -> IO ()
 handleFiles args [] = return ()
 handleFiles args (f:fs) = do
-  content   <- readFile f
-  ast       <- reportResult $ parseModule content
-  when (SAST `elem` args) $ print ast
-  typedAst  <- reportResult $ typingPass ast
-  transfAst <- reportResult $ computingIndexesPass typedAst
-  emittedCode <- reportResult $ if Generic `elem` args
-    then compileToGeneric transfAst
-    else compileToC       transfAst
-  hOut <- openFile "a.out" WriteMode
-  hPutStr hOut emittedCode
-  hClose hOut
-  putStrLn $ "successfully compiled " ++ f ++ " file into a.out"
+  content  <- readFile f
+  ast      <- reportResult $ parseModule content
+  when ((SAST SimplePrint)  `elem` args) $ do
+    putStrLn "------------------------------ output of the parsed AST"
+    putStrLn (strSExpr [] ast)
+    putStrLn ""
+  typedAst <- reportResult $ typingPass ast
+  when ((SAST PrintTypes)   `elem` args) $ do
+    putStrLn "------------------------------ output of the typed AST"
+    putStrLn (strSExpr [PrintTypes] typedAst)
+    putStrLn ""
+  withEnv  <- reportResult $ computingEnvPass typedAst
+  when ((SAST PrintIndexes) `elem` args) $ do
+    putStrLn "------------------------------ output of the decorated AST"
+    putStrLn (strSExpr [PrintIndexes] withEnv)
+    putStrLn ""
+  emittedCode    <- reportResult $ if Generic `elem` args
+    then compileToGeneric withEnv
+    else compileToC       withEnv
+  if Generic `elem` args
+    then outputCode emittedCode f "a.out"
+    else outputCode emittedCode f "a.c"
   handleFiles args fs
 
 -- | The 'compileToGeneric' function compiles a piccolo AST using the generic backend
@@ -74,11 +85,18 @@ compileToC piAst = do
   let output = runEmitterM (emitCode "Main" seqAst)
   return output
 
+outputCode :: String -> String -> String -> IO ()
+outputCode code f fname = do
+  hOut <- openFile fname WriteMode
+  hPutStr hOut code
+  hClose hOut
+  putStrLn $ "successfully compiled " ++ f ++ " into " ++ fname
+
 -- | Various flags for compiler options
 data Flag
-  = Help       -- ^ \--help or -h
-  | Generic    -- ^ \--generic or -g
-  | SAST       -- ^ \--sast or -s
+  = Help              -- ^ \--help or -h
+  | Generic           -- ^ \--generic or -g
+  | SAST PrintLevel   -- ^ \--sast or -s
   deriving Eq
 
 -- | Flags description to parse with "System.Console.GetOpt" module
@@ -88,7 +106,11 @@ flags =
       "Print this help message"
   , Option "g" ["generic"] (NoArg Generic)
       "Produce generic code instead of C code"
-  , Option "s" ["sast"] (NoArg SAST)
+  , Option "s0" ["sast0"] (NoArg (SAST SimplePrint))
+      "Print AST in s-epxressions style for debugging purposes"
+  , Option "s1" ["sast1"] (NoArg (SAST PrintTypes))
+      "Print AST in s-epxressions style for debugging purposes"
+  , Option "s2" ["sast2"] (NoArg (SAST PrintIndexes))
       "Print AST in s-epxressions style for debugging purposes"
   ]
 
@@ -105,4 +127,3 @@ parseArgs argv = case getOpt Permute flags argv of
     putStrLn (concat errs ++ usageInfo header flags)
     exitWith $ ExitFailure 1
   where header = "Usage: piccolo [-hgs] [file ...]"
-

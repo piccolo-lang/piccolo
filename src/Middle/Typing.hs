@@ -41,16 +41,16 @@ getVarType v loc = do
 
 -- | The 'typingPass' function typechecks each definition of a module,
 -- and return either a 'PiccError' or the type annotated version of this module.
-typingPass :: ModuleDef -> Either PiccError ModuleDef
-typingPass mDef = evalState (runErrorT tChecked) initEnv
-  where initEnv  = (moduleDefs mDef, Map.empty)
-        tChecked = tcModule mDef
+typingPass :: Modul -> Either PiccError Modul
+typingPass m = evalState (runErrorT tChecked) initEnv
+  where initEnv  = (modDefs m, Map.empty)
+        tChecked = tcModul m
 
 
-tcModule :: ModuleDef -> TypingM ModuleDef
-tcModule mDef = do
-  defs <- mapM tcDefinition $ moduleDefs mDef
-  return $ mDef { moduleDefs = defs }
+tcModul :: Modul -> TypingM Modul
+tcModul m = do
+  defs <- mapM tcDefinition $ modDefs m
+  return $ m { modDefs = defs }
 
 tcDefinition :: Definition -> TypingM Definition
 tcDefinition def = do
@@ -59,60 +59,79 @@ tcDefinition def = do
   return $ def { defBody = proc }
 
 tcProcess :: Process -> TypingM Process
-tcProcess proc@(PEnd {}) = return proc
-tcProcess proc@(PChoice {}) = do
+tcProcess proc@PEnd    {} = return proc
+tcProcess proc@PPrefix {} = do
+  action   <- tcAction $ procPref proc
+  cont     <- tcProcess $ procCont proc
+  return $ proc { procPref = action, procCont = cont }
+tcProcess proc@PChoice {} = do
   branches <- mapM tcBranch $ procBranches proc
   return $ proc { procBranches = branches }
-tcProcess proc@(PCall { procName = name }) = do
-  (defs,_) <- lift get
-  def <- case find (\d@(Definition { defName = n }) -> n == name) defs of
+tcProcess proc@PCall { procName = name } = do
+  (defs, _) <- lift get
+  def <- case find (\d -> defName d == name) defs of
            Nothing -> throwError $ DefNotFoundError name (localize proc)
            Just d  -> return d
   let typParams = map (\(_,t,_) -> t) $ defParams def
   args <- mapM tcValue $ procArgs proc
-  let typArgs   = map valTyp args
+  let typArgs = map valTyp args
   when (length typParams /= length typArgs) $
     throwError $ ArityError name (localize proc) (length typParams) (length typArgs)
   forM_ (zip typParams typArgs) (\(p,a) -> when (p /= a) $ throwError (SimpleError "bad type in proc"))
   return $ proc { procArgs = args }
 
 tcBranch :: Branch -> TypingM Branch
-tcBranch branch = do
-  guard  <- tcValue   $ bGuard branch
-  action <- tcAction  $ bAction branch
-  cont   <- tcProcess $ bCont branch
-  return $ branch { bGuard = guard, bAction = action, bCont = cont }
+tcBranch br@BTau    {} = do
+  guard <- tcValue $ brGuard br
+  cont  <- tcProcess $ brCont br
+  return $ br { brGuard = guard, brCont = cont }
+tcBranch br@BOutput {} = do
+  guard   <- tcValue $ brGuard br
+  chanTyp <- getVarType (brChan br) (localize br)
+  dat     <- tcValue $ brData br
+  when (chanTyp /= TChannel (valTyp dat) noLoc) $
+    throwError (SimpleError "bad channel type for output")
+  cont    <- tcProcess $ brCont br
+  return $ br { brGuard = guard, brData = dat, brCont = cont }
+tcBranch br@BInput {} = do
+  guard   <- tcValue $ brGuard br
+  chanTyp <- getVarType (brChan br) (localize br)
+  dataTyp <- case chanTyp of
+    TChannel { typExpr = typExpr } -> return typExpr
+    _ -> throwError (SimpleError "input on a variable that is not a channel")
+  putVarType (brBind br) dataTyp
+  cont    <- tcProcess $ brCont br
+  return $ br { brGuard = guard, brCont = cont }
 
 tcAction :: Action -> TypingM Action
-tcAction act@(ATau {}) = return act
-tcAction act@(AOutput { actChan = actChan, actData = actData }) = do
-  chanTyp <- getVarType actChan (localize act)
-  dat     <- tcValue actData
+tcAction act@AOutput {} = do
+  chanTyp <- getVarType (actChan act) (localize act)
+  dat     <- tcValue (actData act)
   when (chanTyp /= TChannel (valTyp dat) noLoc) $
     throwError (SimpleError "bad channel type for output")
   return $ act { actData = dat }
-tcAction act@(AInput {}) = do
+tcAction act@AInput  {} = do
   chanTyp <- getVarType (actChan act) (localize act)
   dataTyp <- case chanTyp of
     TChannel { typExpr = typExpr } -> return typExpr
     _ -> throwError (SimpleError "input on a variable that is not a channel")
   putVarType (actBind act) dataTyp
   return act
-tcAction act@(ANew {}) = do
+tcAction act@ANew    {} = do
   case actTyp act of
     TChannel {} -> return ()
     _ -> throwError (SimpleError "creating with \"new\" a var that is not a channel")
   putVarType (actBind act) (actTyp act)
   return act
-tcAction act@(ALet {}) = do
+tcAction act@ALet    {} = do
   val <- tcValue $ actVal act
   when (actTyp act /= valTyp val) $
     throwError (SimpleError "wrong type in let")
   putVarType (actBind act) (actTyp act)
   return $ act { actVal = val }
-tcAction act@(ASpawn { actName = name }) = do
+tcAction act@ASpawn { actName = name} = do
   (defs,_) <- lift get
-  def <- case find (\d@(Definition { defName = n }) -> n == name) defs of
+  def <- case find (\d -> defName d == name) defs of
            Nothing -> throwError (SimpleError $ "proc def " ++ name ++ " not found")
            Just d  -> return d
   let typParams = map (\(_,t,_) -> t) $ defParams def
@@ -120,9 +139,10 @@ tcAction act@(ASpawn { actName = name }) = do
   let typArgs   = map valTyp args
   when (length typParams /= length typArgs) $
     throwError $ ArityError name (localize act) (length typParams) (length typArgs)
-  forM_ (zip typParams typArgs) (\(p,a) -> when (p /= a) $ throwError (SimpleError "bad type in spawn"))
+  forM_ (zip typParams typArgs) (\(p,a) ->
+    when (p /= a) $ throwError (SimpleError "bad type in spawn"))
   return $ act { actArgs = args }
-tcAction act@(APrim { actModule = m, actName = n }) = do
+tcAction act@APrim { actModule = m, actName = n } = do
   (_, typParams) <- case Map.lookup (m,n) primTypes of
     Nothing -> throwError $ PrimNotFoundError ("#" ++ m ++ ":" ++ n) (localize act)
     Just t  -> return t
@@ -134,18 +154,18 @@ tcAction act@(APrim { actModule = m, actName = n }) = do
   return $ act { actArgs = args }
 
 tcValue :: Value -> TypingM Value
-tcValue val@(VTrue {})   = return $ val { valTyp = TAtom TBool noLoc }
-tcValue val@(VFalse {})  = return $ val { valTyp = TAtom TBool noLoc }
-tcValue val@(VInt {})    = return $ val { valTyp = TAtom TInt noLoc }
-tcValue val@(VString {}) = return $ val { valTyp = TAtom TString noLoc }
-tcValue val@(VTuple { valVals = vs }) = do
+tcValue val@VTrue   {} = return $ val { valTyp = TAtom TBool noLoc }
+tcValue val@VFalse  {} = return $ val { valTyp = TAtom TBool noLoc }
+tcValue val@VInt    {} = return $ val { valTyp = TAtom TInt noLoc }
+tcValue val@VString {} = return $ val { valTyp = TAtom TString noLoc }
+tcValue val@VTuple { valVals = vs } = do
   typedVals <- mapM tcValue vs
   let tuplTyp = TTuple (map valTyp typedVals) noLoc
   return $ val { valVals = typedVals, valTyp = tuplTyp }
-tcValue val@(VVar { valVar = v }) = do
+tcValue val@VVar { valVar = v } = do
   typ <- getVarType v (localize val)
   return $ val { valTyp = typ }
-tcValue val@(VPrim { valModule = m, valName = n }) = do
+tcValue val@VPrim { valModule = m, valName = n } = do
   (typRet, typParams) <- case Map.lookup (m,n) primTypes of
     Nothing -> throwError $ PrimNotFoundError ("#" ++ m ++ ":" ++ n) (localize val)
     Just t  -> return t
