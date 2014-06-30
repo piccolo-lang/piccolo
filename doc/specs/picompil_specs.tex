@@ -377,6 +377,113 @@ Expression & ::= & Constant \\
   \kw{end}
 \end{program}
 
+\subsection{Compilation of prefixed processes}
+
+\algosection{Compilation of prefixed process}
+\begin{program}
+  \compiletime{Compile($\alpha$,$P$)} $\rightarrow$ \\
+\compiletime{CompilePrefix($\alpha$)} \\
+\compiletime{Compile}($P$)\\
+\end{program}
+
+\algosection{Compilation outline for output prefix}
+\begin{program}
+  \compiletime{CompilePrefix($c!e$:T)} $\rightarrow$ \\ 
+  \compiletime{cvar @prefix\_start : dynLabel} \\
+  \compiletime{@prefix\_start $\leftarrow$ GenerateLabel()} \\
+  \compiletime{cvar @prefix\_cont : dynLabel} \\
+  \compiletime{@prefix\_cont $\leftarrow$ GenerateLabel()} \\
+  \kw{case} @prefix\_start: \\
+  \kw{begin} \\
+   \pindent\kw{var} $commit$ : \myref{InCommit} \\
+   \> \kw{var} $ok$ : \kw{bool} \\
+   \> $ok \leftarrow $ ProcessAcquireChannel($pt$, $pt.env[c]$) \\
+  \> \kw{if} \kw{not} $ok$  \kw{then} \\
+  \> \pindent $pt.pc \leftarrow $ @prefix\_start \\
+  \>  \> ProcessYield($pt$) \\
+  \>  \> \kw{return}\\
+  \>  \kw{endif} \\
+  \> $commit \leftarrow$ TryOutputAction($pt$, $c$, $\& tryResult$)\\
+  \>\kw{if} $tryResult$ = ENABLED \kw{then} \\
+  \>\pindent \synchro{ReleaseChannel($pt.env[c]$)} \\
+  \>\>\compiletime{\myref{CompileExpr}($e$)} \\
+  \>\>$commit.thread.env[commit.refval] \leftarrow pt.val$ \\
+  \>\>\myref{Awake}($scheduler$, $commit.thread$, $commit$) \\
+  \>\>\kw{goto} @prefix\_cont \\
+ \> \kw{elseif} $tryResult$ = DISABLED \kw{then} \\
+ \> \> \synchro{ReleaseChannel($pt.env[c]$)} \\
+ \> \> \myref{ProcessEnd}($pt$, STATUS\_BLOCKED) \\
+ \> \> \kw{return} \\
+ \> \kw{endif}\\
+\\
+  \>\kw{var} $eval$ : \kw{function}($pt$ : PiThread) : Value = \\
+  \>\pindent\kw{begin} \\
+  \>\>\pindent\compiletime{\myref{CompileExpr}($v$)} \\
+  \>\>\>\kw{return} $pt.val$ \\
+  \>\> \kw{end} \\
+  \> \myref{RegisterOutputCommitment}($pt, pt.env[c], eval, @prefix\_cont$) \\
+  \>\synchro{Acquire($pt.lock$)} \\
+  \>\synchro{\myref{ReleaseChannel}($pt.env[c]$)} \\
+  \>\synchro{\myref{ProcessWait}($pt$)} \\
+  \>\kw{return} \\
+  \kw{end} \\
+ \kw{case} \@prefix\_cont:
+\end{program}
+
+\algosection{Runtime : try output action}
+\begin{program}
+  \kw{type} TryResult = \{ DISABLED, ENABLED, COMMIT \} \\
+\\
+  \kw{function} TryOutputAction(\=$pt$ : \myref{PiThread}, $outchan$ : \myref{Channel}, $tryResult$: \&TryStatus) : \myref{InCommit} \\
+  \kw{begin} \\
+  \pindent\kw{if} $outchan.globalrc = 1$ \kw{then} \\
+  \>\pindent$tryResult \leftarrow$ DISABLED \\
+  \>\>\kw{return} \kw{null} \\
+  \>\kw{endif} \\
+  \>\kw{var} $commit$ : \myref{InCommit} \\
+  \>\kw{var} $ok$ : \{CANNOT\_ACQUIRE, VALID\_COMMITMENT, INVALID\_COMMITMENT\} \\
+  \>\\
+  \>\kw{do} \\
+  \>\pindent$commit \leftarrow$ \myref{FetchInputCommitment}($outchan$) \\
+  \>\>\kw{if} $commit =$ \kw{null} \kw{then} \\
+  \>\>\pindent$tryresult \leftarrow$ COMMIT \\
+  \>\>\>\kw{return} \kw{null} \\
+  \>\>\kw{endif} \\
+
+  \>\>\kw{do} \\
+  \>\>\pindent$ok \leftarrow$ \myref{CanAwake}($commit.thread, commit$) \\
+  \>\>\>\kw{if} $ok =$ CANNOT\_ACQUIRE \kw{then} \\
+  \>\>\>\pindent\synchro{lowLevelYield()} \\
+  \>\>\>\kw{endif} \\
+  \>\>\kw{while} $ok =$ CANNOT\_ACQUIRE \\
+  \>\>\\
+  \>\>\kw{if} $ok =$ VALID\_COMMITMENT \kw{then} \\
+  \>\>\> $tryResult \leftarrow$ ENABLED \\
+  \>\>\> \kw{return} commit \\
+  \>\>\kw{endif} \\
+  \>\kw{while} $outchan.incommits \neq \{\}$ \\
+  \> errorDeadCodeReached() \\
+  \kw{end}
+\end{program}
+
+\algosection{Runtime : Process acquire channel}
+\begin{program}
+  \kw{function} ProcessAcquireChannel($pt$ : \myref{PiThread}, $outchan$ : \myref{Channel}) : \kw{bool} \\
+\kw{begin} \\
+  \pindent \kw{while} \kw{not} \synchro{TryAcquireChannel($outchan$)} \kw{do} \\
+  \> \pindent $pt.fuel \leftarrow pt.fuel - 1$ \\
+  \> \> \kw{if} $pt.fuel = 0$ \kw{then} \\
+  \> \> \pindent \kw{return} \kw{false} \\
+  \> \> \kw{endif} \\
+  \> \> \synchro{low\_level\_yield()} \\
+  \> \kw{endwhile} \\
+  \> \kw{return} \kw{true} \\
+\kw{end} 
+
+\end{program}
+
+
+
 \label{ProcessWait}
 \algosection{Runtime: process wait}
 \begin{program}
@@ -394,16 +501,6 @@ Expression & ::= & Constant \\
 \kw{end}
 \end{program}
 
-
-
-\label{CompileYield}
-\algosection{Compilation outline for yield}
-\begin{program}
-  \compiletime{CompileYield($label\_cont$) $\rightarrow$} \\ \\
-  $pt.pc \leftarrow @label\_cont$ \\
-  \synchro{\myref{ProcessYield}($pt$:\myref{PiThread})} \\
-  \kw{return}
-\end{program}
 
 \label{ProcessYield}
 \algosection{Runtime: process yield}
@@ -501,10 +598,12 @@ Expression & ::= & Constant \\
   \>\>\>\pindent$pt.enabled[i] \leftarrow$ \kw{false} \\
   \>\>\>\>$nbdisabled \leftarrow nbdisabled + 1$ \\
   \>\>\>\kw{else} \kw{if} $tryresult =$ ENABLED \kw{then} \\
+  \>\>\>\pindent\synchro{\myref{ReleaseAllChannels}($chans$, $nbchans$)} \\
   \>\>\>\pindent$pt.fuel \leftarrow pt.fuel - 1$ \\
   \>\>\>\>\kw{if} $pt.fuel = 0$ \kw{then} \\
-  \>\>\>\>\pindent\synchro{\myref{ReleaseAllChannels}($chans$, $nbchans$)} \\
-  \>\>\>\>\>\compiletime{\myref{CompileYield}($choice\_cont[i]$)} \\
+  \>\>\>\>\pindent $pt.pc \leftarrow choice\_cont[i]$ \\
+  \>\>\>\>\>\myref{ProcessYield}($pt$) \\
+  \>\>\>\>\>\kw{return} \\
   \>\>\>\>\kw{endif} \\
   \>\>\>\>\kw{goto} $@choice\_cont[i]$ \\
   \>\>\>\kw{endif} \\
@@ -604,7 +703,6 @@ Expression & ::= & Constant \\
   \kw{endfunction}
 \end{program}
 
-
 \algosection{Runtime : add channel in (statically allocated) array set}
 \begin{program}
   \kw{function} ChanArrayAdd($newchan$ : \myref{Channel}, $chans$: Array[\myref{Channel}], $nbchans$ : \&\kw{int}) : \kw{bool} \\
@@ -621,7 +719,6 @@ Expression & ::= & Constant \\
   \> \kw{return} true
   \kw{endfunction}
 \end{program}
-
 
 \algosection{Compilation outline for input prefix try}
 \begin{program}
