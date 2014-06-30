@@ -223,218 +223,6 @@ $ $\newline
 
 \newpage
 
-\section{Thread queues implementation}
-
-\algosection{ConcurrentReadyQueue implementation}
-
-\label{ReadyQueuePush}
-\begin{program}
-  \kw{function} ReadyQueuePush($rq$ : ReadyQueue, $pt$ : PiThread) \\
-  \pindent\synchro{Acquire($rq.lock$)} \\
-  \>\kw{if} $rq.size = 0$ \kw{then} \\
-  \>\pindent$rq.head \leftarrow pt$ \\
-  \>\>$rq.tail \leftarrow pt$ \\
-  \>\>$pt.next \leftarrow$ \kw{null} \\
-  \>\kw{else} \\
-  \>\pindent$pt.next \leftarrow rq.head$ \\
-  \>\>$rq.head \leftarrow pt$ \\
-  \>\kw{endif} \\
-  \>$rq.size \leftarrow rq.size + 1$ \\
-  \>\synchro{Release($rq.lock$)} \\
-  \kw{endfunction}
-\end{program}
-
-\label{ReadyQueueAdd}
-\begin{program}
-  \kw{function} ReadyQueueAdd($rq$ : ReadyQueue, $pt$ : PiThread) \\
-  \pindent\synchro{Acquire($rq.lock$)} \\
-  \>\kw{if} $rq.size = 0$ \kw{then} \\
-  \>\pindent$rq.head \leftarrow pt$ \\
-  \>\>$rq.tail \leftarrow pt$ \\
-  \>\>$pt.next \leftarrow$ \kw{null} \\
-  \>\kw{else} \\
-  \>\pindent$rq.tail.next \leftarrow pt$ \\
-  \>\>$rq.tail \leftarrow pt$ \\
-  \>\>$pt.next \leftarrow$ \kw{null} \\
-  \>\kw{endif} \\
-  \>$rq.size \leftarrow rq.size + 1$ \\
-  \>\synchro{Release($rq.lock$)} \\
-  \kw{endfunction}
-\end{program}
-
-\label{ReadyQueuePop}
-\begin{program}
-  \kw{function} ReadyQueuePop($rq$ : ReadyQueue) \\
-  \pindent\synchro{Acquire($rq.lock$)} \\
-  \>\kw{if} $rq.size = 0$ \kw{then} \\
-  \>\pindent\synchro{Release($rq.lock$)} \\
-  \>\>\kw{return} \kw{null} \\
-  \>\kw{endif} \\
-  \>\kw{var} $res$ : PiThread \\
-  \>$res \leftarrow rq.head$ \\
-  \>$rq.head \leftarrow res.next$ \\
-  \>$rq.size \leftarrow rq.size - 1$ \\
-  \>\synchro{Release($rq.lock$)} \\
-  \>\kw{return} $res$ \\
-  \kw{endfunction}
-\end{program}
-
-\label{ReadyQueueSize}
-\begin{program}
-  \kw{function} ReadyQueueSize($rq$ : ReadyQueue) \\
-  \pindent\synchro{Acquire($rq.lock$)} \\
-  \>\kw{var} $nb$ : \kw{int} \\
-  \>$nb \leftarrow rq.size$ \\
-  \>\synchro{Release($rq.lock$)} \\
-  \>\kw{return} $nb$ \\
-  \kw{endfunction}
-\end{program}
-
-\algosection{ConcurrentWaitQueue implementation}
-
-\begin{program}
-  /* The WaitQueue is made of two consecutives queues : the active queue and the old queue */
-\end{program}
-
-\label{WaitQueuePush}
-\begin{program}
-  \kw{function} WaitQueuePush($wq$ : WaitQueue, $pt$ : PiThread) \\
-  \pindent\synchro{Acquire($wq.lock$)} \\
-  \>\kw{if} $wq.active.size = 0$ \kw{then} \\
-  \>\pindent$wq.active.head \leftarrow pt$ \\
-  \>\>$wq.active.tail \leftarrow pt$ \\
-  \>\>$pt.next \leftarrow wq.old.head$ \\
-  \>\kw{else} \\
-  \>\pindent$pt.next \leftarrow wq.active.head$ \\
-  \>\>$wq.active.head \leftarrow pt$ \\
-  \>\kw{endif} \\
-  \>$wq.active.size = wq.active.size + 1$ \\
-  \>\synchro{Release($wq.lock$)} \\
-  \kw{endfunction}
-\end{program}
-
-\label{WaitQueueFetch}
-\begin{program}
-  \kw{function} WaitQueueFetch($wq$ : WaitQueue, $pt$ : PiThread) \\
-  \pindent\synchro{Acquire($wq.lock$)} \\
-  \>\kw{var} $zone$ : \{ACTIVE, OLD\} \\
-  \>\kw{var} $current$ : PiThread \\
-  \>\kw{var} $prev$ : PiThread \\
-  \>$zone \leftarrow$ ACTIVE \\
-  \>$current \leftarrow wq.active.head$ \\
-  \>$prev \leftarrow$ \kw{null} \\
-  \>\kw{if} $current =$ \kw{null} \kw{then} \\
-  \>\pindent$zone \leftarrow$ OLD \\
-  \>\>$current \leftarrow wq.old.head$ \\
-  \>\kw{endif} \\
-  \>\kw{while} $current \neq$ \kw{null} \\
-  \>\pindent\kw{if} $current = pt$ \kw{then} \\
-  \>\>\pindent\kw{if} $prev \neq$ \kw{null} \kw{then} \\
-  \>\>\>\pindent$prev.next \leftarrow current.next$\\
-  \>\>\>\kw{endif} \\
-  \>\>\>\kw{if} $zone =$ ACTIVE \kw{then} \\
-  \>\>\>\pindent\kw{if} $current = wq.active.head$ \kw{then} \\
-  \>\>\>\>\pindent$wq.active.head \leftarrow current.next$ \\
-  \>\>\>\>\kw{endif} \\
-  \>\>\>\>\kw{if} $current = wq.active.tail$ \kw{then} \\
-  \>\>\>\>\pindent$wq.active.tail \leftarrow prev$ \\
-  \>\>\>\>\kw{endif} \\
-  \>\>\>\>$wq.active.size \leftarrow wq.active.size - 1$ \\
-  \>\>\>\kw{else} \\
-  \>\>\>\pindent\kw{if} $current = wq.old.head$ \kw{then} \\
-  \>\>\>\>\pindent$wq.old.head \leftarrow current.next$ \\
-  \>\>\>\>\kw{endif} \\
-  \>\>\>\>\kw{if} $current = wq.old.tail$ \kw{then} \\
-  \>\>\>\>\pindent$wq.old.tail \leftarrow prev$ \\
-  \>\>\>\>\kw{endif} \\
-  \>\>\>\>$wq.old.size \leftarrow wq.old.size - 1$ \\
-  \>\>\>\kw{endif} \\
-  \>\>\>\synchro{Release($wq.lock$)} \\
-  \>\>\>\kw{return} $current$ \\
-  \>\>\kw{endif} \\
-  \>\>$prev \leftarrow current$ \\
-  \>\>$current \leftarrow current.next$ \\
-  \>\>\kw{if} $zone =$ ACTIVE \kw{and} $current = wq.old.head$ \kw{then} \\
-  \>\>\pindent$zone \leftarrow$ OLD \\
-  \>\>\kw{endif} \\
-  \>\kw{endwhile} \\
-  \>\synchro{Release($wq.lock$)} \\
-  \>\kw{return} \kw{null} \\
-  \kw{endfunction}
-\end{program}
-
-\label{WaitQueuePushOld}
-\begin{program}
-  \kw{function} WaitQueuePushOld($wq$ : WaitQueue, $pt$ : PiThread) \\
-  \pindent\synchro{Acquire($wq.lock$)} \\
-  \>\kw{if} $wq.old.size = 0$ \kw{then} \\
-  \>\pindent$wq.old.head \leftarrow pt$ \\
-  \>\>$wq.old.tail \leftarrow pt$ \\
-  \>\>$pt.next \leftarrow$ \kw{null} \\
-  \>\kw{else} \\
-  \>\pindent$pt.next \leftarrow wq.old.head$ \\
-  \>\>$wq.old.head \leftarrow pt$ \\
-  \>\kw{endif} \\
-  \>kw{if} $wq.active.size \neq 0$ \kw{then} \\
-  \>\pindent$wq.active.tail.next \leftarrow pt$ \\
-  \>\kw{endif} \\
-  \>$wq.old.size \leftarrow wq.old.size + 1$ \\
-  \>\synchro{Release($wq.lock$)} \\
-  \kw{endfunction}
-\end{program}
-
-\label{WaitQueuePopOld}
-\begin{program}
-  \kw{function} WaitQueuePopOld($wq$ : WaitQueue) \\
-  \pindent\synchro{Acquire($wq.lock$)} \\
-  \>\kw{if} $wq.old.size = 0$ \kw{then} \\
-  \>\pindent\synchro{Release($rq.lock$)} \\
-  \>\>\kw{return} \kw{null} \\
-  \>\kw{endif} \\
-  \>\kw{var} $res$ : PiThread \\
-  \>$res \leftarrow wq.old.tail$ \\
-  \>$wq.old.tail \leftarrow res.prev$ \\
-  \>$wq.old.size \leftarrow wq.old.size - 1$ \\
-  \>\synchro{Release($wq.lock$)} \\
-  \>\kw{return} $res$ \\
-  \kw{endfunction}
-\end{program}
-
-\label{WaitQueueSize}
-\begin{program}
-  \kw{function} WaitQueueSize($wq$ : WaitQueue) \\
-  \pindent\synchro{Acquire($wq.lock$)} \\
-  \>\kw{var} $nb$ : \kw{int} \\
-  \>$nb \leftarrow wq.active.size$ \\
-  \>$nb \leftarrow nb + wq.old.size$ \\
-  \>\synchro{Release($wq.lock$)} \\
-  \>\kw{return} $nb$ \\
-  \kw{endfunction}
-\end{program}
-
-\label{WaitQueueMaxActive}
-\begin{program}
-  \kw{function} WaitQueueMaxActive($wq$ : WaitQueue) \\
-  \pindent\synchro{Acquire($wq.lock$)} \\
-  \>\kw{var} $nb$ : \kw{int} \\
-  \>$nb \leftarrow wq.active.size$ \\
-  \>\synchro{Release($wq.lock$)} \\
-  \>\kw{return} $nb$ \\
-  \kw{endfunction}
-\end{program}
-
-\label{WaitQueueMaxActiveReset}
-\begin{program}
-  \kw{function} WaitQueueMaxActiveReset($wq$ : WaitQueue) \\
-  \pindent\synchro{Acquire($wq.lock$)} \\
-  \>$wq.old.size \leftarrow wq.old.size + wq.active.size$ \\
-  \>$wq.active.size \leftarrow 0$ \\
-  \>$wq.old.head \leftarrow wq.active.head$ \\
-  \>$wq.active.head \leftarrow$ \kw{null} \\
-  \>$wq.active.tail \leftarrow$ \kw{null} \\
-  \>\synchro{Release($wq.lock$)} \\
-  \kw{endfunction}
-\end{program}
 
 %%%%%%%%%%%%%%% Section SYNTAX %%%%%%%%%%%%%%%
 
@@ -1151,6 +939,9 @@ ProcessBranch & ::= & \kw{tau} \code{,} Process & (silent branch) \\
   \kw{endprocedure}
 \end{program}
 
+
+\section{Scheduler}
+
 \label{SchedulerSlave}
 \algosection{Runtime : slave scheduler}
 \begin{program}
@@ -1228,7 +1019,220 @@ ProcessBranch & ::= & \kw{tau} \code{,} Process & (silent branch) \\
   \kw{endprocedure}
 \end{program}
 
-\newpage
+\section{Thread queues implementation}
+
+\algosection{ConcurrentReadyQueue implementation}
+
+\label{ReadyQueuePush}
+\begin{program}
+  \kw{function} ReadyQueuePush($rq$ : ReadyQueue, $pt$ : PiThread) \\
+  \pindent\synchro{Acquire($rq.lock$)} \\
+  \>\kw{if} $rq.size = 0$ \kw{then} \\
+  \>\pindent$rq.head \leftarrow pt$ \\
+  \>\>$rq.tail \leftarrow pt$ \\
+  \>\>$pt.next \leftarrow$ \kw{null} \\
+  \>\kw{else} \\
+  \>\pindent$pt.next \leftarrow rq.head$ \\
+  \>\>$rq.head \leftarrow pt$ \\
+  \>\kw{endif} \\
+  \>$rq.size \leftarrow rq.size + 1$ \\
+  \>\synchro{Release($rq.lock$)} \\
+  \kw{endfunction}
+\end{program}
+
+\label{ReadyQueueAdd}
+\begin{program}
+  \kw{function} ReadyQueueAdd($rq$ : ReadyQueue, $pt$ : PiThread) \\
+  \pindent\synchro{Acquire($rq.lock$)} \\
+  \>\kw{if} $rq.size = 0$ \kw{then} \\
+  \>\pindent$rq.head \leftarrow pt$ \\
+  \>\>$rq.tail \leftarrow pt$ \\
+  \>\>$pt.next \leftarrow$ \kw{null} \\
+  \>\kw{else} \\
+  \>\pindent$rq.tail.next \leftarrow pt$ \\
+  \>\>$rq.tail \leftarrow pt$ \\
+  \>\>$pt.next \leftarrow$ \kw{null} \\
+  \>\kw{endif} \\
+  \>$rq.size \leftarrow rq.size + 1$ \\
+  \>\synchro{Release($rq.lock$)} \\
+  \kw{endfunction}
+\end{program}
+
+\label{ReadyQueuePop}
+\begin{program}
+  \kw{function} ReadyQueuePop($rq$ : ReadyQueue) \\
+  \pindent\synchro{Acquire($rq.lock$)} \\
+  \>\kw{if} $rq.size = 0$ \kw{then} \\
+  \>\pindent\synchro{Release($rq.lock$)} \\
+  \>\>\kw{return} \kw{null} \\
+  \>\kw{endif} \\
+  \>\kw{var} $res$ : PiThread \\
+  \>$res \leftarrow rq.head$ \\
+  \>$rq.head \leftarrow res.next$ \\
+  \>$rq.size \leftarrow rq.size - 1$ \\
+  \>\synchro{Release($rq.lock$)} \\
+  \>\kw{return} $res$ \\
+  \kw{endfunction}
+\end{program}
+
+\label{ReadyQueueSize}
+\begin{program}
+  \kw{function} ReadyQueueSize($rq$ : ReadyQueue) \\
+  \pindent\synchro{Acquire($rq.lock$)} \\
+  \>\kw{var} $nb$ : \kw{int} \\
+  \>$nb \leftarrow rq.size$ \\
+  \>\synchro{Release($rq.lock$)} \\
+  \>\kw{return} $nb$ \\
+  \kw{endfunction}
+\end{program}
+
+\algosection{ConcurrentWaitQueue implementation}
+
+\begin{program}
+  /* The WaitQueue is made of two consecutives queues : the active queue and the old queue */
+\end{program}
+
+\label{WaitQueuePush}
+\begin{program}
+  \kw{function} WaitQueuePush($wq$ : WaitQueue, $pt$ : PiThread) \\
+  \pindent\synchro{Acquire($wq.lock$)} \\
+  \>\kw{if} $wq.active.size = 0$ \kw{then} \\
+  \>\pindent$wq.active.head \leftarrow pt$ \\
+  \>\>$wq.active.tail \leftarrow pt$ \\
+  \>\>$pt.next \leftarrow wq.old.head$ \\
+  \>\kw{else} \\
+  \>\pindent$pt.next \leftarrow wq.active.head$ \\
+  \>\>$wq.active.head \leftarrow pt$ \\
+  \>\kw{endif} \\
+  \>$wq.active.size = wq.active.size + 1$ \\
+  \>\synchro{Release($wq.lock$)} \\
+  \kw{endfunction}
+\end{program}
+
+\label{WaitQueueFetch}
+\begin{program}
+  \kw{function} WaitQueueFetch($wq$ : WaitQueue, $pt$ : PiThread) \\
+  \pindent\synchro{Acquire($wq.lock$)} \\
+  \>\kw{var} $zone$ : \{ACTIVE, OLD\} \\
+  \>\kw{var} $current$ : PiThread \\
+  \>\kw{var} $prev$ : PiThread \\
+  \>$zone \leftarrow$ ACTIVE \\
+  \>$current \leftarrow wq.active.head$ \\
+  \>$prev \leftarrow$ \kw{null} \\
+  \>\kw{if} $current =$ \kw{null} \kw{then} \\
+  \>\pindent$zone \leftarrow$ OLD \\
+  \>\>$current \leftarrow wq.old.head$ \\
+  \>\kw{endif} \\
+  \>\kw{while} $current \neq$ \kw{null} \\
+  \>\pindent\kw{if} $current = pt$ \kw{then} \\
+  \>\>\pindent\kw{if} $prev \neq$ \kw{null} \kw{then} \\
+  \>\>\>\pindent$prev.next \leftarrow current.next$\\
+  \>\>\>\kw{endif} \\
+  \>\>\>\kw{if} $zone =$ ACTIVE \kw{then} \\
+  \>\>\>\pindent\kw{if} $current = wq.active.head$ \kw{then} \\
+  \>\>\>\>\pindent$wq.active.head \leftarrow current.next$ \\
+  \>\>\>\>\kw{endif} \\
+  \>\>\>\>\kw{if} $current = wq.active.tail$ \kw{then} \\
+  \>\>\>\>\pindent$wq.active.tail \leftarrow prev$ \\
+  \>\>\>\>\kw{endif} \\
+  \>\>\>\>$wq.active.size \leftarrow wq.active.size - 1$ \\
+  \>\>\>\kw{else} \\
+  \>\>\>\pindent\kw{if} $current = wq.old.head$ \kw{then} \\
+  \>\>\>\>\pindent$wq.old.head \leftarrow current.next$ \\
+  \>\>\>\>\kw{endif} \\
+  \>\>\>\>\kw{if} $current = wq.old.tail$ \kw{then} \\
+  \>\>\>\>\pindent$wq.old.tail \leftarrow prev$ \\
+  \>\>\>\>\kw{endif} \\
+  \>\>\>\>$wq.old.size \leftarrow wq.old.size - 1$ \\
+  \>\>\>\kw{endif} \\
+  \>\>\>\synchro{Release($wq.lock$)} \\
+  \>\>\>\kw{return} $current$ \\
+  \>\>\kw{endif} \\
+  \>\>$prev \leftarrow current$ \\
+  \>\>$current \leftarrow current.next$ \\
+  \>\>\kw{if} $zone =$ ACTIVE \kw{and} $current = wq.old.head$ \kw{then} \\
+  \>\>\pindent$zone \leftarrow$ OLD \\
+  \>\>\kw{endif} \\
+  \>\kw{endwhile} \\
+  \>\synchro{Release($wq.lock$)} \\
+  \>\kw{return} \kw{null} \\
+  \kw{endfunction}
+\end{program}
+
+\label{WaitQueuePushOld}
+\begin{program}
+  \kw{function} WaitQueuePushOld($wq$ : WaitQueue, $pt$ : PiThread) \\
+  \pindent\synchro{Acquire($wq.lock$)} \\
+  \>\kw{if} $wq.old.size = 0$ \kw{then} \\
+  \>\pindent$wq.old.head \leftarrow pt$ \\
+  \>\>$wq.old.tail \leftarrow pt$ \\
+  \>\>$pt.next \leftarrow$ \kw{null} \\
+  \>\kw{else} \\
+  \>\pindent$pt.next \leftarrow wq.old.head$ \\
+  \>\>$wq.old.head \leftarrow pt$ \\
+  \>\kw{endif} \\
+  \>kw{if} $wq.active.size \neq 0$ \kw{then} \\
+  \>\pindent$wq.active.tail.next \leftarrow pt$ \\
+  \>\kw{endif} \\
+  \>$wq.old.size \leftarrow wq.old.size + 1$ \\
+  \>\synchro{Release($wq.lock$)} \\
+  \kw{endfunction}
+\end{program}
+
+\label{WaitQueuePopOld}
+\begin{program}
+  \kw{function} WaitQueuePopOld($wq$ : WaitQueue) \\
+  \pindent\synchro{Acquire($wq.lock$)} \\
+  \>\kw{if} $wq.old.size = 0$ \kw{then} \\
+  \>\pindent\synchro{Release($rq.lock$)} \\
+  \>\>\kw{return} \kw{null} \\
+  \>\kw{endif} \\
+  \>\kw{var} $res$ : PiThread \\
+  \>$res \leftarrow wq.old.tail$ \\
+  \>$wq.old.tail \leftarrow res.prev$ \\
+  \>$wq.old.size \leftarrow wq.old.size - 1$ \\
+  \>\synchro{Release($wq.lock$)} \\
+  \>\kw{return} $res$ \\
+  \kw{endfunction}
+\end{program}
+
+\label{WaitQueueSize}
+\begin{program}
+  \kw{function} WaitQueueSize($wq$ : WaitQueue) \\
+  \pindent\synchro{Acquire($wq.lock$)} \\
+  \>\kw{var} $nb$ : \kw{int} \\
+  \>$nb \leftarrow wq.active.size$ \\
+  \>$nb \leftarrow nb + wq.old.size$ \\
+  \>\synchro{Release($wq.lock$)} \\
+  \>\kw{return} $nb$ \\
+  \kw{endfunction}
+\end{program}
+
+\label{WaitQueueMaxActive}
+\begin{program}
+  \kw{function} WaitQueueMaxActive($wq$ : WaitQueue) \\
+  \pindent\synchro{Acquire($wq.lock$)} \\
+  \>\kw{var} $nb$ : \kw{int} \\
+  \>$nb \leftarrow wq.active.size$ \\
+  \>\synchro{Release($wq.lock$)} \\
+  \>\kw{return} $nb$ \\
+  \kw{endfunction}
+\end{program}
+
+\label{WaitQueueMaxActiveReset}
+\begin{program}
+  \kw{function} WaitQueueMaxActiveReset($wq$ : WaitQueue) \\
+  \pindent\synchro{Acquire($wq.lock$)} \\
+  \>$wq.old.size \leftarrow wq.old.size + wq.active.size$ \\
+  \>$wq.active.size \leftarrow 0$ \\
+  \>$wq.old.head \leftarrow wq.active.head$ \\
+  \>$wq.active.head \leftarrow$ \kw{null} \\
+  \>$wq.active.tail \leftarrow$ \kw{null} \\
+  \>\synchro{Release($wq.lock$)} \\
+  \kw{endfunction}
+\end{program}
+
+\section{Garbage collector}
 
 \label{GC2}
 \algosection{Runtime : second generation garbage collector}
