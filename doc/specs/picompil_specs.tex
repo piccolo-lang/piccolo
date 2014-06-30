@@ -28,7 +28,7 @@
 \newcommand{\algotitle}[1]{\noindent\\ \noindent#1\par\nobreak\vspace{3pt}\hrule\vspace{6pt}}
 \newcommand{\algosection}[1]{
   \phantomsection
-  \addcontentsline{toc}{subsection}{#1}
+%  \addcontentsline{toc}{subsubsection}{#1}
   \algotitle{#1}
 }
 \newcommand{\myref}[1]{
@@ -69,21 +69,8 @@ $ $\newline
 
 
 %%%%%%%%%%%%%%% Section DATA STRUCTURES %%%%%%%%%%%
-\section{Data structures and operations}
+\section{Basic data structures and operation signatures}
 
-\label{SchedPool}
-\algosection{SchedPool}
-\begin{program}
-  \kw{record} SchedPool \{ \\
-  \pindent ready : \synchro{\myref{ConcurrentReadyQueue}}[\myref{PiThread}], \\
-  \> wait : \synchro{\myref{ConcurrentWaitQueue}}[\myref{PiThread}] \\
-  \> \synchro{lock : Mutex} \\
-  \> \synchro{cond : Condition} \\
-  \> nb\_slaves : \kw{int} \\
-  \> nb\_waiting\_slaves : \kw{int} \\
-  \} \\ \\
-  \myref{GC2} : SchedPool $\rightarrow$ \kw{boolean}
-\end{program}
 
 \label{PiThread}
 \algosection{PiThread}
@@ -91,7 +78,7 @@ $ $\newline
   \kw{record} PiThread \{ \\
   \pindent status : \{STATUS\_RUN, STATUS\_CALL, STATUS\_WAIT, STATUS\_ENDED\}, \\
   \> enabled : Array[\kw{boolean}], \\
-  \> knows : \myref{KnowsSet}[\myref{Channel}], \\
+  \> knows : \myref{KnowSet}[\myref{Channel}], \\
   \> env : Array[Object], \\
   \> commit : Commit \\
   \> commits : Set[Commit] \\
@@ -197,22 +184,22 @@ $ $\newline
   \myref{WaitQueueMaxActiveReset} : WaitQueue $\rightarrow$ \kw{int}
 \end{program}
 
-\algosection{KnowsSet}
+\algosection{KnowSet}
 \begin{program}
   \kw{type} KnowsState : \{UNKNOWN, KNOWN, FORGET\} \\ \\
-  /* KnowsSetKnows returns a subset of all KNOWN-state in a KnowsSet */ \\
-  \kw{abstract} KnowsSetKnows : KnowsSet $\rightarrow$ KnowsSet \\ \\
-  /* KnowsSetForget returns a subset of all FORGET-state in a KnowsSet */ \\
-  \kw{abstract} KnowsSetForget : KnowsSet $\rightarrow$ KnowsSet \\ \\
-  /* KnowsSetForgetToUnknown switches an element of a KnowsSet from the FORGET-State to the UNKNOWN-state */ \\
-  \kw{abstract} KnowsSetForgetToUnknown : KnowsSet x \myref{Channel} \kw{var} $\rightarrow$ \kw{void} \\ \\
-  /* KnowsSetForgetAll switches all KNOWN-state elements of a KnowsSet to FORGET-state */ \\
-  \kw{abstract} KnowsSetForgetAll : KnowsSet $\rightarrow$ \kw{void} \\ \\
-  /* KnowsRegister looks for a channel in a KnowsSet : \\
-  \pindent * if the channel is in the KnowsSet in KNOWN-state, it returns false \\
-  \> * if the channel is in the KnowsSet in FORGET-state, it switches it to KNOWN then returns false \\
-  \> * else it adds the channel in the KnowsSet (KNOWS-state) then returns true */ \\
-  \kw{abstract} KnowsRegister : KnowsSet x \myref{Channel} \kw{var} $\rightarrow$ \kw{boolean}
+  /* KnowSetKnows returns a subset of all KNOWN-state in a KnowSet */ \\
+  \kw{abstract} KnowSetKnows : KnowSet $\rightarrow$ KnowSet \\ \\
+  /* KnowSetForget returns a subset of all FORGET-state in a KnowSet */ \\
+  \kw{abstract} KnowSetForget : KnowSet $\rightarrow$ KnowSet \\ \\
+  /* KnowSetForgetToUnknown switches an element of a KnowSet from the FORGET-State to the UNKNOWN-state */ \\
+  \kw{abstract} KnowSetForgetToUnknown : KnowSet x \myref{Channel} \kw{var} $\rightarrow$ \kw{void} \\ \\
+  /* KnowSetForgetAll switches all KNOWN-state elements of a KnowSet to FORGET-state */ \\
+  \kw{abstract} KnowSetForgetAll : KnowSet $\rightarrow$ \kw{void} \\ \\
+  /* KnowsRegister looks for a channel in a KnowSet : \\
+  \pindent * if the channel is in the KnowSet in KNOWN-state, it returns false \\
+  \> * if the channel is in the KnowSet in FORGET-state, it switches it to KNOWN then returns false \\
+  \> * else it adds the channel in the KnowSet (KNOWS-state) then returns true */ \\
+  \kw{abstract} KnowsRegister : KnowSet x \myref{Channel} \kw{var} $\rightarrow$ \kw{boolean}
 \end{program}
 
 
@@ -226,29 +213,37 @@ Module & ::= & \kw{module} $moduleId$ Definition$+$ & (module definition) \\
 \\
 Definition & ::= &  \kw{def} $D(x_1:T_1, ..., x_n:T_n) = $ Process & (process definition) \\
 \\
-Process & ::= & PrefixProcess & (prefixed process) \\
+Process & ::= & \kw{end} & (end process) \\
+        &    &  $|$ $D(e_1$:T$_1, ..., e_n$:T$_n)$ & (tail-call process) \\
+        &    &  $|$ PrefixProcess & (prefixed process) \\
         &    &  $|$ ChoiceProcess & (choice process) \\
-        &    &  $|$ $D(v_1$:T$_1, ..., v_n$:T$_n)$ & (tail-call process) \\
-        &    &  $|$ \kw{end} & (end process) \\
 \\
-PrefixProcess & ::= & $chan$\code{!}$val$ \code{,} Process & (output prefix) \\
+PrefixProcess & ::= & $chan$\code{!}$expr$ \code{,} Process & (output prefix) \\
               &     & $|$ $chan$\code{?}$(x:T)$ \code{,} Process & (input prefix) \\
               &     & $|$ \kw{new}$(chan:T)$ \code{,} Process & (new channel prefix) \\
-              &     & $|$ \kw{spawn}\code{\{}$(D(v_1$:T$_1, ..., v_n$:T$_n))$\code{\}} \code{,} Process & (spawn process prefix) \\
-              &     & $|$ \kw{let}$(x:T=v)$\code{,} Process & (let prefix) \\
-              &     & $|$ \code{\#}$prim(v_1$:T$_1, ..., v_n$:T$_n)$\code{,} Process & (primitive call prefix) \\
+              &     & $|$ \kw{spawn}\code{\{}$(D(e_1$:T$_1, ..., e_n$:T$_n))$\code{\}} \code{,} Process & (spawn process prefix) \\
+              &     & $|$ \kw{let}$(x:T=e)$\code{,} Process & (let prefix) \\
+              &     & $|$ \code{\#}$prim(e_1$:T$_1, ..., e_n$:T$_n)$\code{,} Process & (primitive call prefix) \\
 \\
-ChoiceProcess & ::= & $\sum_{i=0}^{n-1}$\code{[}Guard$_i$\code{]} ProcessBranch$_i$ \\
+ChoiceProcess & ::= & $\sum_{i=0}^{n-1}$\code{[}Expression$_i$\code{]} ProcessBranch$_i$ \\
 \\
 ProcessBranch & ::= & \kw{tau} \code{,} Process & (silent branch) \\
               &     & $|$ $chan$\code{!}$val$ \code{,} Process & (output branch) \\
               &     & $|$ $chan$\code{?}$(x:T)$ \code{,} Process & (input branch) \\
-            
+\\
+\\
+Expression & ::= & Constant \\
+           &     & $|$ $v$  & (free variable) \\
+           &     & $|$ \kw{op} Expression & (unary operator) \\
+           &     & $|$ Expression$_l$ \kw{op} Expression$_r$  & (binary operator) \\
+           &     & $|$ \code{\#}$vprim(e_1$:T$_1, ..., e_n$:T$_n)$ & (value primitive) \\
 \end{tabular}
 
 
 %%%%%%%%%%%%%%% Section COMPILATION %%%%%%%%%%%%%%%
 \section{Compilation outlines and runtime functions}
+
+\subsection{Compilation of expressions}
 
 \label{CompileExpr}
 \algosection{Compilation outline for constants}
@@ -303,6 +298,22 @@ ProcessBranch & ::= & \kw{tau} \code{,} Process & (silent branch) \\
   \kw{end}
 \end{program}
 
+\algosection{Compilation outline for value primitives}
+\begin{program}
+\compiletime{CompileExpr(\code{\#}$vprim(e_1$:T$_1, ..., e_n$:T$_n)$) $\rightarrow$} \\
+  \kw{begin} \\
+  \pindent \compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $1$ \kw{to} $n$ \kw{do}} \\
+  \> \pindent \kw{var} $v_i$ : T$_i$ \\
+  \> \> \compiletime{CompileExpr($e_i$)} \\
+  \> \> $v_i \leftarrow pt.val$ \\
+  \> \compiletime{\kw{cendfor}} \\
+  \> $pt.val \leftarrow$ \code{\#}$vprim$($v_1$, $\ldots$, $v_n$) \\
+  \kw{end}
+\end{program}
+
+
+\subsection{Compilation of Processes}
+
 \algosection{Compilation outline for definition}
 \begin{program}
   \compiletime{Compile(\kw{def} $D(x_1, ..., x_n) = P$) $\rightarrow$} \\ \\
@@ -318,8 +329,8 @@ ProcessBranch & ::= & \kw{tau} \code{,} Process & (silent branch) \\
 
 \algosection{Compilation outline for termination}
 \begin{program}
-  \compiletime{Compile(\kw{end}, $status$) $\rightarrow$} \\ \\
-  ProcessEnd($pt$, $satus$) \\
+  \compiletime{Compile(\kw{end}) $\rightarrow$} \\ \\
+  ProcessEnd($pt$, STATUS\_ENDED) \\
   \kw{return}
 \end{program}
 
@@ -329,10 +340,10 @@ ProcessBranch & ::= & \kw{tau} \code{,} Process & (silent branch) \\
 \begin{program}
   \kw{procedure} ProcessEnd($pt$ : \myref{PiThread}, $status$ : \myref{ProcessStatus})\\
 \kw{begin} \\
-\pindent  \kw{foreach} $chan$ : \myref{Channel} in \myref{KnowsSetKnows}($pt.knows$) \\
+\pindent  \kw{foreach} $chan$ : \myref{Channel} in \myref{KnowSetKnows}($pt.knows$) \\
 \> \pindent\myref{ChannelDecRefCount}($chan$) \\
 \>  \kw{endfor} \\
-\>  \kw{foreach} $chan$ : \myref{Channel} in \myref{KnowsSetForget}($pt.knows$) \\
+\>  \kw{foreach} $chan$ : \myref{Channel} in \myref{KnowSetForget}($pt.knows$) \\
 \>  \pindent\myref{ChannelDecRefCount}($chan$) \\
 \>  \kw{endfor} \\
 \>  $pt.status \leftarrow status$ \\
@@ -344,18 +355,18 @@ ProcessBranch & ::= & \kw{tau} \code{,} Process & (silent branch) \\
 \begin{program}
   \compiletime{Compile($D(v_1$:T$_1, ..., v_n$:T$_n)) \rightarrow$} \\ \\
   \kw{begin} \\
-  \pindent\kw{var} $args$ : Array[$n$ * Value] \\
-  \>\myref{KnowsSetForgetAll}($pt.knows$) \\
+  \pindent\myref{KnowSetForgetAll}($pt.knows$) \\
   \>\\
-  \>\compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $0$ \kw{to} $n-1$} \\
-  \>\pindent\compiletime{\myref{CompileExpr}($v_{i+1}$)} \\
-  \>\>$args[i] \leftarrow pt.val$ \\
+  \>\compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $1$ \kw{to} $n$} \\
+  \>\pindent var $v_i$ : $T_i$ \\
+  \>\>\compiletime{\myref{CompileExpr}($v_{i}$)} \\
+  \>\>$v_i \leftarrow pt.val$ \\
   \>\compiletime{\kw{cendfor}} \\
   \>\\
-  \>\compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $0$ \kw{to} $n-1$} \\
-  \>\pindent $pt.env[i] \leftarrow args[i]$ \\
-  \>\>\compiletime{\kw{cif} ischannel(T$_{i+1}$) \kw{then}} \\
-  \>\>\pindent\myref{KnowsRegister}($pt.knows, args[i]$) \\
+  \>\compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $1$ \kw{to} $n$} \\
+  \>\pindent $pt.env[i-1] \leftarrow v_i$ \\
+  \>\>\compiletime{\kw{cif} ischannel(T$_{i}$) \kw{then}} \\
+  \>\>\pindent\myref{KnowsRegister}($pt.knows, v_i$) \\
   \>\>\compiletime{\kw{cendif}} \\
   \>\compiletime{\kw{cendfor}} \\
   \>\\
@@ -373,9 +384,9 @@ ProcessBranch & ::= & \kw{tau} \code{,} Process & (silent branch) \\
 \kw{begin} \\
 \pindent  $pt.pc \leftarrow$ INVALID\_PC \\
 \>  $pt.fuel \leftarrow$ FUEL\_INIT \\
-\>  \kw{foreach} $chan$ : \myref{Channel} in \myref{KnowsSetForget}($pt.knows$) \\
+\>  \kw{foreach} $chan$ : \myref{Channel} in \myref{KnowSetForget}($pt.knows$) \\
 \>  \pindent\myref{ChannelDecRefCount}($chan$) \\
-\>  \>\myref{KnowsSetForgetToUnknown}($pt.knows, chan$) \\
+\>  \>\myref{KnowSetForgetToUnknown}($pt.knows, chan$) \\
 \>  \kw{endfor} \\
 \>  $pt.status \leftarrow$ STATUS\_WAIT \\
 \>  \synchro{\myref{WaitQueuePush}($scheduler.wait$, $pt$)} \\
@@ -401,9 +412,9 @@ ProcessBranch & ::= & \kw{tau} \code{,} Process & (silent branch) \\
   \kw{procedure} ProcessYield($pt$ : \myref{PiThread})\\
 \kw{begin} \\
 \pindent  $pt.fuel \leftarrow$ FUEL\_INIT \\
-\>  \kw{foreach} $chan$ : \myref{Channel} in \myref{KnowsSetForget}($pt.knows$) \\
+\>  \kw{foreach} $chan$ : \myref{Channel} in \myref{KnowSetForget}($pt.knows$) \\
 \>  \pindent\myref{ChannelDecRefCount}($chan$) \\
-\>  \>\myref{KnowsSetForgetToUnknown}($pt.knows, chan$) \\
+\>  \>\myref{KnowSetForgetToUnknown}($pt.knows, chan$) \\
 \>  \kw{endfor} \\
 \>  \synchro{\myref{ReadyQueueAdd}($scheduler.ready, pt$)} \\
 \kw{end}
@@ -426,7 +437,7 @@ ProcessBranch & ::= & \kw{tau} \code{,} Process & (silent branch) \\
   \>$newchan.incommits \leftarrow$ \kw{new} CommitList[\myref{InCommit}] \\
   \>$newchan.outcommits \leftarrow$ \kw{new} CommitList[\myref{OutCommit}] \\
   \>$newchan.globalrc \leftarrow 1$ \\ 
-  \>\myref{KnowsSetSwitch}($pt.knows, newchan$, KNOWN) \\
+  \>\myref{KnowSetSwitch}($pt.knows, newchan$, KNOWN) \\
   \> \kw{return} $newchan$ \\
   \kw{endfunction}
 \end{program}
@@ -461,7 +472,7 @@ ProcessBranch & ::= & \kw{tau} \code{,} Process & (silent branch) \\
   \kw{function} GeneratePiThread() \\
   \pindent\kw{var} $newthread$ : \myref{PiThread} \\
   \> $newthread \leftarrow$ \kw{new} PiThread \\
-  \> $newthread.knows \leftarrow$ \kw{new} KnowsSet[\myref{Channel}] \\
+  \> $newthread.knows \leftarrow$ \kw{new} KnowSet[\myref{Channel}] \\
   \> $newthread.fuel \leftarrow$ FUEL\_INIT \\
   \> \kw{return} $newthread$ \\
   \kw{endfunction}
@@ -888,6 +899,23 @@ ProcessBranch & ::= & \kw{tau} \code{,} Process & (silent branch) \\
 
 
 \section{Scheduler}
+
+\algosection{Scheduler datastructure}
+
+\label{SchedPool}
+\algosection{SchedPool}
+\begin{program}
+  \kw{record} SchedPool \{ \\
+  \pindent ready : \synchro{\myref{ConcurrentReadyQueue}}[\myref{PiThread}], \\
+  \> wait : \synchro{\myref{ConcurrentWaitQueue}}[\myref{PiThread}] \\
+  \> \synchro{lock : Mutex} \\
+  \> \synchro{cond : Condition} \\
+  \> nb\_slaves : \kw{int} \\
+  \> nb\_waiting\_slaves : \kw{int} \\
+  \} \\ \\
+  \myref{GC2} : SchedPool $\rightarrow$ \kw{boolean}
+\end{program}
+
 
 \label{SchedulerSlave}
 \algosection{Runtime : slave scheduler}
