@@ -10,197 +10,188 @@ module Back.CBackend where
 
 import Back.SeqAST
 import Back.Backend
+import Back.CodeEmitter
 
-import System.IO
+import Control.Monad
+
 
 -- | 'CBackend' is the empty datatype used in the place of the phantom type in sequential AST.
 data CBackend
 
--- | 'pointer' is a function to easily create C pointer types for sequential AST.
-{-pointer :: (BackendTypes a) => PiccType a -> PiccType a
-pointer t = Pty "*" t-}
+instance BackendConsts CBackend where
+  ptDef            = error "TODO CBackend.ptDef"
 
-{-instance BackendTypes CBackend where
-  void                       = Sty "void"
+  pt               = (SimpleName (Name "pt"), Sty "pt")
+  ptStatus         = error "TODO CBackend.ptStatus"
+  ptEnabled        = error "TODO CBackend.ptEnabled"
+  ptKnows          = error "TODO CBackend.ptKnows"
+  ptEnv            = error "TODO CBackend.ptEnv"
+  ptCommit         = error "TODO CBackend.ptCommit"
+  ptCommits        = error "TODO CBackend.ptCommits"
+  ptProc           = error "TODO CBackend.ptProc"
+  ptPc             = error "TODO CBackend.ptPc"
+  ptVal            = error "TODO CBackend.ptVal"
+  ptClock          = error "TODO CBackend.ptClock"
+  ptFuel           = error "TODO CBackend.ptFuel"
+  ptLock           = error "TODO CBackend.ptLock"
+
+  ptEnvI           = error "TODO CBackend.ptEnvI"
+
+  chan             = error "TODO CBackend.chan"
+  chanIncommits    = error "TODO CBackend.chanIncommits"
+  chanOutcommits   = error "TODO CBackend.chanOutcommits"
+  chanGlobalrc     = error "TODO CBackend.chanGlobalrc"
+  chanLock         = error "TODO CBackend.chanLock"
+
+  scheduler        = (SimpleName (Name "scheduler"), Sty "scheduler")
+
+  labelType        = error "TODO CBackend.labelType"
   
-  primBool                   = Sty "bool"
-  primInt                    = Sty "int"
-  primString                 = pointer $ Sty "char"
+  refBool          = error "TODO CBackend.refBool"
+  refInt           = error "TODO CBackend.refInt"
+  refString        = error "TODO CBackend.refString"
 
-  ptValue                    = Sty "PICC_Value"
-  ptBool                     = pointer $ Sty "PICC_BoolValue"
-  ptInt                      = pointer $ Sty "PICC_IntValue"
-  ptString                   = pointer $ Sty "PICC_StringValue"
-  ptChannel                  = pointer $ Sty "PICC_ChannelValue"
-  ptNoValue                  = pointer $ Sty "PICC_NoValue"
+  defProcType      = Fun (Sty "void") [Sty "scheduler", Sty "pithread"]
 
-  channel                    = pointer $ Sty "PICC_Channel"
-  handle                     = pointer $ Sty "PICC_Handle"
+  statusRun        = error "TODO CBackend.statusRun"
+  statusCall       = error "TODO CBackend.statusCall"
+  statusWait       = error "TODO CBackend.statusWait"
+  statusEnded      = error "TODO CBackend.statusEnded"
 
-  schedPool                  = pointer $ Sty "PICC_SchedPool"
-  piThread                   = pointer $ Sty "PICC_PiThread"
+  void             = error "TODO CBackend.void"
 
-  mutex                      = pointer $ Sty "PICC_Mutex"
-  clock                      = Sty "PICC_Clock"
+  makeTrue         = error "TODO CBackend.makeTrue"
+  makeFalse        = error "TODO CBackend.makeFalse"
+  makeInt          = error "TODO CBackend.makeInt"
+  makeString       = error "TODO CBackend.makeString"
+  makePrim         = error "TODO CBackend.makePrim"
 
-  commit                     = pointer $ Sty "PICC_Commit"
-  inCommit                   = pointer $ Sty "PICC_InCommit"
-  outCommit                  = pointer $ Sty "PICC_OutCommit"
+  convertInt       = error "TODO CBackend.convertInt"
+  convertString    = error "TODO CBackend.convertString"
 
-  pcLabel                    = Sty "PICC_Label"
-  commitList                 = Sty "PICC_CommitList"
+  processEnd       = error "TODO CBackend.processEnd"
 
-  knownSet                   = pointer $ Sty "PICC_KnownSet"
-  knownValue                 = pointer $ Sty "PICC_KnownValue"
-
-  queue                      = Sty "PICC_Queue"
-  readyQueue                 = pointer $ Sty "PICC_ReadyQueue"
-  waitQueue                  = pointer $ Sty "PICC_WaitQueue"
-
-  pDef                       = Fun void [schedPool, piThread]
-  evalTy                     = Fun ptValue [piThread]
-  evalAsVar                  = (SimpleName (Name "evalFunc"), Sty "PICC_EvalFunction")
-
-  statusEnum                 = Sty "PICC_StatusKind"
-  statusCall                 = Val ("PICC_STATUS_CALL", statusEnum)
-  statusRun                  = Val ("PICC_STATUS_RUN", statusEnum)
-  statusWait                 = Val ("PICC_STATUS_WAIT", statusEnum)
-  statusEnded                = Val ("PICC_STATUS_ENDED", statusEnum)
-  statusBlocked              = Val ("PICC_STATUS_BLOCKED", statusEnum)
-
-  tryEnum                    = Sty "PICC_TryResult"
-  tryEnabled                 = Val ("PICC_TRY_ENABLED", tryEnum)
-  tryDisabled                = Val ("PICC_TRY_DISABLED", tryEnum)
-  tryCommit                  = Val ("PICC_TRY_COMMIT", tryEnum)
-
-  commitStatusEnum           = Sty "PICC_CommitStatus"
-  commitCannotAcquire        = Val ("PICC_CANNOT_ACQUIRE", commitStatusEnum)
-  commitValid                = Val ("PICC_VALID_COMMIT", commitStatusEnum)
-  commitInvalid              = Val ("PICC_INVALID_COMMIT", commitStatusEnum)
-
-  fuelInit                   = Val ("PICC_FUEL_INIT", primInt)
-  invalidPC                  = Val ("PICC_INVALID_PC", pcLabel)
-
-  makeTrue                   = (SimpleName (Name "PICC_INIT_BOOL_TRUE"), Fun void [ptValue])
-  makeFalse                  = (SimpleName (Name "PICC_INIT_BOOL_FALSE"), Fun void [ptValue])
-  makeInt                    = (SimpleName (Name "PICC_INIT_INT_VALUE"), Fun void [ptValue, primInt])
-  makeString                 = (SimpleName (Name "PICC_INIT_STRING_VALUE"), Fun void [ptValue, primString])
-  makeChannel                = (SimpleName (Name "PICC_INIT_CHANNEL_VALUE"), Fun void [ptValue, channel])
-
-  createStringHandle str     = FunCall makeStrHndl [Val (str, primString)]
-                               where makeStrHndl = (SimpleName (Name "PICC_create_string_handle"), Fun handle [primString])
-
-  dEntry                     = Val ("0", pcLabel)
-
-  null                       = ("NULL", Sty "NULL")
-  zero                       = ("0", primInt)
-  primFalse                  = ("false", primBool)
-  primTrue                   = ("true", primBool)
-  pcLabelInit                = ("0", pcLabel)
-  tryResultInit              = tryDisabled
-
-instance BackendNames CBackend where
-  copyValue                  = undefined
-  boolOfBoolValue            = undefined
-  outCommitsOfChannelValue   = undefined
-  inCommitsOfChannelValue    = undefined
-
-  evalFunOfOutCommit         = undefined
-
-  awake                      = undefined
-  canAwake                   = undefined
-
-  getHandle                  = undefined
-  acquireHandle              = undefined
-  handleGlobalRC             = undefined
-
-  handleDecRefCount          = undefined
-  handleIncRefCount          = undefined
-
-  fetchInputCommitment       = undefined
-  fetchOutputCommitment      = undefined
-  registerInputCommitment    = undefined
-  registerOutputCommitment   = undefined
-  commitListIsEmpty          = undefined
-
-  emptyKnownSet              = undefined
-  freeKnownSet               = undefined
-  knownSetAdd                = undefined
-  knownSetRegister           = undefined
-  knownSetForgetAll          = undefined
-  knownSetForgetToUnknown    = undefined
-  knownSetForget             = undefined
-  knownSetKnown              = undefined
-
-  waitQueuePush              = undefined
-  readyQueuePush             = undefined
-  readyQueueAdd              = undefined
-  releaseAllChannels         = undefined
-  acquire                    = undefined
-  release                    = undefined
-  lowLevelYield              = undefined
-
-  generateChannel            = undefined
-  generatePiThread           = undefined
-  scheduler                  = undefined
-  schedReady                 = undefined
-  schedWait                  = undefined
-
-  pt                         = undefined
-  ptStatus                   = undefined
-  ptEnabled                  = undefined
-  ptKnown                    = undefined
-  ptEnv                      = undefined
-  ptCommit                   = undefined
-  ptCommits                  = undefined
-  ptProc                     = undefined
-  ptPC                       = undefined
-  ptVal                      = undefined
-  ptClock                    = undefined
-  ptFuel                     = undefined
-  ptLock                     = undefined
-  ptChans                    = undefined
-
-  tryResult                  = undefined
-
-  chan                       = undefined
-  chans                      = undefined
-
-  outCommitVar               = undefined
-  outCommitThread            = undefined
-  outCommitThreadVal         = undefined
-
-  inCommitVar                = undefined
-  inCommitThread             = undefined
-  inCommitIn                 = undefined
-  inCommitRefVar             = undefined
-  inCommitThreadEnvRV        = undefined
-
-  args                       = undefined
-  child                      = undefined
-
-  childProc                  = undefined
-  childPC                    = undefined
-  childStatus                = undefined
-  childKnown                 = undefined
-  childEnv                   = undefined
-
-instance BackendPrims CBackend where
-  addName                    = undefined
-  substractName              = undefined
-  moduloName                 = undefined
-  equalsName                 = undefined
-  lessThanName               = undefined
-  printInfoName              = undefined
-  printStrName               = undefined
-  printIntName               = undefined-}
 
 instance Backend CBackend where
-  emitName = error "TODO Back.CBackend Backend instanciation"
-  emitVarName = error "TODO Back.CBackend Backend instanciation"
-  emitPiccType = error "TODO Back.CBackend Backend instanciation"
-  emitExpr = error "TODO Back.CBackend Backend instanciation"
-  emitBinop = error "TODO Back.CBackend Backend instanciation"
-  emitUnop = error "TODO Back.CBackend Backend instanciation"
-  emitInstr = error "TODO Back.CBackend Backend instanciation"
-  emitCode = error "TODO Back.CBackend Backend instanciation"
+  emitName (Name str) = emitStr str
+
+  emitVarName (SimpleName name)     =
+    emitName name
+  emitVarName (RecordName var str)  = do
+    let (v, t) = var
+    emitVarName v
+    case t of
+      Pty nt _ -> if nt == "*"
+                       then emitStr "->"
+                       else emitStr "."
+      _        -> emitStr "."
+    emitName str
+  emitVarName (ArrayName var expr)  = do
+    emitVarName var
+    emitStr "["
+    emitExpr expr
+    emitStr "]"
+  
+  emitPiccType (Sty str)      =
+    emitStr str
+  emitPiccType (Pty str typ)  =
+    if str == "*"
+      then do { emitPiccType typ ; emitStr "*" }
+      else do { emitStr str ; emitPiccType typ }
+  emitPiccType (Fun fun args) = do
+    emitPiccType fun
+    emitList emitPiccType ", " args
+
+  emitExpr (Val (val, _))     = emitStr val
+  emitExpr (Var (var, _))     = emitVarName var
+  emitExpr (Op o e1 e2)       = do
+    emitStr "("
+    emitExpr e1
+    emitStr ") "
+    emitBinop o
+    emitStr " ("
+    emitExpr e2
+    emitStr ")"
+  emitExpr (OpU o e)          = do
+    emitUnop o
+    emitStr "("
+    emitExpr e
+    emitStr ")"
+  emitExpr (FunCall fun args) = error "TODO CBackend.emitExpr/FunCall"
+
+  emitBinop Sum   = emitStr "+"
+  emitBinop Minus = emitStr "-"
+  emitBinop Mult  = emitStr "*"
+  emitBinop Div   = emitStr "/"
+  emitBinop Equal = emitStr "=="
+
+  emitUnop Not = emitStr "!"
+
+  emitInstr (Comment str)              =
+    emitLn $ "/* " ++ str ++ " */"
+  emitInstr (Debug str)                =
+    emitLn $ "printf(\"%s\", " ++ str ++ ");"
+  emitInstr (Switch expr body)         = do
+    emitIndent
+    emitStr "switch("
+    emitExpr expr
+    emitStr ") {\n"
+    incrIndent
+    emitInstr body
+    decrIndent
+    emitIndent
+    emitStr "}\n"
+  emitInstr (Case expr body)           = error "TODO CBackend.emitInstr Case"
+  emitInstr (SeqBloc instrs)           =
+    forM_ instrs emitInstr
+  emitInstr (SemBloc instrs)           = error "TODO CBackend.emitInstr SemBloc"
+  emitInstr (ComBloc loc instr)        = error "TODO CBackend.emitInstr ComBloc"
+  emitInstr (ProcCall fun args)        = error "TODO CBackend.emitInstr ProcCall"
+  emitInstr (DeclareVar var)           = error "TODO CBackend.emitInstr DeclareVar"
+  emitInstr (Assign var expr)          = error "TODO CBackend.emitInstr Assign"
+  emitInstr (DeclareFun fun args body) = do
+    let (v, (Fun ret argsTyp)) = fun
+    emitIndent
+    emitPiccType ret
+    emitStr " "
+    emitVarName v
+    emitStr "("
+    emitList (\(v,t) -> do
+      emitPiccType t
+      emitStr " "
+      emitName v) ", " $ zip args argsTyp
+    emitStr ")"
+    if null body
+      then emitStr ";\n"
+      else do
+        emitStr "{\n"
+        incrIndent
+        forM_ body emitInstr
+        decrIndent
+        emitStr "}\n"
+  emitInstr (ForEach var expr body)    = error "TODO CBackend.emitInstr ForEach"
+  emitInstr (If cond csq alt)          = error "TODO CBackend.emitInstr If"
+  emitInstr (Label lbl)                = error "TODO CBackend.emitInstr Label"
+  emitInstr (Goto lbl)                 = error "TODO CBackend.emitInstr Goto"
+  emitInstr (Return expr)              = error "TODO CBackend.emitInstr Return"
+  emitInstr (DoWhile expr body)        = error "TODO CBackend.emitInstr DoWhile"
+  
+  emitCode mainName instr = do
+    emitLn "#include <stdio.h>"
+    emitLn "#include <runtime.h>"
+    emitLn "#include <value.h>"
+    emitLn "#include <queue.h>"
+    emitLn "#include <pi_thread_repr.h>"
+    emitLn "#include <knownset_repr.h>"
+    emitLn "#include <commit_repr.h>"
+    emitLn "#include <scheduler_repr.h>"
+    emitLn ""
+    emitInstr instr
+    emitLn ""
+    emitLn "int main() {"
+    incrIndent
+    emitLn $ "PICC_main(2, " ++ mainName ++ ", 10, 10, 10, 10, 10, 0);"
+    emitLn "return 0;"
+    decrIndent
+    emitLn "}"
+

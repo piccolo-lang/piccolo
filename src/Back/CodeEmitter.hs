@@ -19,9 +19,9 @@ type EmitterM a = StateT Int (Writer String) a
 runEmitterM :: EmitterM a -> String
 runEmitterM m = execWriter (evalStateT m 0)
 
--- | 'incrSize' is the default number of spaces for an indentation.
+-- | 'indSize' is the default number of spaces for an indentation.
 indSize :: Int
-indSize = 4
+indSize = 2
 
 -- | 'incrIndent' increments the indentations counter
 incrIndent :: EmitterM ()
@@ -34,3 +34,25 @@ decrIndent :: EmitterM ()
 decrIndent = do
   n <- get
   put (n - indSize)
+
+emitIndent :: EmitterM ()
+emitIndent = do
+  n <- get
+  tell (replicate n ' ')
+
+emitStr :: String -> EmitterM ()
+emitStr = lift . tell
+
+emitLn :: String -> EmitterM ()
+emitLn str = do
+  emitIndent
+  emitStr $ str ++ "\n"
+
+emitList :: (a -> EmitterM ()) -> String -> [a] -> EmitterM ()
+emitList _ _ []     = return ()
+emitList f _ [x]    = f x
+emitList f s (x:xs) = do
+  f x
+  emitStr s
+  emitList f s xs
+
