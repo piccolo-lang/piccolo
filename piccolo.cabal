@@ -7,7 +7,7 @@ version:             0.1.0.0
 -- description:         
 license:             GPL-3
 license-file:        LICENSE
--- author:              
+author:              aurelien.deharbe@lip6.fr
 maintainer:          frederic.peschanski@lip6.fr
 -- copyright:           
 category:            Language
@@ -17,6 +17,6 @@ cabal-version:       >=1.8
 executable piccolo
   main-is:             Main.hs
   other-modules:       Front.PilLexer, Front.PilParser
-  build-depends:       base ==4.6.*, array, pretty, mtl, containers
+  build-depends:       base ==4.6.*, array, pretty, mtl, containers, monad-loops
   build-tools:         alex, happy
   hs-source-dirs:      src

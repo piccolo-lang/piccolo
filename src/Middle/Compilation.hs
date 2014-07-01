@@ -19,9 +19,9 @@ type CompilingM a = ErrorT PiccError Identity a
 
 
 -- | The 'compilePass' monad run the piccolo AST compilation to sequential AST
-compilePass :: (B.Backend a) => ModuleDef -> Either PiccError (S.Instr a)
-compilePass mDef = runIdentity $ runErrorT instr
-  where instr = compileModule mDef
+compilePass :: (B.Backend a) => Modul -> Either PiccError (S.Instr a)
+compilePass m = runIdentity $ runErrorT instr
+  where instr = compileModul m
 
 
 genFunSig :: (B.Backend a) => String -> Definition -> CompilingM (S.Instr a)
@@ -38,21 +38,21 @@ genFunDef m def = do
                                      (S.SeqBloc [S.Case B.dEntry processInstrs])
                                    ])
   where
-    initLabel = undefined
+    initLabel = error "TODO genFunDef"
     n = S.Name (m ++ "_" ++ defName def)
 
-compileModule :: (B.Backend a) => ModuleDef -> CompilingM (S.Instr a)
-compileModule mDef = do
-  defSigs <- mapM (genFunSig m) defs
-  defDefs <- mapM (genFunDef m) defs
+compileModul :: (B.Backend a) => Modul -> CompilingM (S.Instr a)
+compileModul m = do
+  defSigs <- mapM (genFunSig name) defs
+  defDefs <- mapM (genFunDef name) defs
   return $ S.SeqBloc [ S.SeqBloc evalFuns
                      , S.SeqBloc defSigs
                      , S.SeqBloc defDefs
                      ]
   where
-    defs     = moduleDefs mDef
-    m        = moduleName mDef
-    evalFuns = undefined
+    defs     = modDefs m
+    name     = modName m
+    evalFuns = error "compileModule"
 
 compileProcess :: (B.Backend a) => Process -> CompilingM (S.Instr a)
 compileProcess proc@(PEnd {})    = compileEnd B.statusEnded

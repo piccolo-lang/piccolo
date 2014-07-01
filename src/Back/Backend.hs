@@ -24,72 +24,72 @@ class Backend a where
   emitCode      :: String -> Instr a -> EmitterM ()
   
   void :: Expr a
-  void = undefined
+  void = error "Backend void"
 
   -- proc def function type
   pDef :: PiccType a
-  pDef = undefined
+  pDef = error "TODO pDef"
 
   -- scheduler name and type
   scheduler :: VarDescr a
-  scheduler = undefined
+  scheduler = error "TODO scheduler"
 
   -- pithread name and type
   pt :: VarDescr a
-  pt = undefined
+  pt = error "TODO pt"
   -- pithread fields
   ptPC :: VarDescr a
-  ptPC = undefined
+  ptPC = error "TODO ptPC"
   ptKnown :: VarDescr a
-  ptKnown = undefined
+  ptKnown = error "TODO ptKnown"
   ptStatus :: VarDescr a
-  ptStatus = undefined
+  ptStatus = error "TODO ptStatus"
   ptVal :: VarDescr a
-  ptVal = undefined
+  ptVal = error "TODO ptVal"
   ptEnv :: Int -> VarDescr a
-  ptEnv = undefined
+  ptEnv = error "TODO ptEnv"
 
   -- a channel var
   chan :: VarDescr a
-  chan = undefined
+  chan = error "TODO chan"
   
   -- status enum and values
   statusEnum :: PiccType a
-  statusEnum = undefined
+  statusEnum = error "TODO statusEnum"
   statusRun :: Expr a
-  statusRun = undefined
+  statusRun = error "TODO statusRun"
   statusCall :: Expr a
-  statusCall = undefined
+  statusCall = error "TODO statusCall"
   statusWait :: Expr a
-  statusWait = undefined
+  statusWait = error "TODO statusWait"
   statusEnded :: Expr a
-  statusEnded = undefined
+  statusEnded = error "TODO statusEnded"
   statusBlocked :: Expr a
-  statusBlocked = undefined
+  statusBlocked = error "TODO statusBlocked"
 
   knownSetKnown :: VarDescr a
-  knownSetKnown = undefined
+  knownSetKnown = error "TODO knownSetKnown"
   knownSetForget :: VarDescr a
-  knownSetForget = undefined
+  knownSetForget = error "TODO knownSetForget"
 
   handleDecRefCount :: VarDescr a
-  handleDecRefCount = undefined
+  handleDecRefCount = error "TODO handleDecRefCount"
   getHandle :: VarDescr a
-  getHandle = undefined
+  getHandle = error "TODO getHandle"
   
   -- value constructors
   makeTrue :: VarDescr a
-  makeTrue = undefined
+  makeTrue = error "TODO makeTrue"
   makeFalse :: VarDescr a
-  makeFalse = undefined
+  makeFalse = error "TODO makeFalse"
   makeInt :: VarDescr a
-  makeInt = undefined
+  makeInt = error "TODO makeInt"
   makePrimInt :: Int -> Value a
-  makePrimInt = undefined
+  makePrimInt = error "TODO makePrimInt"
 
   -- case label for entry point
   dEntry :: Expr a
-  dEntry = undefined
+  dEntry = error "TODO dEntry"
   
 
 -- | The 'BackendTypes' class forces to specify the various types used by the runtime.

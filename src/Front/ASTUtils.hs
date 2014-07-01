@@ -12,7 +12,8 @@ import Front.AST
 
 import Data.List (intercalate)
 
-data PrintLevel = PrintTypes
+data PrintLevel = SimplePrint
+                | PrintTypes
                 | PrintIndexes
                 deriving (Eq)
 

@@ -72,14 +72,14 @@ handleFiles args (f:fs) = do
   handleFiles args fs
 
 -- | The 'compileToGeneric' function compiles a piccolo AST using the generic backend
-compileToGeneric :: ModuleDef -> Either PiccError String
+compileToGeneric :: Modul -> Either PiccError String
 compileToGeneric piAst = do
   seqAst :: Instr GenericBackend <- compilePass piAst
   let output = runEmitterM (emitCode "Main" seqAst)
   return output
 
 -- | The 'compileToC' function compiles a piccolo AST using the C backend
-compileToC :: ModuleDef -> Either PiccError String
+compileToC :: Modul -> Either PiccError String
 compileToC piAst = do
   seqAst :: Instr CBackend <- compilePass piAst
   let output = runEmitterM (emitCode "Main" seqAst)
