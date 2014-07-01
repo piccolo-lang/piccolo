@@ -396,22 +396,24 @@ Expression & ::= & Constant \\
   \kw{case} @prefix\_start: \\
   \kw{begin} \\
    \pindent \kw{var} $ok$ : \kw{bool} \\
-   \> $ok \leftarrow $ ProcessAcquireChannel($pt$, $pt.env[c]$) \\
+   \> \kw{var} $outchan$ : \myref{Channel} \\
+   \> $outchan \leftarrow pt.env[c]$ \\
+   \> $ok \leftarrow $ ProcessAcquireChannel($pt$, $outchan$) \\
   \> \kw{if} \kw{not} $ok$  \kw{then} \\
   \> \pindent $pt.pc \leftarrow $ @prefix\_start \\
   \>  \> ProcessYield($pt$) \\
   \>  \> \kw{return}\\
   \>  \kw{endif} \\
    \>\kw{var} $commit$ : \myref{InCommit} \\
-  \> $commit \leftarrow$ TryOutputAction($pt$, $pt.env[c]$, $\& tryResult$)\\
+  \> $commit \leftarrow$ TryOutputAction($outchan$, $\& tryResult$)\\
   \>\kw{if} $tryResult$ = ENABLED \kw{then} \\
-  \>\pindent \synchro{ReleaseChannel($pt.env[c]$)} \\
+  \>\pindent \synchro{ReleaseChannel($outchan$)} \\
   \>\>\compiletime{\myref{CompileExpr}($e$)} \\
   \>\>$commit.thread.env[commit.refval] \leftarrow pt.val$ \\
   \>\>\myref{Awake}($scheduler$, $commit.thread$, $commit$) \\
   \>\>\kw{goto} @prefix\_cont \\
  \> \kw{elseif} $tryResult$ = DISABLED \kw{then} \\
- \> \> \synchro{ReleaseChannel($pt.env[c]$)} \\
+ \> \> \synchro{ReleaseChannel($outchan$)} \\
  \> \> \myref{ProcessEnd}($pt$, STATUS\_BLOCKED) \\
  \> \> \kw{return} \\
  \> \kw{endif}\\
@@ -421,9 +423,9 @@ Expression & ::= & Constant \\
   \>\>\pindent\compiletime{\myref{CompileExpr}($v$)} \\
   \>\>\>\kw{return} $pt.val$ \\
   \>\> \kw{end} \\
-  \> \myref{RegisterOutputCommitment}($pt, pt.env[c], eval, @prefix\_cont$) \\
+  \> \myref{RegisterOutputCommitment}($pt, outchan, eval, @prefix\_cont$) \\
   \>\synchro{Acquire($pt.lock$)} \\
-  \>\synchro{\myref{ReleaseChannel}($pt.env[c]$)} \\
+  \>\synchro{\myref{ReleaseChannel}($outchan$)} \\
   \>\synchro{\myref{ProcessWait}($pt$)} \\
   \>\kw{return} \\
   \kw{end} \\
@@ -526,16 +528,18 @@ Expression & ::= & Constant \\
   \kw{case} @prefix\_start: \\
   \kw{begin} \\
    \pindent \kw{var} $ok$ : \kw{bool} \\
-   \> $ok \leftarrow $ ProcessAcquireChannel($pt$, $pt.env[c]$) \\
+   \> \kw{var} $inchan$ : \myref{Channel} \\
+   \> $inchan \leftarrow pt.env[c]$ \\
+   \> $ok \leftarrow $ ProcessAcquireChannel($pt$, $inchan$) \\
   \> \kw{if} \kw{not} $ok$  \kw{then} \\
   \> \pindent $pt.pc \leftarrow $ @prefix\_start \\
   \>  \> ProcessYield($pt$) \\
   \>  \> \kw{return}\\
   \>  \kw{endif} \\
   \pindent\kw{var} $commit$ : \myref{OutCommit} \\
-  \> $commit \leftarrow$ TryInputAction($pt$, $pt.env[c]$, $\& tryResult$) \\
+  \> $commit \leftarrow$ TryInputAction($inchan$, $\& tryResult$) \\
   \>\kw{if} $tryResult =$ ENABLED \kw{then} \\
-  \>\pindent \synchro{ReleaseChannel($pt.env[c]$)} \\
+  \>\pindent \synchro{ReleaseChannel($inchan$)} \\
   \>\> $pt.env[x] \leftarrow$ commit.evalfunc($commit.thread$) \\
   \>\>\compiletime{\kw{cif} ischannel(T) \kw{then}} \\
   \>\>\pindent\kw{if} \myref{KnowsRegister}($pt.knows, pt.env[x]$) \kw{then} \\
@@ -545,14 +549,14 @@ Expression & ::= & Constant \\
   \>\>\myref{Awake}($scheduler, commit.thread, commit$) \\
   \>\>\kw{goto} @prefix\_cont \\
   \>\kw{elseif} $tryResult =$ DISABLED \kw{then} \\
-  \>\> \synchro{ReleaseChannel($pt.env[c]$)} \\
+  \>\> \synchro{ReleaseChannel($inchan$)} \\
  \> \> \myref{ProcessEnd}($pt$, STATUS\_BLOCKED) \\
  \> \> \kw{return} \\
   \>\kw{endif} \\
 \\
-  \> \myref{RegisterInputCommitment}($pt, pt.env[c], x, @prefix\_cont$) \\
+  \> \myref{RegisterInputCommitment}($pt, inchan, x, @prefix\_cont$) \\
   \>\synchro{Acquire($pt.lock$)} \\
-  \>\synchro{\myref{ReleaseChannel}($pt.env[c]$)} \\
+  \>\synchro{\myref{ReleaseChannel}($inchan$)} \\
   \>\synchro{\myref{ProcessWait}($pt$)} \\
   \>\kw{return} \\
   \kw{end} \\
@@ -563,7 +567,7 @@ Expression & ::= & Constant \\
 \begin{program}
   \kw{type} TryResult = \{ DISABLED, ENABLED, COMMIT \} \\
 \\
-  \kw{function} TryInputAction($pt$ : \myref{PiThread}, $inchan$ : \myref{Channel} , $tryResult$: \&TryResult) : \myref{OutCommit} \\
+  \kw{function} TryInputAction($inchan$ : \myref{Channel} , $tryResult$: \&TryResult) : \myref{OutCommit} \\
   \kw{begin} \\
   \pindent\kw{if} $inchan.globalrc = 1$ \kw{then} \\
   \>\pindent$tryResult \leftarrow$ DISABLED \\
@@ -659,6 +663,18 @@ Expression & ::= & Constant \\
   $pt.env[x] \leftarrow $ $pt.val$ \\
 \end{program}
 
+\algosection{Compilation outline for prefix primitives}
+\begin{program}
+\compiletime{CompilePrefix(\code{\#}$prim(e_1$:T$_1, ..., e_n$:T$_n)$) $\rightarrow$} \\
+  \kw{begin} \\
+  \pindent \compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $1$ \kw{to} $n$ \kw{do}} \\
+  \> \pindent \kw{var} $v_i$ : T$_i$ \\
+  \> \> \compiletime{CompileExpr($e_i$)} \\
+  \> \> $v_i \leftarrow pt.val$ \\
+  \> \compiletime{\kw{cendfor}} \\
+  \> \code{\#}$vprim$($v_1$, $\ldots$, $v_n$) \\
+  \kw{end}
+\end{program}
 
 \section{Compilation of choice process}
 
@@ -743,132 +759,66 @@ Expression & ::= & Constant \\
 
 \algosection{Compilation outline for output prefix try}
 \begin{program}
-  \compiletime{CompileTryAction($c!v$:T)}[$chans$ : Array[\myref{Channel}], $nbchans$ : \kw{int}, $tryresult$:\{ENABLED, DISABLED, COMMIT, ABORT\}] $\rightarrow$ \\ \\
+  \compiletime{CompileTryAction($c!v$:T)} $\rightarrow$ \\ 
   \kw{begin} \\
-  \pindent\kw{var} $commit$ : \myref{InCommit} \\
-  \> $commit \leftarrow$ TryOutputAction($pt$, $c$, $chans$, $\&nbchans$, $\& tryResult$)\\
-  \>\kw{if} $tryResult$ = ENABLED \kw{then} \\
-  \>\pindent\compiletime{\myref{CompileExpr}($v$)} \\
-  \>\>$commit.thread.env[commit.refval] \leftarrow pt.val$ \\
-  \>\>\myref{Awake}($scheduler$, $commit.thread$, $commit$) \\
-  \> \kw{endif}\\
+  \pindent \kw{var} $outchan$ : \myref{Channel} \\
+  \> $outchan \leftarrow pt.env[c]$ \\
+  \> \kw{if} \kw{not} ChannelAcquireAndRegister($pt$, $outchan$, $chans$, $nbchans$) \kw{then} \\
+  \> \pindent $tryresult \leftarrow$ ABORT \\
+  \> \kw{else} \\
+  \>\>\kw{var} $commit$ : \myref{InCommit} \\
+  \>\> $commit \leftarrow$ TryOutputAction($outchan$, $\& tryResult$)\\
+  \>\>\kw{if} $tryResult$ = ENABLED \kw{then} \\
+  \>\>\pindent\compiletime{\myref{CompileExpr}($v$)} \\
+  \>\>\>$commit.thread.env[commit.refval] \leftarrow pt.val$ \\
+  \>\>\>\myref{Awake}($scheduler$, $commit.thread$, $commit$) \\
+  \>\> \kw{endif}\\
+  \>\kw{endif} \\
   \kw{end}
 \end{program}
 
-\algosection{Runtime : try output action}
+\algosection{Runtime : acquire and register channel if acquired}
 \begin{program}
-  \kw{type} TryResult = \{ DISABLED, ENABLED, COMMIT \} \\
-\\
-  \kw{function} TryOutputAction(\=$pt$ : \myref{PiThread}, $chanRef$ : int, $chans$: Array[\myref{Channel}], $nbchans$ : \&\kw{int},\\
-\> $tryResult$: \&TryStatus) : \myref{InCommit} \\
-  \pindent \kw{var} $outchan$ : \myref{Channel} \\
-  \> $outchan \leftarrow$ $pt$.$env$[$chanRef$] \\
-  \pindent \kw{if} ChanArrayAdd($outchan$, $chans$, $\&nbchans$) \kw{then} \\
-  \>\pindent\synchro{Acquire($outchan.lock$)} \\
-  \>\kw{endif} \\
-  \>\kw{if} $outchan.globalrc = 1$ \kw{then} \\
-  \>\pindent$tryResult \leftarrow$ DISABLED \\
-  \>\>\kw{return} \kw{null} \\
-  \>\kw{endif} \\
-  \>\kw{var} $commit$ : \myref{InCommit} \\
-  \>\kw{var} $ok$ : \{CANNOT\_ACQUIRE, VALID\_COMMITMENT, INVALID\_COMMITMENT\} \\
-  \>\\
-  \>\kw{do} \\
-  \>\pindent$commit \leftarrow$ \myref{FetchInputCommitment}($outchan$) \\
-  \>\>\kw{if} $commit =$ \kw{null} \kw{then} \\
-  \>\>\pindent$tryresult \leftarrow$ COMMIT \\
-  \>\>\>\kw{return} \kw{null} \\
-  \>\>\kw{endif} \\
-
-  \>\>\kw{do} \\
-  \>\>\pindent$ok \leftarrow$ \myref{CanAwake}($commit.thread, commit$) \\
-  \>\>\>\kw{if} $ok =$ CANNOT\_ACQUIRE \kw{then} \\
-  \>\>\>\pindent\synchro{lowLevelYield()} \\
-  \>\>\>\kw{endif} \\
-  \>\>\kw{while} $ok =$ CANNOT\_ACQUIRE \\
-  \>\>\\
-  \>\>\kw{if} $ok =$ VALID\_COMMITMENT \kw{then} \\
-  \>\>\> $tryResult \leftarrow$ ENABLED \\
-  \>\>\> \kw{return} commit \\
-  \>\>\kw{endif} \\
-  \>\kw{while} $outchan.incommits \neq \{\}$ \\
-  errorDeadCodeReached() \\
-  \kw{endfunction}
-\end{program}
-
-\algosection{Runtime : add channel in (statically allocated) array set}
-\begin{program}
-  \kw{function} ChanArrayAdd($newchan$ : \myref{Channel}, $chans$: Array[\myref{Channel}], $nbchans$ : \&\kw{int}) : \kw{bool} \\
+  \kw{function} ChannelAcquireAndRegister($pt$ : \myref{PiThread}, $newchan$ : \myref{Channel}, $chans$: Array[\myref{Channel}], $nbchans$ : \&\kw{int}) : \kw{bool} \\
+  \kw{begin}\\
   \pindent \kw{var} $i$ : \kw{int} \\
   \> $i \leftarrow$ 0 \\
   \> \kw{while} $i$ $<$ $nbchans$ \kw{do}\\
   \> \pindent \kw{if} $chans$[$i$] = $newchan$ \kw{then} \\
-  \> \> \pindent \kw{return} false \\
+  \> \> \pindent \kw{return} true \\
   \> \> \kw{endif} \\
   \> \> $i \leftarrow$ $i$ + 1 \\
   \> \kw{endwhile} \\
+  \> \kw{if} \kw{not} ProcessAcquireChannel($pt$, $newchan$) \kw{then} \\
+  \>\> \kw{return} false \\
+  \> \kw{endif} \\
   \> $chans$[$nbchans$] = $newchan$ \\
   \> $nbchans \leftarrow$ $nbchans$ + 1 \\
   \> \kw{return} true
-  \kw{endfunction}
+  \kw{end}
 \end{program}
 
 \algosection{Compilation outline for input prefix try}
 \begin{program}
-  \compiletime{CompileTryAction($c?x$:T, $chans$:Set[\myref{Channel}]) $\rightarrow$} \\ \\
+  \compiletime{CompileTryAction($c?x$:T) $\rightarrow$} \\ 
   \kw{begin} \\
-  \pindent\kw{var} $commit$ : \myref{OutCommit} \\
-  \> $commit \leftarrow$ TryInputAction($pt$, $c$, $chans$, $\& tryResult$) \\
-  \>\kw{if} $tryResult =$ ENABLED \kw{then} \\
-  \>\pindent $pt.env[x] \leftarrow$ commit.evalfunc($commit.thread$) \\
-  \>\>\compiletime{\kw{cif} ischannel(T) \kw{then}} \\
-  \>\>\pindent\kw{if} \myref{KnowsRegister}($pt.knows, pt.env[x]$) \kw{then} \\
-  \>\>\>\pindent \myref{ChannelIncrRefCount}($pt.env[x]$) \\
-  \>\>\>\kw{endif} \\
-  \>\>\compiletime{\kw{cendif}} \\
-  \>\>\myref{Awake}($scheduler, commit.thread, commit$) \\
-  \>\kw{endif} \\
-  \kw{end}
-\end{program}
-
-\algosection{Runtime : try input action}
-\begin{program}
-  \kw{type} TryResult = \{ DISABLED, ENABLED, COMMIT \} \\
-\\
-  \kw{function} TryInputAction($pt$ : \myref{PiThread}, $chanRef$ : int, $chans$: Set[\myref{Channel}], $tryResult$: \&TryResyult) : \myref{OutCommit} \\
   \pindent \kw{var} $inchan$ : \myref{Channel} \\
-  \> $inchan \leftarrow$ $pt$.$env$[$chanRef$] \\
-  \> \kw{if} ChanArrayAdd($inchan$, $chans$, $\&nbchans$) \kw{then} \\
-  \>\pindent\synchro{Acquire($inchan.lock$)} \\
-  \>\kw{endif} \\
-  \>\kw{if} $inchan.globalrc = 1$ \kw{then} \\
-  \>\pindent$tryResult \leftarrow$ DISABLED \\
-  \>\>\kw{return} \kw{null} \\
-  \>\kw{endif} \\
-  \>\kw{var} $commit$ : \myref{OutCommit} \\
-  \>\kw{var} $ok$ : \{CANNOT\_ACQUIRE, VALID\_COMMITMENT, INVALID\_COMMITMENT\} \\
-  \>\\
-  \>\kw{do} \\
-  \>\pindent$commit \leftarrow$ \myref{FetchOutputCommitment}($inchan$) \\
-  \>\>\kw{if} $commit =$ \kw{null} \kw{then} \\
-  \>\>\pindent$tryresult \leftarrow$ COMMIT \\
-  \>\>\>\kw{return} \kw{null} \\
+  \> $inchan \leftarrow pt.env[c]$ \\
+  \> \kw{if} \kw{not} ChannelAcquireAndRegister($pt$, $inchan$, $chans$, $nbchans$) \kw{then} \\
+  \> \pindent $tryresult \leftarrow$ ABORT \\
+  \> \kw{else} \\
+  \>\>\kw{var} $commit$ : \myref{OutCommit} \\
+  \>\> $commit \leftarrow$ TryInputAction($inchan$, $\& tryResult$) \\
+  \>\>\kw{if} $tryResult =$ ENABLED \kw{then} \\
+  \>\>\pindent $pt.env[x] \leftarrow$ commit.evalfunc($commit.thread$) \\
+  \>\>\>\compiletime{\kw{cif} ischannel(T) \kw{then}} \\
+  \>\>\>\pindent\kw{if} \myref{KnowsRegister}($pt.knows, pt.env[x]$) \kw{then} \\
+  \>\>\>\>\pindent \myref{ChannelIncrRefCount}($pt.env[x]$) \\
+  \>\>\>\>\kw{endif} \\
+  \>\>\>\compiletime{\kw{cendif}} \\
+  \>\>\>\myref{Awake}($scheduler, commit.thread, commit$) \\
   \>\>\kw{endif} \\
-
-  \>\>\kw{do} \\
-  \>\>\pindent$ok \leftarrow$ \myref{CanAwake}($commit.thread, commit$) \\
-  \>\>\>\kw{if} $ok =$ CANNOT\_ACQUIRE \kw{then} \\
-  \>\>\>\pindent\synchro{lowLevelYield()} \\
-  \>\>\>\kw{endif} \\
-  \>\>\kw{while} $ok =$ CANNOT\_ACQUIRE \\
-  \>\>\\
-  \>\>\kw{if} $ok =$ VALID\_COMMITMENT \kw{then} \\
-  \>\>\> $tryResult \leftarrow$ ENABLED \\
-  \>\>\> \kw{return} commit \\
-  \>\>\kw{endif} \\
-  \>\kw{while} $inchan.outcommits \neq \{\}$ \\
-  errorDeadCodeReached() \\
-  \kw{endfunction}
+  \kw{end}
 \end{program}
 
 
