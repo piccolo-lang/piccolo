@@ -1,9 +1,19 @@
 module Test/PingPong
 
-def PingPong(i:chan<string>,o:chan<string>,msg:string) = i?(m), #core/io:print_str(m), o!msg, PingPong(i,o,msg)
+def PingPong(i:chan<string>,o:chan<string>,msg:string) =
+  i?(m), #core/io:print_str(m), o!msg, PingPong(i,o,msg)
 
-def Thread(c:chan<string>) = c!"<THREAD>",end
+def Thread(c:chan<string>) =
+  c!"<THREAD>",end
 
-def ThreadConstructor(c:chan<string>) = spawn{Thread(c)},ThreadConstructor(c)
+def ThreadConstructor(c:chan<string>) =
+  spawn{Thread(c)},ThreadConstructor(c)
 
-def Main() = new(c1:chan<string>),new(c2:chan<string>),spawn{PingPong(c1,c2,"<PING>")},new(c3:chan<string>),spawn{ThreadConstructor(c3)}, c1!"<PONG>", PingPong(c2, c1,"<PONG>")
+def Main() =
+  new(c1:chan<string>),
+  new(c2:chan<string>),
+  spawn{PingPong(c1,c2,"<PING>")},
+  new(c3:chan<string>),
+  spawn{ThreadConstructor(c3)},
+  c1!"<PONG>",
+  PingPong(c2, c1,"<PONG>")

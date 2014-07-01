@@ -130,7 +130,7 @@ brSExpr = brSExpr' 0
 
 brSExpr' :: Int -> [PrintLevel] -> Branch -> String
 brSExpr' ind lvl br@BTau    {} = indent ind ++
-  "(-> " ++ guard ++ " " ++ " tau " ++ "\n" ++ cont ++ ")"
+  "(-> " ++ guard ++ " tau " ++ "\n" ++ cont ++ ")"
   where guard = valSExpr lvl $ brGuard br
         cont  = procSExpr' (ind+4) lvl $ brCont br
 brSExpr' ind lvl br@BOutput {} = indent ind ++
@@ -205,5 +205,5 @@ valSExpr' ind lvl val@VPrim   {} = indent ind ++
   (if PrintTypes `elem` lvl then "[" ++ show (valTyp val) ++ "]" else "") ++
   " #" ++ valModule val ++ "/" ++ valName val ++ args ++ ")"
   where args | null (valArgs val) = ""
-             | otherwise          = " " ++ unwords (map (valSExpr lvl) $ valVals val)
+             | otherwise          = " " ++ unwords (map (valSExpr lvl) $ valArgs val)
 

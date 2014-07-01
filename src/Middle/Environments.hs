@@ -170,7 +170,7 @@ envValue val@VVar   {} = do
     Just index -> return $ val { valIndex = index }
     Nothing    -> throwError $ SimpleError "var not in scope"
 envValue val@VPrim  {} = do
-  envVals <- mapM envValue $ valVals val
-  return $ val { valVals = envVals }
+  args <- mapM envValue $ valArgs val
+  return $ val { valArgs = args }
 envValue val = return val
 

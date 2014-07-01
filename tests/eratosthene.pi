@@ -3,12 +3,13 @@
 module Test/Eratosthene
 
 def Gen(i:int, n:int, p: int, gen:chan<int>) =	
-  [#core/arith:less_than(i, n)] gen!i, Gen(#core/arith:add(i, p), n, p, gen)
+  [#core/arith:less_than(i, n)] gen!i,
+    Gen(#core/arith:add(i, p), n, p, gen)
 
 def PrimeFilter(n:int, in:chan<int>, out:chan<int>) =
   in?(x), 
-  	[#core/arith:equals(#core/arith:modulo(x, n), 0)] tau, PrimeFilter(n, in, out) +
-	[true] out!x, PrimeFilter(n, in, out)
+    [#core/arith:equals(#core/arith:modulo(x, n), 0)] tau, PrimeFilter(n, in, out) +
+    [true] out!x, PrimeFilter(n, in, out)
 
 def EndFilter(in:chan<int>, primes:chan<int>) =
   in?(x), primes!x, new(out:chan<int>), spawn{PrimeFilter(x, in, out)}, EndFilter(out, primes)
