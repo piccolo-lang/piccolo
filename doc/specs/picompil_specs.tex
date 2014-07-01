@@ -722,7 +722,8 @@ Expression & ::= & Constant \\
   \>\compiletime{\kw{cendfor}} \\
   \>\kw{if} $nbdisabled = n$ \kw{then} \\
   \>\pindent\synchro{\myref{ReleaseAllChannels}($chans$, $nbchans$)} \\
-  \>\>\compiletime{Compile(\kw{end}, STATUS\_BLOCKED)} \\
+  \>\>ProcessEnd($pt$, STATUS\_BLOCKED) \\
+  \>\>\kw{return} \\
   \>\kw{endif} \\
   \>\compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $0$ \kw{to} $n-1$} \\
   \>\pindent\kw{if} $pt.enabled[i]$ \kw{then} \\
