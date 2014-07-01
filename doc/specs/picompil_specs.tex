@@ -737,13 +737,13 @@ Expression & ::= & Constant \\
 \label{CompileTryAction}
 \algosection{Compilation outline for tau prefix try}
 \begin{program}
-  \compiletime{CompileTryAction(\kw{tau})}[\ldots $tryresult$:\{ENABLED, DISABLED, COMMIT\}] $\rightarrow$ \\ \\
+  \compiletime{CompileTryAction(\kw{tau})}[\ldots $tryresult$:\{ENABLED, DISABLED, COMMIT, ABORT\}] $\rightarrow$ \\ \\
   $tryresult \leftarrow$ ENABLED \\
 \end{program}
 
 \algosection{Compilation outline for output prefix try}
 \begin{program}
-  \compiletime{CompileTryAction($c!v$:T)}[$chans$ : Array[\myref{Channel}], $nbchans$ : \kw{int}, $tryresult$:\{ENABLED, DISABLED, COMMIT\}] $\rightarrow$ \\ \\
+  \compiletime{CompileTryAction($c!v$:T)}[$chans$ : Array[\myref{Channel}], $nbchans$ : \kw{int}, $tryresult$:\{ENABLED, DISABLED, COMMIT, ABORT\}] $\rightarrow$ \\ \\
   \kw{begin} \\
   \pindent\kw{var} $commit$ : \myref{InCommit} \\
   \> $commit \leftarrow$ TryOutputAction($pt$, $c$, $chans$, $\&nbchans$, $\& tryResult$)\\
