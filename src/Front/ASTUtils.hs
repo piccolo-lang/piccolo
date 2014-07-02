@@ -99,7 +99,7 @@ defSExpr' ind lvl def = indent ind ++
   "(def (" ++ defName def ++ params ++ ")\n" ++ body ++ "\n" ++
   indent ind ++ ")"
   where params | null (defParams def) = ""
-               | otherwise            = " " ++ unwords (map param (zip (defParams def) ([0..]::[Int])))
+               | otherwise = " " ++ unwords (zipWith (curry param) (defParams def) ([0..] :: [Int]))
         param ((n, t, _), i) = let name = if PrintIndexes `elem` lvl
                                             then "*" ++ show i
                                             else n in

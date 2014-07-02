@@ -33,6 +33,7 @@ import System.Environment
 import System.Console.GetOpt
 import System.IO
 import System.Exit
+import System.FilePath.Posix
 import Control.Monad
 import Control.Monad.Error
 import Data.List
@@ -49,48 +50,48 @@ handleFiles args [] = return ()
 handleFiles args (f:fs) = do
   content  <- readFile f
   ast      <- reportResult $ parseModule content
-  when ((SAST SimplePrint)  `elem` args) $ do
+  when (SAST SimplePrint  `elem` args) $ do
     putStrLn "------------------------------ output of the parsed AST"
     putStrLn (strSExpr [] ast)
     putStrLn ""
   typedAst <- reportResult $ typingPass ast
-  when ((SAST PrintTypes)   `elem` args) $ do
+  when (SAST PrintTypes   `elem` args) $ do
     putStrLn "------------------------------ output of the typed AST"
     putStrLn (strSExpr [PrintTypes] typedAst)
     putStrLn ""
   withEnv  <- reportResult $ computingEnvPass typedAst
-  when ((SAST PrintIndexes) `elem` args) $ do
+  when (SAST PrintIndexes `elem` args) $ do
     putStrLn "------------------------------ output of the decorated AST"
     putStrLn (strSExpr [PrintIndexes] withEnv)
     putStrLn ""
   emittedCode    <- reportResult $ if Generic `elem` args
     then compileToGeneric withEnv
     else compileToC       withEnv
-  if Generic `elem` args
-    then outputCode emittedCode f "a.out"
-    else outputCode emittedCode f "a.c"
+  let fOutput = replaceExtension f $ if Generic `elem` args then "out" else "c"
+  outputCode emittedCode fOutput
   handleFiles args fs
 
 -- | The 'compileToGeneric' function compiles a piccolo AST using the generic backend
 compileToGeneric :: Modul -> Either PiccError String
 compileToGeneric piAst = do
   seqAst :: Instr GenericBackend <- compilePass piAst
-  let output = runEmitterM (emitCode "Main" seqAst)
+  let output = runEmitterM $ emitCode mainDef seqAst
   return output
+  where mainDef = delete '/' (modName piAst) ++ "_Main"
 
 -- | The 'compileToC' function compiles a piccolo AST using the C backend
 compileToC :: Modul -> Either PiccError String
 compileToC piAst = do
   seqAst :: Instr CBackend <- compilePass piAst
-  let output = runEmitterM (emitCode "Main" seqAst)
+  let output = runEmitterM $ emitCode mainDef seqAst
   return output
+  where mainDef = delete '/' (modName piAst) ++ "_Main"
 
-outputCode :: String -> String -> String -> IO ()
-outputCode code f fname = do
+outputCode :: String -> String -> IO ()
+outputCode code fname = do
   hOut <- openFile fname WriteMode
   hPutStr hOut code
   hClose hOut
-  putStrLn $ "successfully compiled " ++ f ++ " into " ++ fname
 
 -- | Various flags for compiler options
 data Flag
@@ -106,11 +107,11 @@ flags =
       "Print this help message"
   , Option "g" ["generic"] (NoArg Generic)
       "Produce generic code instead of C code"
-  , Option "s0" ["sast0"] (NoArg (SAST SimplePrint))
+  , Option "" ["sast0"] (NoArg (SAST SimplePrint))
       "Print AST in s-epxressions style for debugging purposes"
-  , Option "s1" ["sast1"] (NoArg (SAST PrintTypes))
+  , Option "" ["sast1"] (NoArg (SAST PrintTypes))
       "Print AST in s-epxressions style for debugging purposes"
-  , Option "s2" ["sast2"] (NoArg (SAST PrintIndexes))
+  , Option "" ["sast2"] (NoArg (SAST PrintIndexes))
       "Print AST in s-epxressions style for debugging purposes"
   ]
 

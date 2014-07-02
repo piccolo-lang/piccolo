@@ -1,0 +1,3 @@
+module Test/Simplest
+
+def Main() = #core/io:print_str("hello\n"), end

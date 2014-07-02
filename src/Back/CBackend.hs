@@ -8,10 +8,13 @@ This backend targets C code.
 -}
 module Back.CBackend where
 
+import Front.AST
 import Back.SeqAST
+import Back.SeqASTUtils
 import Back.Backend
 import Back.CodeEmitter
 
+import Debug.Trace
 import Control.Monad
 
 
@@ -21,21 +24,21 @@ data CBackend
 instance BackendConsts CBackend where
   ptDef            = error "TODO CBackend.ptDef"
 
-  pt               = (SimpleName (Name "pt"), Sty "pt")
-  ptStatus         = error "TODO CBackend.ptStatus"
-  ptEnabled        = error "TODO CBackend.ptEnabled"
-  ptKnows          = error "TODO CBackend.ptKnows"
-  ptEnv            = error "TODO CBackend.ptEnv"
-  ptCommit         = error "TODO CBackend.ptCommit"
-  ptCommits        = error "TODO CBackend.ptCommits"
-  ptProc           = error "TODO CBackend.ptProc"
-  ptPc             = error "TODO CBackend.ptPc"
-  ptVal            = error "TODO CBackend.ptVal"
-  ptClock          = error "TODO CBackend.ptClock"
-  ptFuel           = error "TODO CBackend.ptFuel"
-  ptLock           = error "TODO CBackend.ptLock"
+  pt               = (SimpleName (Name "pt"), Pty "*" (Sty "PICC_PiThread"))
+  ptStatus         = (RecordName pt (Name "status"),  Sty "unknown_ptStatus")
+  ptEnabled        = (RecordName pt (Name "enabled"), Sty "unknown_ptEnabled")
+  ptKnows          = (RecordName pt (Name "knowns"),  Sty "unknown_ptKnows")
+  ptEnv            = (RecordName pt (Name "env"),     Sty "unknown_ptEnv")
+  ptCommit         = (RecordName pt (Name "commit"),  Sty "unknown_ptCommit")
+  ptCommits        = (RecordName pt (Name "commits"), Sty "unknown_ptCommits")
+  ptProc           = (RecordName pt (Name "proc"),    Sty "unknwown_ptProc")
+  ptPc             = (RecordName pt (Name "pc"),      Sty "unknown_ptPc")
+  ptVal            = (RecordName pt (Name "val"),     Sty "PICC_Value")
+  ptClock          = (RecordName pt (Name "clock"),   Sty "unknown_ptCLock")
+  ptFuel           = (RecordName pt (Name "fuel"),    Sty "unknown_ptFuel")
+  ptLock           = (RecordName pt (Name "lock"),    Sty "unknown_ptLock")
 
-  ptEnvI           = error "TODO CBackend.ptEnvI"
+  ptEnvI i         = (ArrayName (fst ptEnv) (Val (show i, Sty "int")), Sty "PICC_Value")
 
   chan             = error "TODO CBackend.chan"
   chanIncommits    = error "TODO CBackend.chanIncommits"
@@ -43,37 +46,65 @@ instance BackendConsts CBackend where
   chanGlobalrc     = error "TODO CBackend.chanGlobalrc"
   chanLock         = error "TODO CBackend.chanLock"
 
-  scheduler        = (SimpleName (Name "scheduler"), Sty "scheduler")
+  scheduler        = (SimpleName (Name "scheduler"), Pty "*" (Sty "PICC_SchedPool"))
 
-  labelType        = error "TODO CBackend.labelType"
+  labelType        = Sty "unknwown_label"
+  valueType        = Sty "PICC_Value"
+  stringHandleType = Pty "*" (Sty "PICC_StringHandle")
   
-  refBool          = error "TODO CBackend.refBool"
-  refInt           = error "TODO CBackend.refInt"
-  refString        = error "TODO CBackend.refString"
+  statusType       = Sty "unknown_statusType"
+  statusRun        = ("PICC_STATUS_RUN",     statusType)
+  statusCall       = ("PICC_STATUS_CALL",    statusType)
+  statusWait       = ("PICC_STATUS_WAIT",    statusType)
+  statusBlocked    = ("PICC_STATUS_BLOCKED", statusType)
+  statusEnded      = ("PICC_STATUS_ENDED",   statusType)
 
-  defProcType      = Fun (Sty "void") [Sty "scheduler", Sty "pithread"]
+  void             = ("void", Sty "void")
 
-  statusRun        = error "TODO CBackend.statusRun"
-  statusCall       = error "TODO CBackend.statusCall"
-  statusWait       = error "TODO CBackend.statusWait"
-  statusEnded      = error "TODO CBackend.statusEnded"
+  makeTrue         = (SimpleName (Name "PICC_INIT_BOOL_TRUE"),
+                      Fun (Sty "void") [Sty "unknown_makeTrue"])
+  makeFalse        = (SimpleName (Name "PICC_INIT_BOOL_FALSE"),
+                      Fun (Sty "void") [Sty "unknown_makeFalse"])
+  makeInt          = (SimpleName (Name "PICC_INIT_INT_VALUE"),
+                      Fun (Sty "void") [Sty "unknown_makeInt"])
+  makeString       = (SimpleName (Name "PICC_INIT_STRING_VALUE"),
+                      Fun (Sty "void") [Sty "PICC_Value", Sty "unknown_stringHandle"])
+  makeStringHandle = (SimpleName (Name "PICC_create_string_handle"),
+                      Fun stringHandleType [Pty "*" (Sty "char")])
 
-  void             = error "TODO CBackend.void"
+  convertInt i     = Val (show i, Sty "int")
+  convertString s  = FunCall makeStringHandle [Val (s, Pty "*" (Sty "char"))]
 
-  makeTrue         = error "TODO CBackend.makeTrue"
-  makeFalse        = error "TODO CBackend.makeFalse"
-  makeInt          = error "TODO CBackend.makeInt"
-  makeString       = error "TODO CBackend.makeString"
-  makePrim         = error "TODO CBackend.makePrim"
+  processEnd       = (SimpleName (Name "PICC_ProcessEnd"),
+                      Fun (Sty "void") [extractVarType pt, statusType])
 
-  convertInt       = error "TODO CBackend.convertInt"
-  convertString    = error "TODO CBackend.convertString"
+  makePrim "core/arith" "add"        = (SimpleName (Name "TODO add"),
+                                        Fun valueType [valueType, valueType])
+  makePrim "core/arith" "substract"  = (SimpleName (Name "TODO substract"),
+                                        Fun valueType [valueType, valueType])
+  makePrim "core/arith" "modulo"     = (SimpleName (Name "TODO modulo"),
+                                        Fun valueType [valueType, valueType])
+  makePrim "core/arith" "equals"     = (SimpleName (Name "TODO equals"),
+                                        Fun valueType [valueType, valueType])
+  makePrim "core/io"    "print_info" = (SimpleName (Name "TODO print_info"),
+                                        Fun valueType [valueType])
+  makePrim "core/io"    "print_str"  = (SimpleName (Name "PICC_print_value"),
+                                        Fun valueType [valueType])
+  makePrim "core/io"    "print_int"  = (SimpleName (Name "PICC_print_value"),
+                                        Fun valueType [valueType])
+  makePrim _ _                       = error "unknown primitive"
 
-  processEnd       = error "TODO CBackend.processEnd"
+prefixes :: (BackendConsts a) => [(PiccType a, String)]
+prefixes = [ (Sty "PICC_Value", "&") ]
 
+emitPrefix :: (BackendConsts a) => PiccType a -> EmitterM ()
+emitPrefix t = case lookup t prefixes of
+                 Nothing -> return ()
+                 Just p  -> emitStr p
 
 instance Backend CBackend where
-  emitName (Name str) = emitStr str
+  emitName (Name n) =
+    emitStr n
 
   emitVarName (SimpleName name)     =
     emitName name
@@ -81,9 +112,7 @@ instance Backend CBackend where
     let (v, t) = var
     emitVarName v
     case t of
-      Pty nt _ -> if nt == "*"
-                       then emitStr "->"
-                       else emitStr "."
+      Pty nt _ -> emitStr (if nt == "*" then "->" else ".")
       _        -> emitStr "."
     emitName str
   emitVarName (ArrayName var expr)  = do
@@ -117,7 +146,19 @@ instance Backend CBackend where
     emitStr "("
     emitExpr e
     emitStr ")"
-  emitExpr (FunCall fun args) = error "TODO CBackend.emitExpr/FunCall"
+  emitExpr (FunCall fun args) =
+    case fun of
+      (SimpleName f, Fun _ argTypes) -> do
+        emitName f
+        emitStr "("
+        emitList (\(expr,typ) -> do { emitPrefix typ ; emitExpr expr })
+          ", " (zip args argTypes)
+        emitStr ")"
+      (f, _) -> do
+        emitVarName f
+        emitStr "("
+        emitList emitExpr ", " args
+        emitStr ")"
 
   emitBinop Sum   = emitStr "+"
   emitBinop Minus = emitStr "-"
@@ -127,30 +168,69 @@ instance Backend CBackend where
 
   emitUnop Not = emitStr "!"
 
-  emitInstr (Comment str)              =
+  emitInstr (Comment str)              = do
+    emitLn ""
     emitLn $ "/* " ++ str ++ " */"
   emitInstr (Debug str)                =
     emitLn $ "printf(\"%s\", " ++ str ++ ");"
   emitInstr (Switch expr body)         = do
     emitIndent
-    emitStr "switch("
+    emitStr "switch ("
     emitExpr expr
     emitStr ") {\n"
     incrIndent
-    emitInstr body
+    emitList emitInstr "" body
     decrIndent
     emitIndent
     emitStr "}\n"
-  emitInstr (Case expr body)           = error "TODO CBackend.emitInstr Case"
+  emitInstr (Case expr)                = do
+    decrIndent
+    emitIndent
+    emitStr "case "
+    emitExpr expr
+    emitStr ":\n"
+    incrIndent
   emitInstr (SeqBloc instrs)           =
     forM_ instrs emitInstr
-  emitInstr (SemBloc instrs)           = error "TODO CBackend.emitInstr SemBloc"
-  emitInstr (ComBloc loc instr)        = error "TODO CBackend.emitInstr ComBloc"
-  emitInstr (ProcCall fun args)        = error "TODO CBackend.emitInstr ProcCall"
-  emitInstr (DeclareVar var)           = error "TODO CBackend.emitInstr DeclareVar"
-  emitInstr (Assign var expr)          = error "TODO CBackend.emitInstr Assign"
+  emitInstr (SemBloc instrs)           = do
+    emitLn "{"
+    incrIndent
+    emitList emitInstr "" instrs
+    decrIndent
+    emitLn "}"
+  emitInstr (ComBloc loc instr)        = do
+    emitIndent
+    emitStr $ "#line " ++ show (locStartLine loc) ++ "\n"
+    emitInstr instr
+  emitInstr (ProcCall fun args)        = do
+    emitIndent
+    case fun of
+      (SimpleName f, Fun _ argTypes) -> do
+        emitName f
+        emitStr "("
+        emitList (\(expr,typ) -> do { emitPrefix typ ; emitExpr expr })
+          ", " (zip args argTypes)
+        emitStr ");\n"
+      (f, _) -> do
+        emitVarName f
+        emitStr "("
+        emitList emitExpr ", " args
+        emitStr ");\n"
+  emitInstr (DeclareVar (var, typ))    = do
+    emitIndent
+    emitPiccType typ
+    emitStr " "
+    emitVarName var
+    emitStr ";\n"
+  emitInstr (Assign (var, _) expr)     = do
+    emitIndent
+    emitVarName var
+    emitStr " = "
+    emitExpr expr
+    emitStr ";\n"
   emitInstr (DeclareFun fun args body) = do
-    let (v, (Fun ret argsTyp)) = fun
+    let (v, Fun ret argsTyp) = fun
+    emitLn ""
     emitIndent
     emitPiccType ret
     emitStr " "
@@ -164,17 +244,64 @@ instance Backend CBackend where
     if null body
       then emitStr ";\n"
       else do
-        emitStr "{\n"
+        emitStr " {\n"
         incrIndent
         forM_ body emitInstr
         decrIndent
         emitStr "}\n"
-  emitInstr (ForEach var expr body)    = error "TODO CBackend.emitInstr ForEach"
-  emitInstr (If cond csq alt)          = error "TODO CBackend.emitInstr If"
-  emitInstr (Label lbl)                = error "TODO CBackend.emitInstr Label"
-  emitInstr (Goto lbl)                 = error "TODO CBackend.emitInstr Goto"
-  emitInstr (Return expr)              = error "TODO CBackend.emitInstr Return"
-  emitInstr (DoWhile expr body)        = error "TODO CBackend.emitInstr DoWhile"
+  emitInstr (ForEach (var, _) expr body) = do
+    emitLn "{"
+    incrIndent
+    emitIndent
+    emitStr "PICC_KnownValue "
+    emitVarName var
+    emitStr ";\n"
+    emitIndent
+    emitStr "PICC_KnownSet* s = "
+    emitExpr expr
+    emitStr ";\n"
+    emitIndent
+    emitStr "PICC_KNOWNSET_FOREACH(s, "
+    emitVarName var
+    emitStr ") {\n"
+    incrIndent
+    emitIndent
+    emitInstr body
+    decrIndent
+    emitLn "}"
+    emitLn "PICC_free_knownset(s);"
+    decrIndent
+    emitLn "}"
+  emitInstr (If cond csq alt)          = do
+    emitIndent
+    emitStr "if ("
+    emitExpr cond
+    emitStr ") {\n"
+    incrIndent
+    emitInstr csq
+    decrIndent
+    emitLn "} else {"
+    incrIndent
+    emitInstr alt
+    decrIndent
+    emitLn "}"
+  emitInstr (Label lbl)                = emitLn $ lbl ++ ":"
+  emitInstr (Goto lbl)                 = emitLn $ "goto " ++ lbl
+  emitInstr (Return (Val ("void", _))) = emitLn "return;"
+  emitInstr (Return expr)              = do
+    emitIndent
+    emitStr "return ("
+    emitExpr expr
+    emitStr ");\n"
+  emitInstr (DoWhile body expr)        = do
+    emitLn "do {"
+    incrIndent
+    emitInstr body
+    decrIndent
+    emitIndent
+    emitStr "} while ("
+    emitExpr expr
+    emitStr ");\n"
   
   emitCode mainName instr = do
     emitLn "#include <stdio.h>"
@@ -190,7 +317,7 @@ instance Backend CBackend where
     emitLn ""
     emitLn "int main() {"
     incrIndent
-    emitLn $ "PICC_main(2, " ++ mainName ++ ", 10, 10, 10, 10, 10, 0);"
+    emitLn $ "PICC_main(4, " ++ mainName ++ ", 2, 2, 2, 0, 0, 1);"
     emitLn "return 0;"
     decrIndent
     emitLn "}"

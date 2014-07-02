@@ -14,18 +14,18 @@ class BackendConsts a where
   ptDef            :: [a]
 
   pt               :: VarDescr a
-  ptStatus         :: [a]
-  ptEnabled        :: [a]
-  ptKnows          :: [a]
+  ptStatus         :: VarDescr a
+  ptEnabled        :: VarDescr a
+  ptKnows          :: VarDescr a
   ptEnv            :: VarDescr a
-  ptCommit         :: [a]
-  ptCommits        :: [a]
-  ptProc           :: [a]
+  ptCommit         :: VarDescr a
+  ptCommits        :: VarDescr a
+  ptProc           :: VarDescr a
   ptPc             :: VarDescr a
   ptVal            :: VarDescr a
-  ptClock          :: [a]
-  ptFuel           :: [a]
-  ptLock           :: [a]
+  ptClock          :: VarDescr a
+  ptFuel           :: VarDescr a
+  ptLock           :: VarDescr a
 
   ptEnvI           :: Int -> VarDescr a
   
@@ -38,16 +38,14 @@ class BackendConsts a where
   scheduler        :: VarDescr a
   
   labelType        :: PiccType a
-  
-  refBool          :: PiccType a
-  refInt           :: PiccType a
-  refString        :: PiccType a
+  valueType        :: PiccType a
+  stringHandleType :: PiccType a
 
-  defProcType      :: PiccType a
-
+  statusType       :: PiccType a
   statusRun        :: Value a
   statusCall       :: Value a
   statusWait       :: Value a
+  statusBlocked    :: Value a
   statusEnded      :: Value a
   
   void             :: Value a
@@ -56,10 +54,11 @@ class BackendConsts a where
   makeFalse        :: VarDescr a
   makeInt          :: VarDescr a
   makeString       :: VarDescr a
+  makeStringHandle :: VarDescr a
   makePrim         :: String -> String -> VarDescr a
 
-  convertInt       :: Int -> Value a
-  convertString    :: String -> Value a
+  convertInt       :: Int -> Expr a
+  convertString    :: String -> Expr a
 
   processEnd       :: VarDescr a
 
