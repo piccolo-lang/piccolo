@@ -1,0 +1,7 @@
+module Test/Call
+
+def Printer(x:int) = #core/io:print_int(x), end
+
+def Main() =
+  spawn{Printer(41)},
+  Printer(42)

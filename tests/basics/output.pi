@@ -1,0 +1,6 @@
+module Test/Prim
+
+def Main() =
+  new(c:chan<int>),
+  c!42,
+  end

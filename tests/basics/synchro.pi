@@ -1,0 +1,12 @@
+module Test/Prim
+
+def P(c:chan<int>) =
+  c?(x), #core/io:print_int(x), end
+
+def Q(c:chan<int>) =
+  c!(42), end
+
+def Main() =
+  new(c:chan<int>),
+  spawn{P(c)},
+  Q(c)

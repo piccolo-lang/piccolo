@@ -1,0 +1,3 @@
+module Test/Let
+
+def Main() = let(x:int=42), #core/io:print_int(x), end
