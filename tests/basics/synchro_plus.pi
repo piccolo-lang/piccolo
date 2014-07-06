@@ -1,0 +1,14 @@
+module Test/Prim
+
+def P(c:chan<int>) =
+  [false] tau, end +
+  [true] c?(x), #core/io:print_int(x), end
+
+def Q(c:chan<int>, x:int) =
+  [#core/arith:less_than(1000, x)] c!42, end +
+  [true] tau, end
+
+def Main() =
+  new(c:chan<int>),
+  spawn{P(c)},
+  Q(c, 42)

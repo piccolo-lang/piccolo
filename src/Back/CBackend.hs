@@ -21,63 +21,109 @@ import Control.Monad
 -- | 'CBackend' is the empty datatype used in the place of the phantom type in sequential AST.
 data CBackend
 
-instance BackendConsts CBackend where
-  ptDef            = error "TODO CBackend.ptDef"
+instance BackendTypes CBackend where
+  voidType              = Sty "void"
+  boolType              = Sty "char"
+  intType               = Sty "int"
+  stringType            = Pty "*" (Sty "char")
+  labelType             = Sty "int"
+  channelType           = Sty "TODO_channel_type"
 
-  pt               = (SimpleName (Name "pt"), Pty "*" (Sty "PICC_PiThread"))
-  ptStatus         = (RecordName pt (Name "status"),  Sty "unknown_ptStatus")
-  ptEnabled        = (RecordName pt (Name "enabled"), Sty "unknown_ptEnabled")
-  ptKnows          = (RecordName pt (Name "knowns"),  Sty "unknown_ptKnows")
-  ptEnv            = (RecordName pt (Name "env"),     Sty "unknown_ptEnv")
-  ptCommit         = (RecordName pt (Name "commit"),  Sty "unknown_ptCommit")
-  ptCommits        = (RecordName pt (Name "commits"), Sty "unknown_ptCommits")
-  ptProc           = (RecordName pt (Name "proc"),    Sty "unknwown_ptProc")
-  ptPc             = (RecordName pt (Name "pc"),      Sty "unknown_ptPc")
-  ptVal            = (RecordName pt (Name "val"),     Sty "PICC_Value")
-  ptClock          = (RecordName pt (Name "clock"),   Sty "unknown_ptCLock")
-  ptFuel           = (RecordName pt (Name "fuel"),    Sty "unknown_ptFuel")
-  ptLock           = (RecordName pt (Name "lock"),    Sty "unknown_ptLock")
+  defType               = Sty "TODO_defType"
 
-  ptEnvI i         = (ArrayName (fst ptEnv) (Val (show i, Sty "int")), Sty "PICC_Value")
+  ptType                = Pty "*" (Sty "PICC_PiThread")
+  knowSetType           = Sty "TODO_knowsSet_type"
+  valueType             = Sty ("PICC_Value")
+  statusType            = Sty "TODO_status_type"
+  tryResultType         = Sty "TODO_try_result_type"
+  incommitType          = Sty "TODO incommitType"
+  outcommitType         = Sty "TODO outcommitType"
 
-  chan             = error "TODO CBackend.chan"
-  chanIncommits    = error "TODO CBackend.chanIncommits"
-  chanOutcommits   = error "TODO CBackend.chanOutcommits"
-  chanGlobalrc     = error "TODO CBackend.chanGlobalrc"
-  chanLock         = error "TODO CBackend.chanLock"
+  schedulerType         = Pty "*" (Sty "PICC_SchedPool")
 
-  scheduler        = (SimpleName (Name "scheduler"), Pty "*" (Sty "PICC_SchedPool"))
+  stringHandleType      = Pty "*" (Sty "PICC_StringHandle")
 
-  labelType        = Sty "unknwown_label"
-  valueType        = Sty "PICC_Value"
-  stringHandleType = Pty "*" (Sty "PICC_StringHandle")
+
+instance BackendNames CBackend where
+  ptDef                 = error "TODO CBackend.ptDef"
+
+  pt                    = (SimpleName (Name "pt"),         ptType)
+  ptStatus              = (RecordName pt (Name "status"),  statusType)
+  ptEnabled             = (RecordName pt (Name "enabled"), Sty "TODOunknown_ptEnabled")
+  ptKnows               = (RecordName pt (Name "knowns"),  knowSetType)
+  ptEnv                 = (RecordName pt (Name "env"),     Sty "TODOunknown_ptEnv")
+  ptCommit              = (RecordName pt (Name "commit"),  Sty "TODOunknown_ptCommit")
+  ptCommits             = (RecordName pt (Name "commits"), Sty "TODOunknown_ptCommits")
+  ptProc                = (RecordName pt (Name "proc"),    Sty "TODOunknwown_ptProc")
+  ptPc                  = (RecordName pt (Name "pc"),      labelType)
+  ptVal                 = (RecordName pt (Name "val"),     valueType)
+  ptClock               = (RecordName pt (Name "clock"),   Sty "TODOunknown_ptCLock")
+  ptFuel                = (RecordName pt (Name "fuel"),    Sty "TODOunknown_ptFuel")
+  ptLock                = (RecordName pt (Name "lock"),    Sty "TODOunknown_ptLock")
+
+  ptEnvI i              = (ArrayName (fst ptEnv) (convertInt i), valueType)
+
+  chan                  = error "TODO CBackend.chan"
+  chanIncommits         = error "TODO CBackend.chanIncommits"
+  chanOutcommits        = error "TODO CBackend.chanOutcommits"
+  chanGlobalrc          = error "TODO CBackend.chanGlobalrc"
+  chanLock              = error "TODO CBackend.chanLock"
+
+  scheduler             = (SimpleName (Name "scheduler"), schedulerType)
   
-  statusType       = Sty "unknown_statusType"
-  statusRun        = ("PICC_STATUS_RUN",     statusType)
-  statusCall       = ("PICC_STATUS_CALL",    statusType)
-  statusWait       = ("PICC_STATUS_WAIT",    statusType)
-  statusBlocked    = ("PICC_STATUS_BLOCKED", statusType)
-  statusEnded      = ("PICC_STATUS_ENDED",   statusType)
+  statusRun             = ("PICC_STATUS_RUN",     statusType)
+  statusCall            = ("PICC_STATUS_CALL",    statusType)
+  statusWait            = ("PICC_STATUS_WAIT",    statusType)
+  statusBlocked         = ("PICC_STATUS_BLOCKED", statusType)
+  statusEnded           = ("PICC_STATUS_ENDED",   statusType)
 
-  void             = ("void", Sty "void")
+  tryResultDisabled     = ("PICC_TRYRESULT_DISABLED", tryResultType)
+  tryResultEnabled      = ("PICC_TRYRESULT_ENABLED",  tryResultType)
+  tryResultCommit       = ("PICC_TRYRESULT_COMMIT",   tryResultType)
 
-  makeTrue         = (SimpleName (Name "PICC_INIT_BOOL_TRUE"),
-                      Fun (Sty "void") [Sty "unknown_makeTrue"])
-  makeFalse        = (SimpleName (Name "PICC_INIT_BOOL_FALSE"),
-                      Fun (Sty "void") [Sty "unknown_makeFalse"])
-  makeInt          = (SimpleName (Name "PICC_INIT_INT_VALUE"),
-                      Fun (Sty "void") [Sty "unknown_makeInt"])
-  makeString       = (SimpleName (Name "PICC_INIT_STRING_VALUE"),
-                      Fun (Sty "void") [Sty "PICC_Value", Sty "unknown_stringHandle"])
-  makeStringHandle = (SimpleName (Name "PICC_create_string_handle"),
-                      Fun stringHandleType [Pty "*" (Sty "char")])
+  ksForgetAll           = (SimpleName (Name "KnowSetForgetAll"),
+                           Fun voidType [knowSetType])
+  kRegister             = (SimpleName (Name "KnowRegister"),
+                           Fun voidType [knowSetType, channelType])
 
-  convertInt i     = Val (show i, Sty "int")
-  convertString s  = FunCall makeStringHandle [Val (s, Pty "*" (Sty "char"))]
+  void                  = ("void", voidType)
 
-  processEnd       = (SimpleName (Name "PICC_ProcessEnd"),
-                      Fun (Sty "void") [extractVarType pt, statusType])
+  makeTrue              = (SimpleName (Name "PICC_INIT_BOOL_TRUE"),
+                           Fun voidType [valueType])
+  makeFalse             = (SimpleName (Name "PICC_INIT_BOOL_FALSE"),
+                           Fun voidType [valueType])
+  makeInt               = (SimpleName (Name "PICC_INIT_INT_VALUE"),
+                           Fun voidType [valueType, intType])
+  makeString            = (SimpleName (Name "PICC_INIT_STRING_VALUE"),
+                           Fun voidType [valueType, stringHandleType])
+  makeStringHandle      = (SimpleName (Name "PICC_create_string_handle"),
+                           Fun stringHandleType [stringType])
 
+  convertInt i          = Val (show i, intType)
+  convertString s       = FunCall makeStringHandle [Val (s, stringType)]
+
+  processEnd            = (SimpleName (Name "PICC_ProcessEnd"),
+                           Fun voidType [ptType, statusType])
+  processAcquireChannel = error "TODO processAcquireChannel"
+  processYield          = error "TODO processYield"
+  processWait           = error "TODO processWait"
+  awake                 = error "TODO awake"
+  generatePiThread      = error "TODO generatePiThread"
+
+  generateChannel       = (SimpleName (Name "PICC_GenerateChannel"),
+                           Fun valueType [ptType])
+  releaseChannel        = error "TODO releaseChannel"
+  acquire               = error "TODO acquire"
+
+  readyQueuePush        = error "TODO readyQueuePush"
+
+  tryOutputAction       = error "TODO tryOutputAction"
+  tryInputAction        = error "TODO tryInputAction"
+  registerOutputCommit  = error "TODO registerOutputCommit"
+  registerInputCommit   = error "TODO registerInputCommit"
+
+
+instance BackendPrimitives CBackend where
   makePrim "core/arith" "add"        = (SimpleName (Name "TODO add"),
                                         Fun valueType [valueType, valueType])
   makePrim "core/arith" "substract"  = (SimpleName (Name "TODO substract"),
@@ -94,10 +140,11 @@ instance BackendConsts CBackend where
                                         Fun valueType [valueType])
   makePrim _ _                       = error "unknown primitive"
 
-prefixes :: (BackendConsts a) => [(PiccType a, String)]
+
+prefixes :: (Backend a) => [(PiccType a, String)]
 prefixes = [ (Sty "PICC_Value", "&") ]
 
-emitPrefix :: (BackendConsts a) => PiccType a -> EmitterM ()
+emitPrefix :: (Backend a) => PiccType a -> EmitterM ()
 emitPrefix t = case lookup t prefixes of
                  Nothing -> return ()
                  Just p  -> emitStr p
@@ -278,11 +325,11 @@ instance Backend CBackend where
     emitExpr cond
     emitStr ") {\n"
     incrIndent
-    emitInstr csq
+    emitInstr $ SeqBloc csq
     decrIndent
     emitLn "} else {"
     incrIndent
-    emitInstr alt
+    emitInstr $ SeqBloc alt
     decrIndent
     emitLn "}"
   emitInstr (Label lbl)                = emitLn $ lbl ++ ":"

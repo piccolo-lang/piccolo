@@ -12,15 +12,13 @@ module Back.SeqAST where
 
 import qualified Front.AST as PilAST
 
-data Name b = Name String
-  deriving Show
+newtype Name b = Name String
 
 -- | Variable name datatype
 data VarName b
   = SimpleName (Name b)               -- ^ Simple name
   | RecordName (VarDescr b) (Name b)  -- ^ Fully quelified record name of the form name.field
   | ArrayName (VarName b) (Expr b)    -- ^ Array cell variable of the form name.[epxr]
-  deriving Show
 
 -- | A variable description is made of a variable name and its type
 type VarDescr b = (VarName b,PiccType b)
@@ -30,7 +28,7 @@ data PiccType b
   = Sty String                        -- ^ Atomic type
   | Pty String (PiccType b)           -- ^ Parameterized type
   | Fun (PiccType b) [PiccType b]     -- ^ Function type
-  deriving (Show, Eq)
+  deriving (Eq)
 
 -- | Values manipulated by the backend are strings in the generated code, with their types
 type Value b = (String,PiccType b)
@@ -42,7 +40,6 @@ data Expr b
   | Op (Binop b) (Expr b) (Expr b)    -- ^ Binary operation applied on two 'Expr'
   | OpU (Unop b) (Expr b)             -- ^ Unary operation applied on an 'Expr'
   | FunCall (VarDescr b) [Expr b]     -- ^ Function call
-  deriving Show
 
 -- | Binary operations that must be supported by the backend language
 data Binop b
@@ -51,12 +48,10 @@ data Binop b
   | Mult
   | Div
   | Equal
-  deriving Show
 
 -- | Unary operations that must be supported by the backend language
 data Unop b
   = Not
-  deriving Show
 
 -- | 'Instr' datatype is the entry point of a sequential AST description
 data Instr b
@@ -72,10 +67,9 @@ data Instr b
   | Assign (VarDescr b) (Expr b)                  -- ^ Variable assignation
   | DeclareFun (VarDescr b) [Name b] [Instr b]    -- ^ Function declaration
   | ForEach (VarDescr b) (Expr b) (Instr b)       -- ^ ForEach loop
-  | If (Expr b) (Instr b) (Instr b)               -- ^ If instruction
+  | If (Expr b) [Instr b] [Instr b]               -- ^ If instruction
   | Label String                                  -- ^ Label for goto
   | Goto String                                   -- ^ Goto
   | Return (Expr b)                               -- ^ Function return
   | DoWhile (Instr b) (Expr b)                    -- ^ DoWhile loop
-  deriving Show
 

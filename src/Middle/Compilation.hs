@@ -19,76 +19,64 @@ import Control.Monad.Error
 import Control.Monad.State
 
 
-type LocalVarCount = Int
-type LabelCount = Int
+data CompState = CompState { locVarCount :: Int
+                           , labelCount  :: Int
+                           }
 
--- counter for local ver gen,
--- counter for label gen,
--- backup of the entry label of a definition
-type CompilingState = (LocalVarCount, LabelCount, Int)
-type CompilingM a = ErrorT PiccError (State CompilingState) a
+type CompilingM a = ErrorT PiccError (State CompState) a
 
 resetLocCount :: CompilingM ()
 resetLocCount = do
-  (_, labCount, labEntry) <- get
-  put (0, labCount, labEntry)
+  st <- get
+  put st { locVarCount = 0 }
 
 genLocalVar :: CompilingM (S.VarName a)
 genLocalVar = do
-  (locCount, labCount, labEntry) <- get
-  let v = "v" ++ show locCount
-  put (locCount + 1, labCount, labEntry)
-  return $ S.SimpleName (S.Name v)
+  st <- get
+  let l = locVarCount st
+  put st { locVarCount = l + 1 }
+  return $ S.SimpleName (S.Name ("v" ++ show l))
 
 resetLabCount :: CompilingM ()
 resetLabCount = do
-  (locCount, _, labEntry) <- get
-  put (locCount, 0, labEntry)
+  st <- get
+  put st { labelCount = 0 }
 
-genLabel :: (B.Backend a) => CompilingM (S.Expr a)
+genLabel :: (B.Backend a) => CompilingM (S.Expr a, String)
 genLabel = do
-  (locCount, labCount, labEntry) <- get
-  let l = show labCount
-  put (locCount, labCount + 1, labEntry)
-  return $ S.Val (l, B.labelType)
+  st <- get
+  let l = labelCount st
+  put st { labelCount = l + 1 }
+  return (S.Val (show l, B.labelType), "label" ++ show l)
 
 
 -- | The 'compilePass' monad run the piccolo AST compilation to sequential AST
 compilePass :: (B.Backend a) => Modul -> Either PiccError (S.Instr a)
 compilePass m = evalState (runErrorT instr) initEnv
   where instr    = compileModul m
-        initEnv  = (0, 0, 0)
+        initEnv  = CompState 0 0
 
 
 compileModul :: (B.Backend a) => Modul -> CompilingM (S.Instr a)
 compileModul m = do
-  defSigs <- mapM (genFunSig (delete '/' $ modName m)) (modDefs m)
-  defDefs <- mapM (compileDefinition (delete '/' $ modName m)) (modDefs m)
-  return $ S.SeqBloc [ S.SeqBloc defSigs
-                     , S.SeqBloc defDefs
+  decls <- forM (modDefs m) $ \def -> do
+    return $ S.DeclareFun (S.SimpleName (name def), S.Fun B.voidType [B.schedulerType, B.ptType])
+                          (map extractVarName [B.scheduler, B.pt])
+                          []
+  deffs <- forM (modDefs m) $ \def -> compileDefinition (name def) def
+  return $ S.SeqBloc [ S.SeqBloc decls
+                     , S.SeqBloc deffs
                      ]
+  where name def = S.Name $ (delete '/' $ modName m) ++ "_" ++ defName def
 
-genFunSig :: (B.Backend a) => String -> Definition -> CompilingM (S.Instr a)
-genFunSig mName def = do
-  let args     = [B.scheduler, B.pt]
-  let voidType = extractValType B.void
-  return $ S.DeclareFun (S.SimpleName n, S.Fun voidType (map extractVarType args))
-                        (map extractVarName args)
-                        []
-  where n = S.Name (mName ++ "_" ++ defName def)
-
-compileDefinition :: (B.Backend a) => String -> Definition -> CompilingM (S.Instr a)
-compileDefinition mName def = do
+compileDefinition :: (B.Backend a) => S.Name a -> Definition -> CompilingM (S.Instr a)
+compileDefinition name def = do
   resetLabCount
-  dEntry     <- genLabel
-  procInstrs <- compileProcess (defBody def)
-  let args     = [B.scheduler, B.pt]
-  let voidType = extractValType B.void
-  return $ S.DeclareFun (S.SimpleName n, S.Fun voidType (map extractVarType args))
-                        (map extractVarName args)
+  (dEntry, _) <- genLabel
+  procInstrs  <- compileProcess (defBody def)
+  return $ S.DeclareFun (S.SimpleName name, S.Fun B.voidType [B.schedulerType, B.ptType])
+                        (map extractVarName [B.scheduler, B.pt])
                         [ S.Switch (S.Var B.ptPc) [ S.Case dEntry, procInstrs ]]
-  where n = S.Name (mName ++ "_" ++ defName def)
-
 
 compileProcess :: (B.Backend a) => Process -> CompilingM (S.Instr a)
 compileProcess proc@PEnd    {} = do
@@ -102,17 +90,140 @@ compileProcess proc@PPrefix {} = do
   cont <- compileProcess $ procCont proc
   return $ S.SeqBloc [ pref, cont ]
 compileProcess proc@PChoice {} = throwError $ TodoError "compileProcess/PChoice"
-compileProcess proc@PCall   {} = throwError $ TodoError "compileProcess/PCall"
+compileProcess proc@PCall   {} = do
+  com   <- commentProcess proc
+  resetLocCount
+  loop1 <- forM (procArgs proc) $ \arg -> do
+    v <- genLocalVar
+    t <- compileType (valTyp arg)
+    let vi = (v, t)
+    e <- compileValue arg
+    return ((vi, arg), S.SeqBloc [ S.DeclareVar vi
+                          , e
+                          , S.Assign vi (S.Var B.ptVal)
+                          ])
+  let (vars, instrs1) = unzip loop1
+  loop2 <- forM (zip vars [0..]) $ \((vi, arg), i) -> do
+    let instr = S.Assign (B.ptEnvI i) (S.Var vi)
+    case valTyp arg of
+      TChannel {} -> return $ S.SeqBloc [instr,
+                                        S.ProcCall B.kRegister [S.Var B.ptKnows, S.Var vi]]
+      _       -> return instr
+  let name = (delete '/' $ procModule proc) ++ "_" ++ procName proc
+  return $ S.SeqBloc [ com
+                     , S.ProcCall B.ksForgetAll [S.Var B.ptKnows]
+                     , S.SemBloc $ instrs1 ++ loop2 ++
+                       [ S.Assign B.ptProc (S.Val (name, B.defType))
+                       , S.Assign B.ptPc (S.Val ("0", B.labelType))
+                       , S.Assign B.ptStatus (S.Val B.statusCall)
+                       , S.Return $ S.Val B.void
+                       ]
+                     ]
 
 compileBranch :: (B.Backend a) => Branch -> CompilingM (S.Instr a)
 compileBranch br = throwError $ TodoError "compileBranch"
 
 compileAction :: (B.Backend a) => Action -> CompilingM (S.Instr a)
-compileAction act@AOutput {} = throwError $ TodoError "compileAction/AOutput"
+compileAction act@AOutput {} = do
+  com                    <- commentAction act
+  (startLabel, _)        <- genLabel
+  (contLabel, contLabel')<- genLabel
+  compiledExpr <- compileValue (actData act)
+  let ok         = (S.SimpleName (S.Name "ok"), B.boolType)
+  let outChan    = (S.SimpleName (S.Name"outchan"), B.channelType)
+  let commit     = (S.SimpleName (S.Name "commit"), B.incommitType)
+  let tryResult  = (S.SimpleName (S.Name "tryresult"), B.tryResultType)
+  return $ S.SeqBloc [ com
+                     , S.Case startLabel
+                     , S.SemBloc [ S.DeclareVar ok
+                                 , S.DeclareVar outChan
+                                 , S.Assign outChan (S.Var (B.ptEnvI (actChanIndex act)))
+                                 , S.Assign ok
+                                   (S.FunCall B.processAcquireChannel
+                                     [ S.Var B.pt, S.Var outChan ])
+                                 , S.If (S.OpU S.Not (S.Var ok))
+                                     [ S.Assign B.ptPc startLabel
+                                     , S.ProcCall B.processYield [S.Var B.pt]
+                                     , S.Return $ S.Val B.void
+                                     ]
+                                     []
+                                 , S.DeclareVar commit
+                                 , S.Assign commit
+                                   (S.FunCall B.tryOutputAction
+                                     [ S.Var outChan, S.Var tryResult ])
+                                 , S.If (S.Op S.Equal (S.Var tryResult) (S.Val B.tryResultEnabled))
+                                     [ S.ProcCall B.releaseChannel [ S.Var outChan ]
+                                     , S.SeqBloc [compiledExpr]
+                                     , S.Assign (S.SimpleName (S.Name "TODO commit.thread.env[commit.refval]"), S.Sty "TODOtype")
+                                       (S.Var B.ptVal)
+                                     , S.ProcCall B.awake
+                                       [S.Var B.scheduler, S.Var (S.SimpleName (S.Name "TODOcommitThread"), S.Sty "TODO type"), S.Var commit]
+                                     , S.Goto contLabel'
+                                     ]
+                                     [S.If (S.Op S.Equal (S.Var tryResult) (S.Val B.tryResultDisabled))
+                                       [ S.ProcCall B.releaseChannel [ S.Var outChan ]
+                                       , S.ProcCall B.processEnd [ S.Var B.pt, S.Val B.statusBlocked ]
+                                       , S.Return $ S.Val B.void
+                                       ]
+                                       []
+                                     ]
+                                 , S.ProcCall B.registerOutputCommit
+                                   [ S.Var B.pt, S.Var outChan, S.Val ("TODO eval function", S.Sty "TODO type"), contLabel ]
+                                 , S.ProcCall B.acquire
+                                   [ S.Var B.ptLock ]
+                                 , S.ProcCall B.releaseChannel
+                                   [ S.Var outChan ]
+                                 , S.ProcCall B.processWait
+                                   [ S.Var B.pt ]
+                                 , S.Return $ S.Val B.void
+                                 ]
+                     , S.Case contLabel
+                     , S.Label contLabel'
+                     ]
 compileAction act@AInput  {} = throwError $ TodoError "compileAction/AInput"
-compileAction act@ANew    {} = throwError $ TodoError "compileAction/ANew"
-compileAction act@ALet    {} = throwError $ TodoError "compileAction/ALet"
-compileAction act@ASpawn  {} = throwError $ TodoError "compileAction/ASpawn"
+compileAction act@ANew    {} = do
+  com  <- commentAction act
+  return $ S.SeqBloc [ com
+                     , S.Assign (B.ptEnvI (actBindIndex act)) $
+                       S.FunCall B.generateChannel [S.Var B.pt]
+                     ]
+compileAction act@ALet    {} = do
+  com  <- commentAction act
+  expr <- compileValue $ actVal act
+  return $ S.SeqBloc [ com
+                     , expr
+                     , S.Assign (B.ptEnvI (actBindIndex act)) $ S.Var B.ptVal
+                     ]
+compileAction act@ASpawn  {} = do
+  com  <- commentAction act
+  resetLocCount
+  let child = (S.SimpleName (S.Name "child"), B.ptType)
+  let name  = (delete '/' $ actModule act) ++ "_" ++ actName act
+  instrs <- forM (zip (actArgs act) (map show [0..])) $ \(arg, i) -> do
+    v <- genLocalVar
+    t <- compileType (valTyp arg)
+    let vi = (v, t)
+    e <- compileValue arg
+    let e' = S.Assign vi (S.Var B.ptVal)
+    let e'' = S.Assign (S.SimpleName (S.Name "child.env[i]"), B.valueType) (S.Var vi)
+    case valTyp arg of
+      TChannel {} -> return $ S.SeqBloc [ e
+                                        , e'
+                                        , S.ProcCall B.kRegister [S.Var (S.SimpleName (S.Name "child.knows"), S.Sty "TODO"), S.Var vi]
+                                        , e''
+                                        ]
+      _           -> return $ S.SeqBloc [ e, e', e'' ]
+  return $ S.SeqBloc [ com
+                     , S.SemBloc $
+                       [ S.DeclareVar child
+                       , S.Assign child (S.FunCall B.generatePiThread [B.convertInt 10])] -- TODO
+                        ++ instrs ++
+                       [ S.Assign (S.SimpleName (S.Name "TODO childProc"), S.Sty "TODO type") (S.Val (name, B.defType))
+                       , S.Assign (S.SimpleName (S.Name "TODO childPc"), S.Sty "TODO type") (S.Val ("0", B.labelType))
+                       , S.Assign (S.SimpleName (S.Name "TODO childStatus"), S.Sty "TODO type") (S.Val B.statusRun)
+                       , S.ProcCall B.readyQueuePush [S.Val ("TODO scheduler.ready.child", S.Sty "TODO type")]
+                       ]
+                     ]
 compileAction act@APrim   {} = do
   com  <- commentAction act
   resetLocCount
@@ -157,7 +268,7 @@ compileValue val@VPrim   {} = do
   let varExprs = map S.Var vars
   return $ S.SemBloc $ instrs ++
     [ S.Assign B.ptVal (S.FunCall (B.makePrim (valModule val) (valName val)) varExprs) ]
-compileValue val@VTuple  {} = throwError $ TodoError "tuples not yet supported"
+compileValue VTuple  {} = throwError $ TodoError "tuples not yet supported"
 
 compileType :: (B.Backend a) => TypeExpr -> CompilingM (S.PiccType a)
 compileType _ = return B.valueType
