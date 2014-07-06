@@ -99,6 +99,7 @@ instance BackendNames GenericBackend where
 
   generateChannel       = error "TODO GenericBackend generateChannel"
   releaseChannel        = error "TODO GenericBackend releaseChannel"
+  releaseAllChannels    = error "TODO GenericBackend releaseAllChannels"
   acquire               = error "TODO GenericBackend acquire"
 
   readyQueuePush        = error "TODO GenericBackend readyQueuePush"
@@ -114,7 +115,6 @@ instance BackendPrimitives GenericBackend where
 
 
 instance Backend GenericBackend where
-  emitName = error "TODO GenericBackend.emitName"
   emitVarName = error "TODO GenericBackend.emitVarName"
   emitPiccType = error "TODO GenericBackend.emitPiccType"
   emitExpr = error "TODO GenericBackend.emitExpr"

@@ -12,26 +12,24 @@ module Back.SeqAST where
 
 import qualified Front.AST as PilAST
 
-newtype Name b = Name String
-
 -- | Variable name datatype
 data VarName b
-  = SimpleName (Name b)               -- ^ Simple name
-  | RecordName (VarDescr b) (Name b)  -- ^ Fully quelified record name of the form name.field
+  = SimpleName String               -- ^ Simple name
+  | RecordName (VarDescr b) String  -- ^ Fully qualified record name of the form name.field
   | ArrayName (VarName b) (Expr b)    -- ^ Array cell variable of the form name.[epxr]
 
 -- | A variable description is made of a variable name and its type
-type VarDescr b = (VarName b,PiccType b)
+type VarDescr b = (VarName b, PiccType b)
 
 -- | Types for sequential AST
 data PiccType b
-  = Sty String                        -- ^ Atomic type
-  | Pty String (PiccType b)           -- ^ Parameterized type
+  = Sty String                      -- ^ Atomic type
+  | Pty String (PiccType b)         -- ^ Parameterized type
   | Fun (PiccType b) [PiccType b]     -- ^ Function type
   deriving (Eq)
 
 -- | Values manipulated by the backend are strings in the generated code, with their types
-type Value b = (String,PiccType b)
+type Value b = (String, PiccType b)
 
 -- | Sequential AST expressions
 data Expr b
@@ -65,7 +63,7 @@ data Instr b
   | ProcCall (VarDescr b) [Expr b]                -- ^ Function call
   | DeclareVar (VarDescr b)                       -- ^ Variable declaration
   | Assign (VarDescr b) (Expr b)                  -- ^ Variable assignation
-  | DeclareFun (VarDescr b) [Name b] [Instr b]    -- ^ Function declaration
+  | DeclareFun (VarDescr b) [String] [Instr b]    -- ^ Function declaration
   | ForEach (VarDescr b) (Expr b) (Instr b)       -- ^ ForEach loop
   | If (Expr b) [Instr b] [Instr b]               -- ^ If instruction
   | Label String                                  -- ^ Label for goto

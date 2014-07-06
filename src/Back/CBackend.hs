@@ -14,7 +14,6 @@ import Back.SeqASTUtils
 import Back.Backend
 import Back.CodeEmitter
 
-import Debug.Trace
 import Control.Monad
 
 
@@ -47,21 +46,21 @@ instance BackendTypes CBackend where
 instance BackendNames CBackend where
   ptDef                 = error "TODO CBackend.ptDef"
 
-  pt                    = (SimpleName (Name "pt"),         ptType)
-  ptStatus              = (RecordName pt (Name "status"),  statusType)
-  ptEnabled             = (RecordName pt (Name "enabled"), Sty "TODOunknown_ptEnabled")
-  ptKnows               = (RecordName pt (Name "knowns"),  knowSetType)
-  ptEnv                 = (RecordName pt (Name "env"),     Sty "TODOunknown_ptEnv")
-  ptCommit              = (RecordName pt (Name "commit"),  Sty "TODOunknown_ptCommit")
-  ptCommits             = (RecordName pt (Name "commits"), Sty "TODOunknown_ptCommits")
-  ptProc                = (RecordName pt (Name "proc"),    Sty "TODOunknwown_ptProc")
-  ptPc                  = (RecordName pt (Name "pc"),      labelType)
-  ptVal                 = (RecordName pt (Name "val"),     valueType)
-  ptClock               = (RecordName pt (Name "clock"),   Sty "TODOunknown_ptCLock")
-  ptFuel                = (RecordName pt (Name "fuel"),    Sty "TODOunknown_ptFuel")
-  ptLock                = (RecordName pt (Name "lock"),    Sty "TODOunknown_ptLock")
+  pt                    = (SimpleName "pt",         ptType)
+  ptStatus aPt          = (RecordName aPt "status",  statusType)
+  ptEnabled aPt         = (RecordName aPt "enabled", Sty "TODOunknown_ptEnabled")
+  ptKnows aPt           = (RecordName aPt "knowns",  knowSetType)
+  ptEnv aPt             = (RecordName aPt "env",     Sty "TODOunknown_ptEnv")
+  ptCommit aPt          = (RecordName aPt "commit",  Sty "TODOunknown_ptCommit")
+  ptCommits aPt         = (RecordName aPt "commits", Sty "TODOunknown_ptCommits")
+  ptProc aPt            = (RecordName aPt "proc",    Sty "TODOunknwown_ptProc")
+  ptPc aPt              = (RecordName aPt "pc",      labelType)
+  ptVal aPt             = (RecordName aPt "val",     valueType)
+  ptClock aPt           = (RecordName aPt "clock",   Sty "TODOunknown_ptCLock")
+  ptFuel aPt            = (RecordName aPt "fuel",    Sty "TODOunknown_ptFuel")
+  ptLock aPt            = (RecordName aPt "lock",    Sty "TODOunknown_ptLock")
 
-  ptEnvI i              = (ArrayName (fst ptEnv) (convertInt i), valueType)
+  ptEnvI aPtEnv i       = (ArrayName (fst aPtEnv) (convertInt i), valueType)
 
   chan                  = error "TODO CBackend.chan"
   chanIncommits         = error "TODO CBackend.chanIncommits"
@@ -69,7 +68,7 @@ instance BackendNames CBackend where
   chanGlobalrc          = error "TODO CBackend.chanGlobalrc"
   chanLock              = error "TODO CBackend.chanLock"
 
-  scheduler             = (SimpleName (Name "scheduler"), schedulerType)
+  scheduler             = (SimpleName "scheduler", schedulerType)
   
   statusRun             = ("PICC_STATUS_RUN",     statusType)
   statusCall            = ("PICC_STATUS_CALL",    statusType)
@@ -81,28 +80,28 @@ instance BackendNames CBackend where
   tryResultEnabled      = ("PICC_TRYRESULT_ENABLED",  tryResultType)
   tryResultCommit       = ("PICC_TRYRESULT_COMMIT",   tryResultType)
 
-  ksForgetAll           = (SimpleName (Name "KnowSetForgetAll"),
+  ksForgetAll           = (SimpleName "KnowSetForgetAll",
                            Fun voidType [knowSetType])
-  kRegister             = (SimpleName (Name "KnowRegister"),
+  kRegister             = (SimpleName "KnowRegister",
                            Fun voidType [knowSetType, channelType])
 
   void                  = ("void", voidType)
 
-  makeTrue              = (SimpleName (Name "PICC_INIT_BOOL_TRUE"),
+  makeTrue              = (SimpleName "PICC_INIT_BOOL_TRUE",
                            Fun voidType [valueType])
-  makeFalse             = (SimpleName (Name "PICC_INIT_BOOL_FALSE"),
+  makeFalse             = (SimpleName "PICC_INIT_BOOL_FALSE",
                            Fun voidType [valueType])
-  makeInt               = (SimpleName (Name "PICC_INIT_INT_VALUE"),
+  makeInt               = (SimpleName "PICC_INIT_INT_VALUE",
                            Fun voidType [valueType, intType])
-  makeString            = (SimpleName (Name "PICC_INIT_STRING_VALUE"),
+  makeString            = (SimpleName "PICC_INIT_STRING_VALUE",
                            Fun voidType [valueType, stringHandleType])
-  makeStringHandle      = (SimpleName (Name "PICC_create_string_handle"),
+  makeStringHandle      = (SimpleName "PICC_create_string_handle",
                            Fun stringHandleType [stringType])
 
   convertInt i          = Val (show i, intType)
   convertString s       = FunCall makeStringHandle [Val (s, stringType)]
 
-  processEnd            = (SimpleName (Name "PICC_ProcessEnd"),
+  processEnd            = (SimpleName "PICC_ProcessEnd",
                            Fun voidType [ptType, statusType])
   processAcquireChannel = error "TODO processAcquireChannel"
   processYield          = error "TODO processYield"
@@ -110,9 +109,10 @@ instance BackendNames CBackend where
   awake                 = error "TODO awake"
   generatePiThread      = error "TODO generatePiThread"
 
-  generateChannel       = (SimpleName (Name "PICC_GenerateChannel"),
+  generateChannel       = (SimpleName "PICC_GenerateChannel",
                            Fun valueType [ptType])
   releaseChannel        = error "TODO releaseChannel"
+  releaseAllChannels    = error "TODO releaseAllChannels"
   acquire               = error "TODO acquire"
 
   readyQueuePush        = error "TODO readyQueuePush"
@@ -124,19 +124,19 @@ instance BackendNames CBackend where
 
 
 instance BackendPrimitives CBackend where
-  makePrim "core/arith" "add"        = (SimpleName (Name "TODO add"),
+  makePrim "core/arith" "add"        = (SimpleName "TODO add",
                                         Fun valueType [valueType, valueType])
-  makePrim "core/arith" "substract"  = (SimpleName (Name "TODO substract"),
+  makePrim "core/arith" "substract"  = (SimpleName "TODO substract",
                                         Fun valueType [valueType, valueType])
-  makePrim "core/arith" "modulo"     = (SimpleName (Name "TODO modulo"),
+  makePrim "core/arith" "modulo"     = (SimpleName "TODO modulo",
                                         Fun valueType [valueType, valueType])
-  makePrim "core/arith" "equals"     = (SimpleName (Name "TODO equals"),
+  makePrim "core/arith" "equals"     = (SimpleName "TODO equals",
                                         Fun valueType [valueType, valueType])
-  makePrim "core/io"    "print_info" = (SimpleName (Name "TODO print_info"),
+  makePrim "core/io"    "print_info" = (SimpleName "TODO print_info",
                                         Fun valueType [valueType])
-  makePrim "core/io"    "print_str"  = (SimpleName (Name "PICC_print_value"),
+  makePrim "core/io"    "print_str"  = (SimpleName "PICC_print_value",
                                         Fun valueType [valueType])
-  makePrim "core/io"    "print_int"  = (SimpleName (Name "PICC_print_value"),
+  makePrim "core/io"    "print_int"  = (SimpleName "PICC_print_value",
                                         Fun valueType [valueType])
   makePrim _ _                       = error "unknown primitive"
 
@@ -150,18 +150,15 @@ emitPrefix t = case lookup t prefixes of
                  Just p  -> emitStr p
 
 instance Backend CBackend where
-  emitName (Name n) =
-    emitStr n
-
   emitVarName (SimpleName name)     =
-    emitName name
+    emitStr name
   emitVarName (RecordName var str)  = do
     let (v, t) = var
     emitVarName v
     case t of
       Pty nt _ -> emitStr (if nt == "*" then "->" else ".")
       _        -> emitStr "."
-    emitName str
+    emitStr str
   emitVarName (ArrayName var expr)  = do
     emitVarName var
     emitStr "["
@@ -196,8 +193,7 @@ instance Backend CBackend where
   emitExpr (FunCall fun args) =
     case fun of
       (SimpleName f, Fun _ argTypes) -> do
-        emitName f
-        emitStr "("
+        emitStr $ f ++ "("
         emitList (\(expr,typ) -> do { emitPrefix typ ; emitExpr expr })
           ", " (zip args argTypes)
         emitStr ")"
@@ -253,8 +249,7 @@ instance Backend CBackend where
     emitIndent
     case fun of
       (SimpleName f, Fun _ argTypes) -> do
-        emitName f
-        emitStr "("
+        emitStr $ f ++ "("
         emitList (\(expr,typ) -> do { emitPrefix typ ; emitExpr expr })
           ", " (zip args argTypes)
         emitStr ");\n"
@@ -276,17 +271,17 @@ instance Backend CBackend where
     emitExpr expr
     emitStr ";\n"
   emitInstr (DeclareFun fun args body) = do
-    let (v, Fun ret argsTyp) = fun
+    let (vt, Fun ret argsTyp) = fun
     emitLn ""
     emitIndent
     emitPiccType ret
     emitStr " "
-    emitVarName v
+    emitVarName vt
     emitStr "("
     emitList (\(v,t) -> do
       emitPiccType t
       emitStr " "
-      emitName v) ", " $ zip args argsTyp
+      emitStr v) ", " $ zip args argsTyp
     emitStr ")"
     if null body
       then emitStr ";\n"
@@ -351,7 +346,6 @@ instance Backend CBackend where
     emitStr ");\n"
   
   emitCode mainName instr = do
-    emitLn "#include <stdio.h>"
     emitLn "#include <runtime.h>"
     emitLn "#include <value.h>"
     emitLn "#include <queue.h>"

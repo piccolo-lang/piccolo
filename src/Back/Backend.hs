@@ -38,20 +38,20 @@ class BackendNames a where
   ptDef                 :: [a]
      
   pt                    :: VarDescr a
-  ptStatus              :: VarDescr a
-  ptEnabled             :: VarDescr a
-  ptKnows               :: VarDescr a
-  ptEnv                 :: VarDescr a
-  ptCommit              :: VarDescr a
-  ptCommits             :: VarDescr a
-  ptProc                :: VarDescr a
-  ptPc                  :: VarDescr a
-  ptVal                 :: VarDescr a
-  ptClock               :: VarDescr a
-  ptFuel                :: VarDescr a
-  ptLock                :: VarDescr a
+  ptStatus              :: VarDescr a -> VarDescr a
+  ptEnabled             :: VarDescr a -> VarDescr a
+  ptKnows               :: VarDescr a -> VarDescr a
+  ptEnv                 :: VarDescr a -> VarDescr a
+  ptCommit              :: VarDescr a -> VarDescr a
+  ptCommits             :: VarDescr a -> VarDescr a
+  ptProc                :: VarDescr a -> VarDescr a
+  ptPc                  :: VarDescr a -> VarDescr a
+  ptVal                 :: VarDescr a -> VarDescr a
+  ptClock               :: VarDescr a -> VarDescr a
+  ptFuel                :: VarDescr a -> VarDescr a
+  ptLock                :: VarDescr a -> VarDescr a
 
-  ptEnvI                :: Int -> VarDescr a
+  ptEnvI                :: VarDescr a -> Int -> VarDescr a
   
   chan                  :: [a]
   chanIncommits         :: [a]
@@ -94,6 +94,7 @@ class BackendNames a where
   
   generateChannel       :: VarDescr a
   releaseChannel        :: VarDescr a
+  releaseAllChannels    :: VarDescr a
   acquire               :: VarDescr a
 
   readyQueuePush        :: VarDescr a
@@ -111,7 +112,6 @@ class BackendPrimitives a where
 -- | The main typeclass of a backend. Contains sequential AST code generation functions.
 --class (BackendTypes a, BackendNames a, BackendPrims a) => Backend a where
 class (BackendTypes a, BackendNames a, BackendPrimitives a) => Backend a where
-  emitName      :: Name a     -> EmitterM ()
   emitVarName   :: VarName a  -> EmitterM ()
   emitPiccType  :: PiccType a -> EmitterM ()
   emitExpr      :: Expr a     -> EmitterM ()

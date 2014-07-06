@@ -2,7 +2,7 @@ module Back.SeqASTUtils where
 
 import Back.SeqAST
 
-extractVarName :: VarDescr a -> Name a
+extractVarName :: VarDescr a -> String
 extractVarName (SimpleName n, _) = n
 extractVarName (_, _) = error "SeqASTUtils.extractName"
 
