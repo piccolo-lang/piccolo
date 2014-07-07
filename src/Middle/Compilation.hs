@@ -19,8 +19,9 @@ import Control.Monad.Error
 import Control.Monad.State
 
 
-data CompState = CompState { locVarCount :: Int
-                           , labelCount  :: Int
+data CompState = CompState { locVarCount   :: Int
+                           , labelCount    :: Int
+                           , currentModule :: String
                            }
 
 type CompilingM a = ErrorT PiccError (State CompState) a
@@ -54,11 +55,13 @@ genLabel = do
 compilePass :: (B.Backend a) => Modul -> Either PiccError (S.Instr a)
 compilePass m = evalState (runErrorT instr) initEnv
   where instr    = compileModul m
-        initEnv  = CompState 0 0
+        initEnv  = CompState 0 0 ""
 
 
 compileModul :: (B.Backend a) => Modul -> CompilingM (S.Instr a)
 compileModul m = do
+  st <- get
+  put st { currentModule = modName m }
   decls <- forM (modDefs m) $ \def -> do
     return $ S.DeclareFun (S.SimpleName (name def), S.Fun B.voidType [B.schedulerType, B.ptType])
              -- FIXME             (map extractVarName [B.scheduler :: S.VarDescr a,
@@ -148,7 +151,9 @@ compileProcess proc@PCall   {} = do
       TChannel {} -> return $ S.SeqBloc [instr,
                                         S.ProcCall B.kRegister [S.Var (B.ptKnows B.pt), S.Var vi]]
       _       -> return instr
-  let name = (delete '/' $ procModule proc) ++ "_" ++ procName proc
+  CompState { currentModule = currentModName } <- get
+  let name | null (procModule proc) = (delete '/' $ currentModName) ++ "_" ++ procName proc
+           | otherwise              = (delete '/' $ procModule proc) ++ "_" ++ procName proc
   return $ S.SeqBloc [ com
                      , S.ProcCall B.ksForgetAll [S.Var (B.ptKnows B.pt)]
                      , S.SemBloc $ instrs1 ++ loop2 ++
@@ -285,7 +290,9 @@ compileAction act@ASpawn  {} = do
   com  <- commentAction act
   resetLocCount
   let child = (S.SimpleName "child", B.ptType)
-  let name  = (delete '/' $ actModule act) ++ "_" ++ actName act
+  CompState { currentModule = currentModName } <- get
+  let name | null (actModule act) = (delete '/' $ currentModName) ++ "_" ++ actName act
+           | otherwise            = (delete '/' $ actModule act) ++ "_" ++ actName act
   instrs <- forM (zip (actArgs act) ([0..]::[Int])) $ \(arg, i) -> do
     v <- genLocalVar
     t <- compileType (valTyp arg)
@@ -308,7 +315,7 @@ compileAction act@ASpawn  {} = do
                        [ S.Assign (B.ptProc child) (S.Val (name, B.defType))
                        , S.Assign (B.ptPc child) (S.Val ("0", B.labelType))
                        , S.Assign (B.ptStatus child) (S.Val B.statusRun)
-                       , S.ProcCall B.readyQueuePush [S.Val ("TODO scheduler.ready.child", S.Sty "TODO type")]
+                       , S.ProcCall B.readyQueuePush [S.Var (B.schedulerReady B.scheduler), S.Var child]
                        ]
                      ]
 compileAction act@APrim   {} = do

@@ -37,6 +37,7 @@ instance BackendTypes CBackend where
   tryResultType         = Sty "PICC_TryResult"
   incommitType          = Sty "PICC_InCommit"
   outcommitType         = Sty "PICC_OutCommit"
+  readyQueueType        = Pty "*" (Sty "PICC_ReadyQueue")
 
   schedulerType         = Pty "*" (Sty "PICC_SchedPool")
 
@@ -67,6 +68,7 @@ instance BackendNames CBackend where
   chanLock              = error "TODO CBackend.chanLock"
 
   scheduler             = (SimpleName "scheduler", schedulerType)
+  schedulerReady aSched = (RecordName aSched "ready", readyQueueType)
   
   statusRun             = ("PICC_STATUS_RUN",     statusType)
   statusCall            = ("PICC_STATUS_CALL",    statusType)
@@ -78,7 +80,7 @@ instance BackendNames CBackend where
   tryResultEnabled      = ("PICC_TRYRESULT_ENABLED",  tryResultType)
   tryResultCommit       = ("PICC_TRYRESULT_COMMIT",   tryResultType)
 
-  ksForgetAll           = (SimpleName "KnowSetForgetAll",
+  ksForgetAll           = (SimpleName "PICC_knownset_forget_all",
                            Fun voidType [knowSetType])
   kRegister             = (SimpleName "KnowRegister",
                            Fun voidType [knowSetType, channelType])
@@ -105,7 +107,8 @@ instance BackendNames CBackend where
   processYield          = error "TODO processYield"
   processWait           = error "TODO processWait"
   awake                 = error "TODO awake"
-  generatePiThread      = error "TODO generatePiThread"
+  generatePiThread      = (SimpleName "PICC_create_pithread",
+                           Fun ptType [intType])
 
   generateChannel       = (SimpleName "PICC_GenerateChannel",
                            Fun valueType [ptType])
@@ -113,7 +116,8 @@ instance BackendNames CBackend where
   releaseAllChannels    = error "TODO releaseAllChannels"
   acquire               = error "TODO acquire"
 
-  readyQueuePush        = error "TODO readyQueuePush"
+  readyQueuePush        = (SimpleName "PICC_ready_queue_push",
+                           Fun voidType [readyQueueType, ptType])
 
   tryOutputAction       = error "TODO tryOutputAction"
   tryInputAction        = error "TODO tryInputAction"

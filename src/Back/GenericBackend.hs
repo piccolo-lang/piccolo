@@ -33,6 +33,7 @@ instance BackendTypes GenericBackend where
   tryResultType         = error "TODO GenericBackend tryResultType"
   incommitType          = error "TODO GenericBackend incommitType"
   outcommitType         = error "TODO GenericBackend outcommitType"
+  readyQueueType        = error "TODO GenericBackend readyQueueType"
 
   schedulerType         = error "TODO GenericBackend schedulerType"
 
@@ -63,6 +64,7 @@ instance BackendNames GenericBackend where
   chanLock              = error "TODO GenericBackend chanLock"
 
   scheduler             = error "TODO GenericBackend scheduler"
+  schedulerReady        = error "TODO GenericBackend schedulerReady"
 
   statusRun             = error "TODO GenericBackend statusRun"
   statusCall            = error "TODO GenericBackend statusCall"

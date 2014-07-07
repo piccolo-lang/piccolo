@@ -28,6 +28,7 @@ class BackendTypes a where
   tryResultType         :: PiccType a
   incommitType          :: PiccType a
   outcommitType         :: PiccType a
+  readyQueueType        :: PiccType a
 
   schedulerType         :: PiccType a
 
@@ -58,6 +59,7 @@ class BackendNames a where
   chanLock              :: [a]
   
   scheduler             :: VarDescr a
+  schedulerReady        :: VarDescr a -> VarDescr a
   
   statusRun             :: Value a
   statusCall            :: Value a
