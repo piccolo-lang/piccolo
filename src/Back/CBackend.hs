@@ -124,15 +124,15 @@ instance BackendNames CBackend where
 
 
 instance BackendPrimitives CBackend where
-  makePrim "core/arith" "add"        = (SimpleName "TODO add",
+  makePrim "core/arith" "add"        = (SimpleName "PICC_Int_add",
                                         Fun valueType [valueType, valueType])
-  makePrim "core/arith" "substract"  = (SimpleName "TODO substract",
+  makePrim "core/arith" "substract"  = (SimpleName "PICC_Int_substract",
                                         Fun valueType [valueType, valueType])
-  makePrim "core/arith" "modulo"     = (SimpleName "TODO modulo",
+  makePrim "core/arith" "modulo"     = (SimpleName "PICC_Int_modulo",
                                         Fun valueType [valueType, valueType])
-  makePrim "core/arith" "equals"     = (SimpleName "TODO equals",
+  makePrim "core/arith" "equals"     = (SimpleName "PICC_equals",
                                         Fun valueType [valueType, valueType])
-  makePrim "core/io"    "print_info" = (SimpleName "TODO print_info",
+  makePrim "core/io"    "print_info" = (SimpleName "PICC_print_info",
                                         Fun valueType [valueType])
   makePrim "core/io"    "print_str"  = (SimpleName "PICC_print_value",
                                         Fun valueType [valueType])
