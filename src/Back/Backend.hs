@@ -35,8 +35,6 @@ class BackendTypes a where
 
 
 class BackendNames a where
-  ptDef                 :: [a]
-     
   pt                    :: VarDescr a
   ptStatus              :: VarDescr a -> VarDescr a
   ptEnabled             :: VarDescr a -> VarDescr a

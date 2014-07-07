@@ -26,17 +26,17 @@ instance BackendTypes CBackend where
   intType               = Sty "int"
   stringType            = Pty "*" (Sty "char")
   labelType             = Sty "int"
-  channelType           = Sty "TODO_channel_type"
+  channelType           = Pty "*" (Sty "PICC_Channel")
 
-  defType               = Sty "TODO_defType"
+  defType               = stringType
 
   ptType                = Pty "*" (Sty "PICC_PiThread")
-  knowSetType           = Sty "TODO_knowsSet_type"
+  knowSetType           = Pty "*" (Sty "PICC_KnownSet")
   valueType             = Sty ("PICC_Value")
-  statusType            = Sty "TODO_status_type"
-  tryResultType         = Sty "TODO_try_result_type"
-  incommitType          = Sty "TODO incommitType"
-  outcommitType         = Sty "TODO outcommitType"
+  statusType            = Sty "PICC_StatusKind"
+  tryResultType         = Sty "PICC_TryResult"
+  incommitType          = Sty "PICC_InCommit"
+  outcommitType         = Sty "PICC_OutCommit"
 
   schedulerType         = Pty "*" (Sty "PICC_SchedPool")
 
@@ -44,8 +44,6 @@ instance BackendTypes CBackend where
 
 
 instance BackendNames CBackend where
-  ptDef                 = error "TODO CBackend.ptDef"
-
   pt                    = (SimpleName "pt",         ptType)
   ptStatus aPt          = (RecordName aPt "status",  statusType)
   ptEnabled aPt         = (RecordName aPt "enabled", Sty "TODOunknown_ptEnabled")

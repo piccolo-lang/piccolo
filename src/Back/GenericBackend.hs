@@ -40,8 +40,6 @@ instance BackendTypes GenericBackend where
 
 
 instance BackendNames GenericBackend where
-  ptDef                 = error "TODO GenericBackend ptDef"
-
   pt                    = error "TODO GenericBackend pt"
   ptStatus              = error "TODO GenericBackend ptStatus"
   ptEnabled             = error "TODO GenericBackend ptEnabeld"
