@@ -2,7 +2,6 @@
 {-|
 Module         : Front.PilParser
 Description    : Piccolo parser
-Sanalysinguin718
 stability      : experimental
 
 This module uses Happy parsing tool to parse piccolo file.
