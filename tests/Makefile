@@ -1,8 +1,8 @@
 
-INC=PATH_TO_LIBPICCOLORT/include
-LIB=PATH_TO_LIBPICCOLORT/src
+INC=../../libpiccolort/include
+LIB=../../libpiccolort/src
 
-PCC=PATH_TO_PICCOLO/dist/build/piccolo/piccolo
+PCC=../dist/build/piccolo/piccolo
 CFLAGS= -g -Wall -std=c99
 
 LIBFILES=$(wildcard $(LIB)/*.c)
