@@ -101,7 +101,7 @@ instance BackendNames CBackend where
   convertInt i          = Val (show i, intType)
   convertString s       = FunCall makeStringHandle [Val (s, stringType)]
 
-  processEnd            = (SimpleName "PICC_ProcessEnd",
+  processEnd            = (SimpleName "PICC_process_end",
                            Fun voidType [ptType, statusType])
   processAcquireChannel = error "TODO processAcquireChannel"
   processYield          = error "TODO processYield"
