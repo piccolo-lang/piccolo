@@ -105,16 +105,16 @@ envProcess proc@PCall { procName = name } = do
   (e, called, f) <- get
   callSize <- lookupSizeOfDef name
   put (e, Map.insert name callSize called, f)
-  args <- mapM envValue $ procArgs proc
+  args <- mapM envExpr $ procArgs proc
   return proc { procArgs = args }
 
 envBranch :: Branch -> EnvM Branch
 envBranch br@BTau    {} = do
-  guard <- envValue $ brGuard br
+  guard <- envExpr $ brGuard br
   cont  <- envProcess $ brCont br
   return br { brGuard = guard, brCont = cont }
 envBranch br@BOutput {} = do
-  guard <- envValue $ brGuard br
+  guard <- envExpr $ brGuard br
   chanInd <- lookupVar $ brChan br
   case chanInd of
     Just i  -> do
@@ -122,7 +122,7 @@ envBranch br@BOutput {} = do
       return br { brGuard = guard, brChanIndex = i, brCont = cont }
     Nothing -> throwError $ SimpleError "var not in scope"
 envBranch br@BInput  {} = do
-  guard <- envValue $ brGuard br
+  guard <- envExpr $ brGuard br
   chanInd <- lookupVar $ brChan br
   case chanInd of
     Nothing -> throwError $ SimpleError "var not in scope"
@@ -136,7 +136,7 @@ envAction act@AOutput {} = do
   ind <- lookupVar $ actChan act
   case ind of
     Just i  -> do
-      dat <- envValue $ actData act
+      dat <- envExpr $ actData act
       return act { actData = dat, actChanIndex = i }
     Nothing -> throwError $ SimpleError "var not in scope"
 envAction act@AInput  {} = do
@@ -151,26 +151,34 @@ envAction act@ANew    {} = do
   return act { actBindIndex = i }
 envAction act@ALet    {} = do
   i <- allocVar $ actBind act
-  val <- envValue $ actVal act
+  val <- envExpr $ actVal act
   return act { actBindIndex = i, actVal = val }
 envAction act@ASpawn  {} = do
-  args <- mapM envValue $ actArgs act
+  args <- mapM envExpr $ actArgs act
   return act { actArgs = args }
 envAction act@APrim   {} = do
-  args <- mapM envValue $ actArgs act
+  args <- mapM envExpr $ actArgs act
   return $ act { actArgs = args }
 
-envValue :: Value -> EnvM Value
-envValue val@VTuple {} = do
-  envVals <- mapM envValue $ valVals val
-  return $ val { valVals = envVals }
-envValue val@VVar   {} = do
-  ind <- lookupVar $ valVar val
+envExpr:: Expr -> EnvM Expr
+envExpr e@ETuple {} = do
+  envVals <- mapM envExpr $ exprVals e
+  return $ e { exprVals = envVals }
+envExpr e@EVar   {} = do
+  ind <- lookupVar $ exprVar e
   case ind of
-    Just index -> return $ val { valIndex = index }
+    Just index -> return $ e { exprIndex = index }
     Nothing    -> throwError $ SimpleError "var not in scope"
-envValue val@VPrim  {} = do
-  args <- mapM envValue $ valArgs val
-  return $ val { valArgs = args }
-envValue val = return val
+envExpr e@EPrim  {} = do
+  args <- mapM envExpr $ exprArgs e
+  return $ e { exprArgs = args }
+envExpr e@EAnd   {} = do
+  left  <- envExpr (exprLeft e)
+  right <- envExpr (exprRight e)
+  return $ e { exprLeft = left, exprRight = right }
+envExpr e@EOr    {} = do
+  left  <- envExpr (exprLeft e)
+  right <- envExpr (exprRight e)
+  return $ e { exprLeft = left, exprRight = right }
+envExpr e = return e
 

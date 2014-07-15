@@ -25,3 +25,4 @@ all: $(TARGETS)
 
 clean:
 	rm -f *.c *~ *.o *.run
+	rm -f basics/*.c basics/*.o basics/*.run

@@ -1,73 +1,131 @@
 {-|
-Module         : Back.SeqAST
+module         : Back.SeqAST
 Description    : The sequential AST for code generation
 Stability      : experimental
 
-Piccolo programs are first compiled into sequential AST. This intermediate representation allows
-multiple backends modules for further code generation. Note that each type in this module has
-a phantom type attached to specify which backend will be used at code generation, since backend
-interface in 'Back.Backend' is described in the form of typeclasses.
+Longer description.
 -}
 module Back.SeqAST where
 
 import qualified Front.AST as PilAST
 
--- | Variable name datatype
-data VarName b
-  = SimpleName String               -- ^ Simple name
-  | RecordName (VarDescr b) String  -- ^ Fully qualified record name of the form name.field
-  | ArrayName (VarName b) (Expr b)    -- ^ Array cell variable of the form name.[epxr]
+data DefName  = DefName  String String
+data PrimName = PrimName String String
+data EvalfuncName = EvalfuncName String
 
--- | A variable description is made of a variable name and its type
-type VarDescr b = (VarName b, PiccType b)
+data VarName
+  = PiThread
+  | PiThreadVal
+  | PiThreadPC
+  | PiThreadEnv Int
+  | PiThreadKnows
+  | PiThreadLock
+  | PiThreadFuel
+  | PiThreadProc
+  | PiThreadStatus
+  | PiThreadEnabled Int
+  | Child
+  | ChildPC
+  | ChildStatus
+  | ChildProc
+  | ChildEnv Int
+  | ChildKnows
+  | Scheduler
+  | SchedulerReady
+  | V Int
+  | Chan
+  | Chans
+  | NbChans
+  | Commit
+  | CommitThread
+  | CommitThreadVal
+  | CommitThreadEnv VarName
+  | CommitVal
+  | CommitRefval
+  | TryResult
+  | OK
+  | NbDisabled
 
--- | Types for sequential AST
-data PiccType b
-  = Sty String                      -- ^ Atomic type
-  | Pty String (PiccType b)         -- ^ Parameterized type
-  | Fun (PiccType b) [PiccType b]     -- ^ Function type
-  deriving (Eq)
+data Type
+  = BoolType
+  | IntType
+  | PiValueType
+  | PiThreadType
+  | SchedulerType
+  | ChannelType
+  | InCommitType
+  | OutCommitType
+  | ChannelArrayType
+  | TryResultEnumType
 
--- | Values manipulated by the backend are strings in the generated code, with their types
-type Value b = (String, PiccType b)
+data EnumName
+  = StatusRun
+  | StatusBlocked
+  | StatusCall
+  | StatusEnded
+  | TryResultEnabled
+  | TryResultDisabled
+  | TryResultAbort
 
--- | Sequential AST expressions
-data Expr b
-  = Val (Value b)                     -- ^  Value
-  | Var (VarDescr b)                  -- ^ Variable
-  | Op (Binop b) (Expr b) (Expr b)    -- ^ Binary operation applied on two 'Expr'
-  | OpU (Unop b) (Expr b)             -- ^ Unary operation applied on an 'Expr'
-  | FunCall (VarDescr b) [Expr b]     -- ^ Function call
+data RTFun
+  = EvalFunc EvalfuncName
+  | CommitEvalFunc            [BExpr]
+  | PrimCall PrimName         [BExpr]
+  | GenerateChannel           [BExpr]
+  | GeneratePiThread          [BExpr]
+  | ProcessWait               [BExpr]
+  | ProcessEnd                [BExpr]
+  | ProcessYield              [BExpr]
+  | ProcessAcquireChannel     [BExpr]
+  | Acquire                   [BExpr]
+  | ReleaseChannel            [BExpr]
+  | ReleaseAllChannels        [BExpr]
+  | ChannelRef                [BExpr]
+  | ChannelIncrRefCount       [BExpr]
+  | ChannelAcquireAndRegister [BExpr]
+  | Awake                     [BExpr]
+  | TryInputAction            [BExpr]
+  | TryOutputAction           [BExpr]
+  | RegisterInputCommitment   [BExpr]
+  | RegisterOutputCommitment  [BExpr]
+  | KnowRegister              [BExpr]
+  | KnowSetForgetAll          [BExpr]
+  | ReadyQueuePush            [BExpr]
+  | InitIntValue              [BExpr]
+  | InitStringValue           [BExpr]
+  | InitBoolTrue              [BExpr]
+  | InitBoolFalse             [BExpr]
+  | BoolFromValue             [BExpr]
 
--- | Binary operations that must be supported by the backend language
-data Binop b
-  = Sum
-  | Minus
-  | Mult
-  | Div
-  | Equal
+data BExpr
+  = Not BExpr
+  | Equal BExpr BExpr
+  | IntExpr Int
+  | StringExpr String
+  | Var VarName
+  | Enum EnumName
+  | FunCall RTFun
+  | FunVal RTFun
 
--- | Unary operations that must be supported by the backend language
-data Unop b
-  = Not
+type Lab = Int
 
--- | 'Instr' datatype is the entry point of a sequential AST description
-data Instr b
-  = Comment String                                -- ^ Comment
-  | Debug String                                  -- ^ Debugging information
-  | Switch (Expr b) [Instr b]                     -- ^ Switch/case instruction
-  | Case (Expr b)                                 -- ^ Case for switch instruction
-  | SeqBloc [Instr b]                             -- ^ List of sequential instructions
-  | SemBloc [Instr b]                             -- ^ Semantic bloc of instructions
-  | ComBloc PilAST.Location (Instr b)             -- ^ Compilation bloc of instructions (represents the compilation of a single piccolo action)
-  | ProcCall (VarDescr b) [Expr b]                -- ^ Function call
-  | DeclareVar (VarDescr b)                       -- ^ Variable declaration
-  | Assign (VarDescr b) (Expr b)                  -- ^ Variable assignation
-  | DeclareFun (VarDescr b) [String] [Instr b]    -- ^ Function declaration
-  | ForEach (VarDescr b) (Expr b) (Instr b)       -- ^ ForEach loop
-  | If (Expr b) [Instr b] [Instr b]               -- ^ If instruction
-  | Label String                                  -- ^ Label for goto
-  | Goto String                                   -- ^ Goto
-  | Return (Expr b)                               -- ^ Function return
-  | DoWhile (Instr b) (Expr b)                    -- ^ DoWhile loop
+data Instr
+  = Comment String
+  | Debug String
+  | Seq Instr Instr
+  | LexBloc Instr
+  | ComBloc PilAST.Location Instr
+  | Nop
+  | DefFunction DefName ((VarName, Type), (VarName, Type)) Instr
+  | EvalFunction EvalfuncName ((VarName, Type)) Instr
+  | DeclareVar VarName Type
+  | Assign VarName BExpr
+  | Return
+  | Goto Int
+  | Increment VarName
+  | Decrement VarName
+  | If BExpr Instr Instr
+  | Switch BExpr Instr
+  | Case Int
+  | ProcCall RTFun
 

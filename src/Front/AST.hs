@@ -60,25 +60,27 @@ instance Eq TypeExpr where
 -- variable or primitive call.
 -- Each value is tagged with its type and location in the piccolo program.
 -- Moreover, variables are tagged with an index in current environment for nameless compilation.
-data Value
-  = VTrue   { valTyp :: TypeExpr, valLoc :: Location }
-  | VFalse  { valTyp :: TypeExpr, valLoc :: Location }
-  | VInt    { valInt  :: Int,    valTyp :: TypeExpr, valLoc :: Location }
-  | VString { valStr  :: String, valTyp :: TypeExpr, valLoc :: Location }
-  | VTuple  { valVals ::[Value], valTyp :: TypeExpr, valLoc :: Location }
-  | VVar    { valVar  :: String, valTyp :: TypeExpr, valLoc :: Location, valIndex :: Int }
-  | VPrim   { valModule :: String, valName :: String, valArgs :: [Value], valTyp :: TypeExpr, valLoc :: Location }
+data Expr
+  = ETrue   { exprTyp :: TypeExpr, exprLoc :: Location }
+  | EFalse  { exprTyp :: TypeExpr, exprLoc :: Location }
+  | EInt    { exprTyp :: TypeExpr, exprLoc :: Location, exprInt  :: Int }
+  | EString { exprTyp :: TypeExpr, exprLoc :: Location, exprStr  :: String }
+  | ETuple  { exprTyp :: TypeExpr, exprLoc :: Location, exprVals :: [Expr] }
+  | EVar    { exprTyp :: TypeExpr, exprLoc :: Location, exprVar :: String, exprIndex :: Int }
+  | EPrim   { exprTyp :: TypeExpr, exprLoc :: Location, exprModule :: String, exprName :: String, exprArgs :: [Expr] }
+  | EAnd    { exprTyp :: TypeExpr, exprLoc :: Location, exprLeft :: Expr, exprRight :: Expr }
+  | EOr     { exprTyp :: TypeExpr, exprLoc :: Location, exprLeft :: Expr, exprRight :: Expr }
 
 data Process
   = PEnd    { procLoc :: Location }
   | PPrefix { procPref :: Action, procCont :: Process, procLoc :: Location }
   | PChoice { procBranches :: [Branch], procLoc :: Location }
-  | PCall   { procModule :: String, procName :: String, procArgs :: [Value], procLoc ::  Location }
+  | PCall   { procModule :: String, procName :: String, procArgs :: [Expr], procLoc ::  Location }
 
 data Branch
-  = BTau    { brGuard :: Value, brCont :: Process, brLoc :: Location }
-  | BOutput { brGuard :: Value, brChan :: String, brData :: Value, brChanIndex :: Int, brCont :: Process, brLoc :: Location }
-  | BInput  { brGuard :: Value, brChan :: String, brBind :: String, brChanIndex :: Int, brBindIndex :: Int, brCont :: Process, brLoc :: Location }
+  = BTau    { brGuard :: Expr, brCont :: Process, brLoc :: Location }
+  | BOutput { brGuard :: Expr, brChan :: String, brData :: Expr, brChanIndex :: Int, brCont :: Process, brLoc :: Location }
+  | BInput  { brGuard :: Expr, brChan :: String, brBind :: String, brBindTyp :: TypeExpr, brChanIndex :: Int, brBindIndex :: Int, brCont :: Process, brLoc :: Location }
 
 -- | 'Action' datatype represents the atomic actions of the piccolo language.
 -- As contrary as traditionnal presentation of pi-calculus,
@@ -86,12 +88,12 @@ data Branch
 -- Moreover, to manipulate value expressions, we defines a "let" and a primitive call action.
 -- 'ASpawn' action is used to spawn a parallel process which will be executing the given piccolo process definition.
 data Action
-  = AOutput { actChan :: String, actData :: Value, actChanIndex :: Int, actLoc :: Location }
-  | AInput  { actChan :: String, actBind :: String, actChanIndex :: Int, actBindIndex :: Int, actLoc :: Location }
+  = AOutput { actChan :: String, actData :: Expr, actChanIndex :: Int, actLoc :: Location }
+  | AInput  { actChan :: String, actBind :: String, actBindTyp :: TypeExpr, actChanIndex :: Int, actBindIndex :: Int, actLoc :: Location }
   | ANew    { actBind :: String, actBindIndex :: Int, actTyp :: TypeExpr, actLoc :: Location }
-  | ALet    { actBind :: String, actBindIndex :: Int, actTyp :: TypeExpr, actVal :: Value, actLoc :: Location }
-  | ASpawn  { actModule :: String, actName :: String, actArgs :: [Value], actLoc :: Location }
-  | APrim   { actModule :: String, actName :: String, actArgs :: [Value], actLoc :: Location }
+  | ALet    { actBind :: String, actBindIndex :: Int, actTyp :: TypeExpr, actVal :: Expr, actLoc :: Location }
+  | ASpawn  { actModule :: String, actName :: String, actArgs :: [Expr], actLoc :: Location }
+  | APrim   { actModule :: String, actName :: String, actArgs :: [Expr], actLoc :: Location }
 
 -- | To spawn or (possibly recursively) call a process definition, the 'Definition' type defines
 -- a process definition attached with parameter names and types.

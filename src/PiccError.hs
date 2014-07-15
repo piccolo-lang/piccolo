@@ -31,7 +31,7 @@ data PiccError
                    , tErrExpected :: TypeExpr
                    , tErrActual   :: TypeExpr
                    }                          -- ^ error occuring during the typing pass of a piccolo AST
-  | TodoError String                          -- ^ error representing an unimplemented functionality
+  | TodoError String                          -- ^ error representing an unimplemented feature
 
 instance Error PiccError where
   noMsg  = strMsg ""

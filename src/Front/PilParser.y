@@ -96,31 +96,31 @@ Process : 'end'         { PEnd $ tokenLoc $1 }
         | PrefixProcess { let (act,cont) = $1 in PPrefix act cont $ mkLoc' (actLoc act) (procLoc cont) }
 
 Call :: { Process }
-Call : '#' ModuleID ':' an_ident '(' ')'        { PCall $2 (contentString $4) [] $ mkLoc $1 $6 }
-     | '#' ModuleID ':' an_ident '(' Values ')' { PCall $2 (contentString $4) $6 $ mkLoc $1 $7 }
-     | an_ident '(' ')'                         { PCall "" (contentString $1) [] $ mkLoc $1 $3 }
-     | an_ident '(' Values ')'                  { PCall "" (contentString $1) $3 $ mkLoc $1 $4 }
+Call : '#' ModuleID ':' an_ident '(' ')'       { PCall $2 (contentString $4) [] $ mkLoc $1 $6 }
+     | '#' ModuleID ':' an_ident '(' Exprs ')' { PCall $2 (contentString $4) $6 $ mkLoc $1 $7 }
+     | an_ident '(' ')'                        { PCall "" (contentString $1) [] $ mkLoc $1 $3 }
+     | an_ident '(' Exprs ')'                 { PCall "" (contentString $1) $3 $ mkLoc $1 $4 }
 
 ChoiceProcess :: { [Branch] }
 ChoiceProcess : Branch                   { [$1] }
               | Branch '+' ChoiceProcess { $1:$3 }
 
 Branch :: { Branch }
-Branch : '[' Value ']' 'tau' ',' Process                         { BTau $2 $6 $ mkLoc' (tokenLoc $1) (procLoc $6) }
-       | '[' Value ']' an_ident '!' Value ',' Process            { BOutput $2 (contentString $4) $6 (-1) $8 $ mkLoc' (tokenLoc $1) (procLoc $8) }
-       | '[' Value ']' an_ident '?' '(' an_ident ')' ',' Process { BInput $2 (contentString $4) (contentString $7) (-1) (-1) $10 $ mkLoc' (tokenLoc $1) (procLoc $10) }
+Branch : '[' Expr ']' 'tau' ',' Process                          { BTau $2 $6 $ mkLoc' (tokenLoc $1) (procLoc $6) }
+       | '[' Expr ']' an_ident '!' Expr ',' Process            { BOutput $2 (contentString $4) $6 (-1) $8 $ mkLoc' (tokenLoc $1) (procLoc $8) }
+       | '[' Expr ']' an_ident '?' '(' an_ident ')' ',' Process { BInput $2 (contentString $4) (contentString $7) (TUnknown noLoc) (-1) (-1) $10 $ mkLoc' (tokenLoc $1) (procLoc $10) }
 
 PrefixProcess :: { (Action, Process) }
 PrefixProcess : Action ',' Process { ($1, $3) }
 
 Action :: { Action }
-Action : an_ident '!' Value                           { AOutput (contentString $1) $3 (-1) $ mkLoc' (tokenLoc $1) (valLoc $3) }
-       | an_ident '?' '(' an_ident ')'                { AInput (contentString $1) (contentString $4) (-1) (-1) $ mkLoc $1 $5 }
+Action : an_ident '!' Expr { AOutput (contentString $1) $3 (-1) $ mkLoc' (tokenLoc $1) (exprLoc $3) }
+       | an_ident '?' '(' an_ident ')'                { AInput (contentString $1) (contentString $4) (TUnknown noLoc) (-1) (-1) $ mkLoc $1 $5 }
        | 'new' '(' an_ident ':' TypeDef ')'           { ANew (contentString $3) (-1) $5 $ mkLoc $1 $6 }
-       | 'let' '(' an_ident ':' TypeDef '=' Value ')' { ALet (contentString $3) (-1) $5 $7 $ mkLoc $1 $8 }
+       | 'let' '(' an_ident ':' TypeDef '=' Expr ')' { ALet (contentString $3) (-1) $5 $7 $ mkLoc $1 $8 }
        | 'spawn' '{' Call '}'                         { let PCall m k vs _ = $3 in ASpawn m k vs $ mkLoc $1 $4 }
        | '#' ModuleID ':' an_ident '(' ')'            { APrim $2 (contentString $4) [] $ mkLoc $1 $6 }
-       | '#' ModuleID ':' an_ident '(' Values ')'     { APrim $2 (contentString $4) $6 $ mkLoc $1 $7 }
+       | '#' ModuleID ':' an_ident '(' Exprs ')'     { APrim $2 (contentString $4) $6 $ mkLoc $1 $7 }
 
 TypeAtomic :: { TypeExpr }
 TypeAtomic : 'bool'   { TAtom TBool $ tokenLoc $1 }
@@ -136,19 +136,19 @@ Types :: { [TypeExpr] }
 Types : TypeDef           { [$1] }
       | TypeDef '*' Types { $1:$3 }
 
-Values :: { [Value] }
-Values : Value            { [$1] }
-       | Value ',' Values { $1:$3 }
+Exprs :: { [Expr] }
+Exprs : Expr           { [$1] }
+      | Expr ',' Exprs { $1:$3 }
 
-Value :: { Value }
-Value : 'true'                                   { VTrue (TUnknown noLoc) (tokenLoc $1) }
-      | 'false'                                  { VFalse (TUnknown noLoc) (tokenLoc $1) }
-      | an_int                                   { VInt (contentInt $1) (TUnknown noLoc) (tokenLoc $1) }
-      | a_string                                 { VString (contentString $1) (TUnknown noLoc) (tokenLoc $1) }
-      | '(' Values ')'                           { VTuple $2 (TUnknown noLoc) (mkLoc $1 $3) }
-      | an_ident                                 { VVar (contentString $1) (TUnknown noLoc) (tokenLoc $1) (-1) }
-      | '#' ModuleID ':' an_ident '(' ')'        { VPrim $2 (contentString $4) [] (TUnknown noLoc) (mkLoc $1 $6) }
-      | '#' ModuleID ':' an_ident '(' Values ')' { VPrim $2 (contentString $4) $6 (TUnknown noLoc) (mkLoc $1 $7) }
+Expr :: { Expr }
+Expr : 'true'                                  { ETrue (TUnknown noLoc) (tokenLoc $1) }
+     | 'false'                                 { EFalse (TUnknown noLoc) (tokenLoc $1) }
+     | an_int                                  { EInt (TUnknown noLoc) (tokenLoc $1) (contentInt $1) }
+     | a_string                                { EString (TUnknown noLoc) (tokenLoc $1) (contentString $1) }
+     | '(' Exprs ')'                           { ETuple (TUnknown noLoc) (mkLoc $1 $3) $2 }
+     | an_ident                                { EVar (TUnknown noLoc) (tokenLoc $1) (contentString $1) (-1) }
+     | '#' ModuleID ':' an_ident '(' ')'       { EPrim (TUnknown noLoc) (mkLoc $1 $6) $2 (contentString $4) [] }
+     | '#' ModuleID ':' an_ident '(' Exprs ')' { EPrim (TUnknown noLoc) (mkLoc $1 $7) $2 (contentString $4) $6 }
 
 {
 

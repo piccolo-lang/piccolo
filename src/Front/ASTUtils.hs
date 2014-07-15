@@ -26,9 +26,9 @@ instance AST TypeExpr where
   localize = typLoc
   strSExpr _ = show
 
-instance AST Value where
-  localize = valLoc
-  strSExpr = valSExpr
+instance AST Expr where
+  localize = exprLoc
+  strSExpr = exprSExpr
 
 instance AST Process where
   localize = procLoc
@@ -77,15 +77,17 @@ instance Show TypeAtom where
   show TInt    = "int"
   show TString = "string"
 
-instance Show Value where
-  show VTrue       {} = "true"
-  show VFalse      {} = "false"
-  show val@VInt    {} = show $ valInt val
-  show val@VString {} = valStr val
-  show val@VTuple  {} = "(" ++ intercalate ", " (map show (valVals val)) ++ ")"
-  show val@VVar    {} = valVar val
-  show val@VPrim   {} = "#" ++ valModule val ++ "/" ++ valName val ++ "(" ++ args ++ ")"
-    where args = intercalate ", " (map show (valVals val))
+instance Show Expr where
+  show ETrue     {} = "true"
+  show EFalse    {} = "false"
+  show e@EInt    {} = show $ exprInt e
+  show e@EString {} = exprStr e
+  show e@ETuple  {} = "(" ++ intercalate ", " (map show (exprVals e)) ++ ")"
+  show e@EVar    {} = exprVar e
+  show e@EPrim   {} = "#" ++ exprModule e ++ "/" ++ exprName e ++ "(" ++ args ++ ")"
+    where args = intercalate ", " (map show (exprVals e))
+  show e@EAnd    {} = "(" ++ show (exprLeft e) ++ ") and (" ++ show (exprRight e) ++ ")"
+  show e@EOr     {} = "(" ++ show (exprLeft e) ++ ") or (" ++ show (exprRight e) ++ ")"
 
 modSExpr :: [PrintLevel] -> Modul -> String
 modSExpr lvl m = "(module " ++ modName m ++ "\n" ++ sdefs (modDefs m) ++ "\n" ++ ")"
@@ -123,7 +125,7 @@ procSExpr' ind lvl proc@PChoice {} = indent ind ++
 procSExpr' ind lvl proc@PCall   {} = indent ind ++
   "(call #" ++ procModule proc ++ "/" ++ procName proc ++ args ++ ")"
   where args | null (procArgs proc) = ""
-             | otherwise            = " " ++ unwords (map (valSExpr lvl) $ procArgs proc)
+             | otherwise            = " " ++ unwords (map (exprSExpr lvl) $ procArgs proc)
 
 brSExpr :: [PrintLevel] -> Branch -> String
 brSExpr = brSExpr' 0
@@ -131,18 +133,18 @@ brSExpr = brSExpr' 0
 brSExpr' :: Int -> [PrintLevel] -> Branch -> String
 brSExpr' ind lvl br@BTau    {} = indent ind ++
   "(-> " ++ guard ++ " tau " ++ "\n" ++ cont ++ ")"
-  where guard = valSExpr lvl $ brGuard br
+  where guard = exprSExpr lvl $ brGuard br
         cont  = procSExpr' (ind+4) lvl $ brCont br
 brSExpr' ind lvl br@BOutput {} = indent ind ++
   "(-> " ++ guard ++ " " ++ act ++ "\n" ++ cont ++ ")"
-  where guard = valSExpr lvl $ brGuard br
-        act   = "(output " ++ chan ++ " " ++ valSExpr lvl (brData br) ++ ")"
+  where guard = exprSExpr lvl $ brGuard br
+        act   = "(output " ++ chan ++ " " ++ exprSExpr lvl (brData br) ++ ")"
         chan  | PrintIndexes `elem` lvl = "*" ++ show (brChanIndex br)
               | otherwise               = brChan br
         cont  = procSExpr' (ind+4) lvl $ brCont br
 brSExpr' ind lvl br@BInput  {} = indent ind ++
   "(-> " ++ guard ++ " " ++ act ++ "\n" ++ cont ++ ")"
-  where guard = valSExpr lvl $ brGuard br
+  where guard = exprSExpr lvl $ brGuard br
         act   = "(input " ++ chan ++ " " ++ bind ++ ")"
         chan  | PrintIndexes `elem` lvl = "*" ++ show (brChanIndex br)
               | otherwise               = brChan br
@@ -155,7 +157,7 @@ actSExpr = actSExpr' 0
 
 actSExpr' :: Int -> [PrintLevel] -> Action -> String
 actSExpr' ind lvl act@AOutput {} = indent ind ++
-  "(output " ++ channel ++ " " ++ valSExpr lvl (actData act) ++ ")"
+  "(output " ++ channel ++ " " ++ exprSExpr lvl (actData act) ++ ")"
   where channel | PrintIndexes `elem` lvl = "*" ++ show (actChanIndex act)
                 | otherwise               = actChan act
 actSExpr' ind lvl act@AInput  {} = indent ind ++
@@ -169,41 +171,44 @@ actSExpr' ind lvl act@ANew    {} = indent ind ++
   where typ | PrintTypes `elem` lvl = "[" ++ show (actTyp act) ++ "]"
             | otherwise             = ""
 actSExpr' ind lvl act@ALet    {} = indent ind ++
-  "(let " ++ actBind act ++ typ ++ " " ++ valSExpr lvl (actVal act) ++ ")"
+  "(let " ++ actBind act ++ typ ++ " " ++ exprSExpr lvl (actVal act) ++ ")"
   where typ | PrintTypes `elem` lvl = "[" ++ show (actTyp act) ++ "]"
             | otherwise             = ""
 actSExpr' ind lvl act@ASpawn  {} = indent ind ++
   "(spawn #" ++ actModule act ++ "/" ++ actName act ++ args ++ ")"
   where args | null (actArgs act) = ""
-             | otherwise          = " " ++ unwords (map (valSExpr lvl) $ actArgs act)
+             | otherwise          = " " ++ unwords (map (exprSExpr lvl) $ actArgs act)
 actSExpr' ind lvl act@APrim   {} = indent ind ++
   "(prim #" ++ actModule act ++ "/" ++ actName act ++ args ++ ")"
   where args | null (actArgs act) = ""
-             | otherwise          = " " ++ unwords (map (valSExpr lvl) $ actArgs act)
+             | otherwise          = " " ++ unwords (map (exprSExpr lvl) $ actArgs act)
 
-valSExpr :: [PrintLevel] -> Value -> String
-valSExpr = valSExpr' 0
+exprSExpr :: [PrintLevel] -> Expr -> String
+exprSExpr = exprSExpr' 0
 
-valSExpr' :: Int -> [PrintLevel] -> Value -> String
-valSExpr' ind lvl val@VTrue   {} = indent ind ++ "true" ++
-  if PrintTypes `elem` lvl then "[" ++ show (valTyp val) ++ "]" else ""
-valSExpr' ind lvl val@VFalse  {} = indent ind ++ "false" ++
-  if PrintTypes `elem` lvl then "[" ++ show (valTyp val) ++ "]" else ""
-valSExpr' ind lvl val@VInt    {} = indent ind ++ show (valInt val) ++
-  if PrintTypes `elem` lvl then "[" ++ show (valTyp val) ++ "]" else ""
-valSExpr' ind lvl val@VString {} = indent ind ++ valStr val ++
-  if PrintTypes `elem` lvl then "[" ++ show (valTyp val) ++ "]" else ""
-valSExpr' ind lvl val@VTuple  {} = indent ind ++
+exprSExpr' :: Int -> [PrintLevel] -> Expr -> String
+exprSExpr' ind lvl e@ETrue   {} = indent ind ++ "true" ++
+  if PrintTypes `elem` lvl then "[" ++ show (exprTyp e) ++ "]" else ""
+exprSExpr' ind lvl e@EFalse  {} = indent ind ++ "false" ++
+  if PrintTypes `elem` lvl then "[" ++ show (exprTyp e) ++ "]" else ""
+exprSExpr' ind lvl e@EInt    {} = indent ind ++ show (exprInt e) ++
+  if PrintTypes `elem` lvl then "[" ++ show (exprTyp e) ++ "]" else ""
+exprSExpr' ind lvl e@EString {} = indent ind ++ exprStr e ++
+  if PrintTypes `elem` lvl then "[" ++ show (exprTyp e) ++ "]" else ""
+exprSExpr' ind lvl e@ETuple  {} = indent ind ++
   "(tuple" ++
-  (if PrintTypes `elem` lvl then "[" ++ show (valTyp val) ++ "]" else "") ++
-  " " ++ unwords (map (valSExpr lvl) $ valVals val) ++ ")"
-valSExpr' ind lvl val@VVar    {} = indent ind ++
-  (if PrintIndexes `elem` lvl then "*" ++ show (valIndex val) else valVar val) ++
-  if PrintTypes `elem` lvl then "[" ++ show (valTyp val) ++ "]" else ""
-valSExpr' ind lvl val@VPrim   {} = indent ind ++
+  (if PrintTypes `elem` lvl then "[" ++ show (exprTyp e) ++ "]" else "") ++
+  " " ++ unwords (map (exprSExpr lvl) $ exprVals e) ++ ")"
+exprSExpr' ind lvl e@EVar    {} = indent ind ++
+  (if PrintIndexes `elem` lvl then "*" ++ show (exprIndex e) else exprVar e) ++
+  if PrintTypes `elem` lvl then "[" ++ show (exprTyp e) ++ "]" else ""
+exprSExpr' ind lvl e@EPrim   {} = indent ind ++
   "(prim" ++
-  (if PrintTypes `elem` lvl then "[" ++ show (valTyp val) ++ "]" else "") ++
-  " #" ++ valModule val ++ "/" ++ valName val ++ args ++ ")"
-  where args | null (valArgs val) = ""
-             | otherwise          = " " ++ unwords (map (valSExpr lvl) $ valArgs val)
-
+  (if PrintTypes `elem` lvl then "[" ++ show (exprTyp e) ++ "]" else "") ++
+  " #" ++ exprModule e ++ "/" ++ exprName e ++ args ++ ")"
+  where args | null (exprArgs e) = ""
+             | otherwise          = " " ++ unwords (map (exprSExpr lvl) $ exprArgs e)
+exprSExpr' ind lvl e@EAnd    {} = indent ind ++
+  "(and " ++ exprSExpr lvl (exprLeft e) ++ " " ++ exprSExpr lvl (exprRight e) ++ ")"
+exprSExpr' ind lvl e@EOr     {} = indent ind ++
+  "(or " ++ exprSExpr lvl (exprLeft e) ++ " " ++ exprSExpr lvl (exprRight e) ++ ")"

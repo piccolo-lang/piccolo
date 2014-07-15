@@ -24,10 +24,9 @@ import Middle.Typing
 import Middle.Environments
 import Middle.Compilation
 import Back.SeqAST
-import Back.Backend hiding (null)
-import Back.GenericBackend
-import Back.CBackend
 import Back.CodeEmitter
+import qualified Back.CBackend as CBackend
+import qualified Back.GenericBackend as GenericBackend
 
 import System.Environment
 import System.Console.GetOpt
@@ -48,50 +47,35 @@ main = do
 handleFiles :: [Flag] -> [String] -> IO ()
 handleFiles args [] = return ()
 handleFiles args (f:fs) = do
-  content  <- readFile f
-  ast      <- reportResult $ parseModule content
+  content     <- readFile f
+  ast         <- reportResult $ parseModule content
   when (SAST SimplePrint  `elem` args) $ do
     putStrLn "------------------------------ output of the parsed AST"
     putStrLn (strSExpr [] ast)
     putStrLn ""
-  typedAst <- reportResult $ typingPass ast
+  typedAst    <- reportResult $ typingPass ast
   when (SAST PrintTypes   `elem` args) $ do
     putStrLn "------------------------------ output of the typed AST"
     putStrLn (strSExpr [PrintTypes] typedAst)
     putStrLn ""
-  withEnv  <- reportResult $ computingEnvPass typedAst
+  withEnv     <- reportResult $ computingEnvPass typedAst
   when (SAST PrintIndexes `elem` args) $ do
     putStrLn "------------------------------ output of the decorated AST"
     putStrLn (strSExpr [PrintIndexes] withEnv)
     putStrLn ""
-  emittedCode    <- reportResult $ if Generic `elem` args
-    then compileToGeneric withEnv
-    else compileToC       withEnv
-  let fOutput = replaceExtension f $ if Generic `elem` args then "out" else "c"
-  outputCode emittedCode fOutput
-  handleFiles args fs
-
--- | The 'compileToGeneric' function compiles a piccolo AST using the generic backend
-compileToGeneric :: Modul -> Either PiccError String
-compileToGeneric piAst = do
-  seqAst :: Instr GenericBackend <- compilePass piAst
-  let output = runEmitterM $ emitCode mainDef seqAst
-  return output
-  where mainDef = delete '/' (modName piAst) ++ "_Main"
-
--- | The 'compileToC' function compiles a piccolo AST using the C backend
-compileToC :: Modul -> Either PiccError String
-compileToC piAst = do
-  seqAst :: Instr CBackend <- compilePass piAst
-  let output = runEmitterM $ emitCode mainDef seqAst
-  return output
-  where mainDef = delete '/' (modName piAst) ++ "_Main"
-
-outputCode :: String -> String -> IO ()
-outputCode code fname = do
-  hOut <- openFile fname WriteMode
-  hPutStr hOut code
-  hClose hOut
+  seqAst      <- reportResult $ compilePass withEnv
+  if Generic `elem` args
+    then do let code  = runEmitterM $ GenericBackend.emitCode (mainDef withEnv) seqAst
+            let fname = replaceExtension f "out"
+            hOut <- openFile fname WriteMode
+            hPutStr hOut code
+            hClose hOut
+    else do let code  = runEmitterM $ CBackend.emitCode (mainDef withEnv) seqAst
+            let fname = replaceExtension f "c"
+            hOut <- openFile fname WriteMode
+            hPutStr hOut code
+            hClose hOut
+  where mainDef m = delete '/' (modName m) ++ "_Main"
 
 -- | Various flags for compiler options
 data Flag
