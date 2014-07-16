@@ -15,7 +15,7 @@ import Back.SeqAST ( DefName(..)
                    , PrimName(..)
                    , EvalfuncName(..)
                    , Instr(DefFunction, EvalFunction,
-                           Nop, Return, Goto, Switch, Case)
+                           Nop, Return, Goto, Switch, Case, CaseAndLabel)
                    , Type (..)
                    , BExpr (Not)
                    )
@@ -162,7 +162,7 @@ compileProcess proc@PChoice {} = do
       _ -> return Nop
   loop3 <- forM (zip ([0..]::[Int]) (procBranches proc)) $ \(i, br) -> do
     cont <- compileProcess (brCont br)
-    return $ Case (choiceConts !! i) #
+    return $ CaseAndLabel (choiceConts !! i) #
              cont
   return $ Case startChoice #
            (begin $ var tryResult TryResultEnumType #
@@ -208,7 +208,8 @@ compileProcess proc@PCall {} = do
                     foldr (#) Nop loop2 #
                     pt_proc  <--- name #
                     pt_pc   <---- dEntry #
-                    pt_status <-- statusCall
+                    pt_status <-- statusCall #
+                    Return
            )
 
 compileBranchAction :: Int -> Branch -> CompilingM Instr
@@ -306,7 +307,7 @@ compileAction act@AOutput { actChanIndex = c } = do
                     processWait(pt) #
                     Return
            ) #
-           Case prefixCont
+           CaseAndLabel prefixCont
 
 compileAction act@AInput { actChanIndex = c, actBindIndex = x } = do
   prefixStart <- genLabel
@@ -354,7 +355,7 @@ compileAction act@AInput { actChanIndex = c, actBindIndex = x } = do
                     processWait(pt) #
                     Return
            ) #
-           Case prefixCont
+           CaseAndLabel prefixCont
 
 compileAction act@ANew { actBindIndex = c } = do
   return $ comment (strSExpr [] act) #

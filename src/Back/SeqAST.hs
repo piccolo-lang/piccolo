@@ -128,5 +128,6 @@ data Instr
   | If BExpr Instr Instr
   | Switch BExpr Instr
   | Case Int
+  | CaseAndLabel Int
   | ProcCall RTFun
 

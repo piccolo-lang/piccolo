@@ -97,6 +97,7 @@ emitInstr (DefFunction name ((p1, t1), (p2, t2)) body) = do
 emitInstr (EvalFunction name (p1, t1) body) = do
   emitLn ""
   emitIndent
+  emitStr "void "
   emitEvalfuncName name
   emitStr "("
   emitType t1
@@ -140,13 +141,13 @@ emitInstr (If test cons alt) = do
   emitIndent
   emitStr "}"
   case alt of
-    Nop -> do emitStr " else {\n"
+    Nop -> return ()
+    _   -> do emitStr " else {\n"
               incrIndent
               emitInstr alt
               decrIndent
               emitIndent
               emitStr "}"
-    _ -> return ()
   emitStr "\n"
 emitInstr (Switch test body) = do
   emitIndent
@@ -160,6 +161,11 @@ emitInstr (Switch test body) = do
 emitInstr (Case lbl)         = do
   decrIndent
   emitLn $ "case " ++ show lbl ++ ":"
+  incrIndent
+emitInstr (CaseAndLabel lbl) = do
+  decrIndent
+  emitLn $ "case " ++ show lbl ++ ":"
+  emitLn $ "label" ++ show lbl ++ ":"
   incrIndent
 emitInstr (ProcCall fun)     = do
   emitIndent
@@ -236,12 +242,24 @@ emitRTFun (ReleaseAllChannels [chans, nbChans]) = do
   emitStr ", "
   emitBExpr nbChans
   emitStr ")"
-emitRTFun (ChannelRef [chan]) =
-  error "ChannelRef TODO"
-emitRTFun (ChannelIncrRefCount [chan]) =
-  error "ChannelIncrRefCount TODO"
-emitRTFun (ChannelAcquireAndRegister [pt, chan, chans, nbChans]) =
-  error "ChannelAcquireAndRegister TODO"
+emitRTFun (ChannelRef [chan]) = do
+  emitStr "PICC_channel_ref("
+  emitBExpr chan
+  emitStr ")"
+emitRTFun (ChannelIncrRefCount [chan]) = do
+  emitStr "PICC_channel_inc_ref_count("
+  emitBExpr chan
+  emitStr ")"
+emitRTFun (ChannelAcquireAndRegister [pt, chan, chans, nbChans]) = do
+  emitStr "PICC_channel_acquire_and_register("
+  emitBExpr pt
+  emitStr ", "
+  emitBExpr chan
+  emitStr ", "
+  emitBExpr chans
+  emitStr ", "
+  emitBExpr nbChans
+  emitStr ")"
 emitRTFun (Awake [sched, commitThread, commit]) = do
   emitStr "PICC_awake("
   emitBExpr sched
@@ -344,10 +362,10 @@ emitType PiValueType       = emitStr "PICC_Value"
 emitType PiThreadType      = emitStr "PICC_PiThread*"
 emitType SchedulerType     = emitStr "PICC_SchedPool*"
 emitType ChannelType       = emitStr "PICC_Channel*"
-emitType InCommitType      = error "InCommitType TODO"
-emitType OutCommitType     = error "OutCcommitType TODO"
-emitType ChannelArrayType  = error "ChannelArrayType TODO"
-emitType TryResultEnumType = error "TryResultEnumType TODO"
+emitType InCommitType      = emitStr "PICC_InCommit"
+emitType OutCommitType     = emitStr "PICC_OutCommit"
+emitType ChannelArrayType  = emitStr "PICC_Channel**"
+emitType TryResultEnumType = emitStr "PICC_TryResult"
 
 emitVarName :: VarName -> EmitterM ()
 emitVarName PiThread            = emitStr "pt"
@@ -373,9 +391,14 @@ emitVarName Chan                = emitStr "chan"
 emitVarName Chans               = emitStr "chans"
 emitVarName NbChans             = emitStr "nbChans"
 emitVarName Commit              = emitStr "commit"
-emitVarName CommitThread        = error "CommitThread TODO"
-emitVarName CommitThreadVal     = error "CommitThreadVal TODO"
-emitVarName (CommitThreadEnv i) = error "CommitThreadEnv TODO"
+emitVarName CommitThread        = emitStr "commit->thread"
+emitVarName CommitThreadVal     = emitStr "commit->thread->val"
+emitVarName (CommitThreadEnv v) = do
+  emitStr "commit->thread->env["
+  emitVarName v
+  emitStr "]"
+emitVarName CommitVal           = emitStr "commit->val"
+emitVarName CommitRefval        = emitStr "commit->refval"
 emitVarName TryResult           = emitStr "tryResult"
 emitVarName OK                  = emitStr "ok"
 emitVarName NbDisabled          = emitStr "nbDisabled"
