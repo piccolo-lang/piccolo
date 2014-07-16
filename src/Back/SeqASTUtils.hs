@@ -86,6 +86,9 @@ initIntValue (e1, i2) = ProcCall $ InitIntValue [e1, IntExpr i2]
 initStringValue :: (BExpr, String) -> Instr
 initStringValue (e1, s2) = ProcCall $ InitStringValue [e1, StringExpr s2]
 
+initChannelValue :: (BExpr, BExpr) -> Instr
+initChannelValue (e1, e2) = ProcCall $ InitChannelValue [e1, e2]
+
 
 class BackendVars a where
   pt                    :: a
@@ -189,7 +192,7 @@ instance BackendVars BExpr where
 
 class BackendFuns a where
   commit_evalfunc            :: BExpr -> a
-  generateChannel            :: BExpr -> a
+  generateChannel            :: () -> a
   generatePiThread           :: Int -> a
   processWait                :: BExpr -> a
   processEnd                 :: (BExpr, BExpr) -> a
@@ -213,7 +216,7 @@ class BackendFuns a where
 
 instance BackendFuns BExpr where
   commit_evalfunc e1         = FunCall $ CommitEvalFunc [e1]
-  generateChannel e1         = FunCall $ GenerateChannel [e1]
+  generateChannel ()         = FunCall $ GenerateChannel []
   generatePiThread i1        = FunCall $ GeneratePiThread [IntExpr i1]
   processWait e1             = FunCall $ ProcessWait [e1]
   processEnd (e1, e2)        = FunCall $ ProcessEnd [e1, e2]
@@ -242,7 +245,7 @@ instance BackendFuns BExpr where
 
 instance BackendFuns Instr where
   commit_evalfunc e1         = ProcCall $ CommitEvalFunc [e1]
-  generateChannel e1         = ProcCall $ GenerateChannel [e1]
+  generateChannel ()         = ProcCall $ GenerateChannel []
   generatePiThread i1        = ProcCall $ GeneratePiThread [IntExpr i1]
   processWait e1             = ProcCall $ ProcessWait [e1]
   processEnd (e1, e2)        = ProcCall $ ProcessEnd [e1, e2]

@@ -14,7 +14,8 @@ import Back.SeqASTUtils
 import Back.SeqAST ( DefName(..)
                    , PrimName(..)
                    , EvalfuncName(..)
-                   , Instr(DefFunction, Nop, Return, Goto, Switch, Case)
+                   , Instr(DefFunction, EvalFunction,
+                           Nop, Return, Goto, Switch, Case)
                    , Type (..)
                    , BExpr (Not)
                    )
@@ -26,6 +27,8 @@ import Control.Monad.State
 
 data CompState = CompState { labelCount    :: Int
                            , currentModule :: String
+                           , evalFuncCount :: Int
+                           , evalFuncs     :: [Instr]
                            }
 
 type CompilingM a = ErrorT PiccError (State CompState) a
@@ -47,15 +50,20 @@ genLabel = do
 
 registerEvalFunc :: Instr -> CompilingM EvalfuncName
 registerEvalFunc expr = do
-  throwError $ TodoError "registerEvalFunc"
-
+  st <- get
+  let n  = evalFuncCount st
+  let fs = evalFuncs st
+  let fName = EvalfuncName n
+  let f = EvalFunction fName (pt, PiThreadType) expr
+  put st { evalFuncCount = n + 1, evalFuncs = fs ++ [f] }
+  return fName
 
 
 -- | The 'compilePass' monad run the piccolo AST compilation to sequential AST
 compilePass :: Modul -> Either PiccError Instr
 compilePass m = evalState (runErrorT instr) initEnv
   where instr    = compileModul m
-        initEnv  = CompState (dEntry + 1) ""
+        initEnv  = CompState (dEntry + 1) "" 1 []
 
 
 compileModul :: Modul -> CompilingM Instr
@@ -63,7 +71,9 @@ compileModul m = do
   st <- get
   put st { currentModule = modName m }
   defs <- forM (modDefs m) $ \def -> compileDefinition def
-  return $ foldr (#) Nop defs
+  CompState { evalFuncs = fs } <- get
+  let defs' = foldr (#) Nop defs
+  return $ foldr (#) defs' fs
 
 compileDefinition :: Definition -> CompilingM Instr
 compileDefinition def = do
@@ -184,7 +194,7 @@ compileProcess proc@PCall {} = do
              vi <-- pt_val
   loop2 <- forM (zip ([1..]::[Int]) (procArgs proc)) $ \(i, arg) -> do
     let vi = v i
-    return $ (pt_env i) <-- vi #
+    return $ (pt_env (i-1)) <-- vi #
              (case exprTyp arg of
                 TChannel {} -> knowRegister(pt_knows, vi)
                 _           -> Nop
@@ -348,7 +358,7 @@ compileAction act@AInput { actChanIndex = c, actBindIndex = x } = do
 
 compileAction act@ANew { actBindIndex = c } = do
   return $ comment (strSExpr [] act) #
-           (pt_env c) <-- generateChannel(pt)
+           initChannelValue (pt_env c, generateChannel())
 
 compileAction act@ALet { actBindIndex = x } = do
   expr <- compileExpr (actVal act)

@@ -30,7 +30,7 @@ emitCode mainName instr = do
   emitLn ""
   emitLn "int main() {"
   incrIndent
-  emitLn $ "PICC_main(4, " ++ mainName ++ ", 2, 2, 2, 0, 0, 1);"
+  emitLn $ "PICC_main(4, " ++ mainName ++ ", 2, 2, 2, 10, 0, 1);" -- TODO : change 10 for the real envsize of entry def
   decrIndent
   emitLn "}"
 
@@ -72,7 +72,9 @@ emitInstr (LexBloc i)     = do
   emitInstr i
   decrIndent
   emitLn "}"
-emitInstr (ComBloc loc i) = error "ComBloc TODO"
+emitInstr (ComBloc loc i) = do
+  emitInstr (Comment $ "compilation bloc [" ++ show loc ++ "]")
+  emitInstr i
 emitInstr Nop = return ()
 emitInstr (DefFunction name ((p1, t1), (p2, t2)) body) = do
   emitLn ""
@@ -178,62 +180,124 @@ emitBExpr (StringExpr str)  = emitStr str
 emitBExpr (Var v)           = emitVarName v
 emitBExpr (Enum u)          = emitEnumName u
 emitBExpr (FunCall fun)     = emitRTFun fun
-emitBExpr (FunVal fun)      = error "FunVal TODO"
+emitBExpr (FunVal (EvalFunc f)) = emitEvalfuncName f
+emitBExpr (FunVal _) = error "FunVal of a function that should not be manipulated as a value"
 
 emitRTFun :: RTFun -> EmitterM ()
-emitRTFun (EvalFunc n)                   =
-  error "EvalFunc TODO"
-emitRTFun (CommitEvalFunc            [pt]) =
-  error "CommitEvalFunc TODO"
+emitRTFun (EvalFunc n) = do
+  emitEvalfuncName n
+  emitStr "(NULL)"
+emitRTFun (CommitEvalFunc [pt]) = do
+  emitStr "commit->evalfunc("
+  emitBExpr pt
+  emitStr ")"
 emitRTFun (PrimCall n (ptVal : vs)) = do
   emitPrimName n
   emitStr "("
   emitStr "&" ; emitBExpr ptVal
   _ <- forM vs $ \v -> do { emitStr ", " ; emitStr "&" ; emitBExpr v }
   emitStr ")"
-emitRTFun (GenerateChannel           [pt]) =
-  error "GenerateChannel TODO"
-emitRTFun (GeneratePiThread          [envSize]) =
-  error "GeneratePiThread TODO"
-emitRTFun (ProcessWait               [pt]) =
-  error "ProcessWait TODO"
+emitRTFun (GenerateChannel []) =
+  emitStr "PICC_create_channel()"
+emitRTFun (GeneratePiThread [envSize]) = do
+  emitStr "PICC_create_pithread("
+  emitBExpr envSize
+  emitStr ", 10, 10)" -- TODO: fix params
+emitRTFun (ProcessWait [pt]) = do
+  emitStr "PICC_process_wait("
+  emitBExpr pt
+  emitStr ")"
 emitRTFun (ProcessEnd [pt, status]) = do
   emitStr "PICC_process_end("
   emitBExpr pt
   emitStr ", " ; emitBExpr status
   emitStr ")"
-emitRTFun (ProcessYield              [pt]) =
-  error "ProcessYield TODO"
-emitRTFun (ProcessAcquireChannel     [pt, chan]) =
-  error "ProcessAcquireChannel TODO"
-emitRTFun (Acquire                   [ptLock]) =
-  error "Acquire TODO"
-emitRTFun (ReleaseChannel            [chan]) =
-  error "ReleaseChannel TODO"
-emitRTFun (ReleaseAllChannels        [chans, nbChans]) =
-  error "ReleaseAllChannels TODO"
-emitRTFun (ChannelRef                [chan]) =
+emitRTFun (ProcessYield [pt]) = do
+  emitStr "PICC_process_yield("
+  emitBExpr pt
+  emitStr ")"
+emitRTFun (ProcessAcquireChannel [pt, chan]) = do
+  emitStr "PICC_process_acquire_channel("
+  emitBExpr pt
+  emitStr ", "
+  emitBExpr chan
+  emitStr ")"
+emitRTFun (Acquire [ptLock]) = do
+  emitStr "PICC_acquire("
+  emitStr "&" ; emitBExpr ptLock
+  emitStr ")"
+emitRTFun (ReleaseChannel [chan]) = do
+  emitStr "PICC_RELEASE_CHANNEL("
+  emitBExpr chan
+  emitStr ")"
+emitRTFun (ReleaseAllChannels [chans, nbChans]) = do
+  emitStr "PICC_release_all_channels("
+  emitBExpr chans
+  emitStr ", "
+  emitBExpr nbChans
+  emitStr ")"
+emitRTFun (ChannelRef [chan]) =
   error "ChannelRef TODO"
-emitRTFun (ChannelIncrRefCount       [chan]) =
+emitRTFun (ChannelIncrRefCount [chan]) =
   error "ChannelIncrRefCount TODO"
 emitRTFun (ChannelAcquireAndRegister [pt, chan, chans, nbChans]) =
   error "ChannelAcquireAndRegister TODO"
-emitRTFun (Awake                     [sched, commitThread, commit]) =
-  error "Awake TODO"
-emitRTFun (TryInputAction            [commit, tryResult]) =
-  error "TryInputAction TODO"
-emitRTFun (TryOutputAction           [commit, tryResult]) =
-  error "TryOutputAction TODO"
-emitRTFun (RegisterInputCommitment   [pt, chan, x, contLabel]) =
-  error "RegisterInputCommitment TODO"
-emitRTFun (RegisterOutputCommitment  [pt, chan, efun, contLabel]) =
-  error "RegisterOutputCommiment TODO"
-emitRTFun (KnowRegister              [ptKnows, chan]) =
-  error "KnowRegister TODO"
-emitRTFun (KnowSetForgetAll          [ptKnows]) =
-  error "KnowSetForgetAll TODO"
-emitRTFun (ReadyQueuePush            [schedReady, child]) =
-  error "ReadyQueuePush TODO"
+emitRTFun (Awake [sched, commitThread, commit]) = do
+  emitStr "PICC_awake("
+  emitBExpr sched
+  emitStr ", "
+  emitBExpr commitThread
+  emitStr ", "
+  emitBExpr commit
+  emitStr ")"
+emitRTFun (TryInputAction [commit, tryResult]) = do
+  emitStr "PICC_try_input_action("
+  emitBExpr commit
+  emitStr ", "
+  emitStr "&" ; emitBExpr tryResult
+  emitStr ")"
+emitRTFun (TryOutputAction [commit, tryResult]) = do
+  emitStr "PICC_try_output_action("
+  emitBExpr commit
+  emitStr ", "
+  emitStr "&" ; emitBExpr tryResult
+  emitStr ")"
+emitRTFun (RegisterInputCommitment [pt, chan, x, contLabel]) = do
+  emitStr "PICC_register_input_commitment("
+  emitBExpr pt
+  emitStr ", "
+  emitBExpr chan
+  emitStr ", "
+  emitBExpr x
+  emitStr ", "
+  emitBExpr contLabel
+  emitStr ")"
+emitRTFun (RegisterOutputCommitment [pt, chan, efun, contLabel]) = do
+  emitStr "PICC_register_output_commiment("
+  emitBExpr pt
+  emitStr ", "
+  emitBExpr chan
+  emitStr ", "
+  emitBExpr efun
+  emitStr ", "
+  emitBExpr contLabel
+  emitStr ")"
+emitRTFun (KnowRegister [ptKnows, chan]) = do
+  emitStr "PICC_knownset_register("
+  emitBExpr ptKnows
+  emitStr ", "
+  emitBExpr chan
+  emitStr ")"
+emitRTFun (KnowSetForgetAll [ptKnows]) = do
+  emitStr "PICC_knownset_forget_all("
+  emitBExpr ptKnows
+  emitStr ")"
+emitRTFun (ReadyQueuePush [schedReady, child]) = do
+  emitStr "PICC_ready_queue_add("
+  emitBExpr schedReady
+  emitStr ", "
+  emitBExpr child
+  emitStr ")"
 emitRTFun (InitBoolTrue [ptVal]) = do
   emitStr "PICC_INIT_BOOL_TRUE("
   emitStr "&" ; emitBExpr ptVal
@@ -253,8 +317,15 @@ emitRTFun (InitStringValue [ptVal, s]) = do
   emitStr ", " ; emitStr "PICC_create_string_handle("
   emitBExpr s
   emitStr "))"
-emitRTFun (BoolFromValue             [ptVal]) =
-  error "BoolFromValue TODO"
+emitRTFun (BoolFromValue [ptVal]) = do
+  emitStr "PICC_bool_of_bool_value("
+  emitBExpr ptVal
+  emitStr ")"
+emitRTFun (InitChannelValue [ptVal, chan]) = do
+  emitStr "PICC_INIT_CHANNEL_VALUE("
+  emitStr "&" ; emitBExpr ptVal
+  emitStr ", " ; emitBExpr chan
+  emitStr ")"
 emitRTFun _ = error "bad params when applying fun of proc"
 
 emitEnumName :: EnumName -> EmitterM ()
@@ -272,7 +343,7 @@ emitType IntType           = emitStr "int"
 emitType PiValueType       = emitStr "PICC_Value"
 emitType PiThreadType      = emitStr "PICC_PiThread*"
 emitType SchedulerType     = emitStr "PICC_SchedPool*"
-emitType ChannelType       = error "ChannelType TODO"
+emitType ChannelType       = emitStr "PICC_Channel*"
 emitType InCommitType      = error "InCommitType TODO"
 emitType OutCommitType     = error "OutCcommitType TODO"
 emitType ChannelArrayType  = error "ChannelArrayType TODO"
@@ -283,7 +354,7 @@ emitVarName PiThread            = emitStr "pt"
 emitVarName PiThreadVal         = emitStr "pt->val"
 emitVarName PiThreadPC          = emitStr "pt->pc"
 emitVarName (PiThreadEnv i)     = emitStr $ "pt->env[" ++ show i ++ "]"
-emitVarName PiThreadKnows       = emitStr "pt->knows"
+emitVarName PiThreadKnows       = emitStr "pt->knowns"
 emitVarName PiThreadLock        = emitStr "pt->lock"
 emitVarName PiThreadFuel        = emitStr "pt->fuel"
 emitVarName PiThreadProc        = emitStr "pt->proc"
@@ -296,7 +367,7 @@ emitVarName ChildProc           = emitStr "child->proc"
 emitVarName (ChildEnv i)        = emitStr $ "child->env[" ++ show i ++ "]"
 emitVarName ChildKnows          = emitStr "child->knows"
 emitVarName Scheduler           = emitStr "scheduler"
-emitVarName SchedulerReady      = error "SchedulerReady TODO"
+emitVarName SchedulerReady      = emitStr "scheduler->ready"
 emitVarName (V i)               = emitStr $ "v" ++ show i
 emitVarName Chan                = emitStr "chan"
 emitVarName Chans               = emitStr "chans"
@@ -310,7 +381,7 @@ emitVarName OK                  = emitStr "ok"
 emitVarName NbDisabled          = emitStr "nbDisabled"
 
 emitEvalfuncName :: EvalfuncName -> EmitterM ()
-emitEvalfuncName (EvalfuncName s) = error "emitEvalfuncName TODO"
+emitEvalfuncName (EvalfuncName i) = emitStr $ "eval" ++ show i
 
 emitPrimName :: PrimName -> EmitterM ()
 emitPrimName (PrimName m f) = do
@@ -324,159 +395,3 @@ emitDefName (DefName m f) = do
   emitStr "_"
   emitStr f
 
-
-
---instance Backend CBackend where
---  emitVarName (RecordName var str)  = do
---    let (v, t) = var
---    emitVarName v
---    case t of
---      Pty nt _ -> emitStr (if nt == "*" then "->" else ".")
---      _        -> emitStr "."
---    emitStr str
---  emitVarName (ArrayName var expr)  = do
---    emitVarName var
---    emitStr "["
---    emitExpr expr
---    emitStr "]"
---  
---  emitExpr (Op o e1 e2)       = do
---    emitStr "("
---    emitExpr e1
---    emitStr ") "
---    emitBinop o
---    emitStr " ("
---    emitExpr e2
---    emitStr ")"
---  emitExpr (OpU o e)          = do
---    emitUnop o
---    emitStr "("
---    emitExpr e
---    emitStr ")"
---  emitExpr (FunCall fun args) =
---    case fun of
---      (SimpleName f, Fun _ argTypes) -> do
---        emitStr $ f ++ "("
---        emitList (\(expr,typ) -> do { emitPrefix typ ; emitExpr expr })
---          ", " (zip args argTypes)
---        emitStr ")"
---      (f, _) -> do
---        emitVarName f
---        emitStr "("
---        emitList emitExpr ", " args
---        emitStr ")"
---
---  emitBinop Sum   = emitStr "+"
---  emitBinop Minus = emitStr "-"
---  emitBinop Mult  = emitStr "*"
---  emitBinop Div   = emitStr "/"
---  emitBinop Equal = emitStr "=="
---
---  emitUnop Not = emitStr "!"
---
---  emitInstr (Comment str)              = do
---    emitLn ""
---    emitLn $ "/* " ++ str ++ " */"
---  emitInstr (Debug str)                =
---    emitLn $ "printf(\"%s\", " ++ str ++ ");"
---  emitInstr (Switch expr body)         = do
---    emitIndent
---    emitStr "switch ("
---    emitExpr expr
---    emitStr ") {\n"
---    incrIndent
---    emitList emitInstr "" body
---    decrIndent
---    emitIndent
---    emitStr "}\n"
---  emitInstr (Case expr)                = do
---    decrIndent
---    emitIndent
---    emitStr "case "
---    emitExpr expr
---    emitStr ":\n"
---    incrIndent
---  emitInstr (SeqBloc instrs)           =
---    forM_ instrs emitInstr
---  emitInstr (SemBloc instrs)           = do
---    emitLn "{"
---    incrIndent
---    emitList emitInstr "" instrs
---    decrIndent
---    emitLn "}"
---  emitInstr (ComBloc loc instr)        = do
---    emitIndent
---    emitStr $ "#line " ++ show (locStartLine loc) ++ "\n"
---    emitInstr instr
---  emitInstr (ProcCall fun args)        = do
---    emitIndent
---    case fun of
---      (SimpleName f, Fun _ argTypes) -> do
---        emitStr $ f ++ "("
---        emitList (\(expr,typ) -> do { emitPrefix typ ; emitExpr expr })
---          ", " (zip args argTypes)
---        emitStr ");\n"
---      (f, _) -> do
---        emitVarName f
---        emitStr "("
---        emitList emitExpr ", " args
---        emitStr ");\n"
---  emitInstr (DeclareVar (var, typ))    = do
---    emitIndent
---    emitPiccType typ
---    emitStr " "
---    emitVarName var
---    emitStr ";\n"
---  emitInstr (Assign (var, _) expr)     = do
---    emitIndent
---    emitVarName var
---    emitStr " = "
---    emitExpr expr
---    emitStr ";\n"
---  emitInstr (ForEach (var, _) expr body) = do
---    emitLn "{"
---    incrIndent
---    emitIndent
---    emitStr "PICC_KnownValue "
---    emitVarName var
---    emitStr ";\n"
---    emitIndent
---    emitStr "PICC_KnownSet* s = "
---    emitExpr expr
---    emitStr ";\n"
---    emitIndent
---    emitStr "PICC_KNOWNSET_FOREACH(s, "
---    emitVarName var
---    emitStr ") {\n"
---    incrIndent
---    emitIndent
---    emitInstr body
---    decrIndent
---    emitLn "}"
---    emitLn "PICC_free_knownset(s);"
---    decrIndent
---    emitLn "}"
---  emitInstr (If cond csq alt)          = do
---    emitIndent
---    emitStr "if ("
---    emitExpr cond
---    emitStr ") {\n"
---    incrIndent
---    emitInstr $ SeqBloc csq
---    decrIndent
---    emitLn "} else {"
---    incrIndent
---    emitInstr $ SeqBloc alt
---    decrIndent
---    emitLn "}"
---  emitInstr (DoWhile body expr)        = do
---    emitLn "do {"
---    incrIndent
---    emitInstr body
---    decrIndent
---    emitIndent
---    emitStr "} while ("
---    emitExpr expr
---    emitStr ");\n"
---  
---

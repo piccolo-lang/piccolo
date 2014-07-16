@@ -11,7 +11,7 @@ import qualified Front.AST as PilAST
 
 data DefName  = DefName  String String
 data PrimName = PrimName String String
-data EvalfuncName = EvalfuncName String
+data EvalfuncName = EvalfuncName Int
 
 data VarName
   = PiThread
@@ -96,6 +96,7 @@ data RTFun
   | InitBoolTrue              [BExpr]
   | InitBoolFalse             [BExpr]
   | BoolFromValue             [BExpr]
+  | InitChannelValue          [BExpr]
 
 data BExpr
   = Not BExpr
