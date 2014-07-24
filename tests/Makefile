@@ -1,28 +1,25 @@
 
-INC=../../libpiccolort/include
-LIB=../../libpiccolort/src
+INC     = ../../libpiccolort/include
+LIB     = ../../libpiccolort/lib
 
-PCC=../dist/build/piccolo/piccolo
-CFLAGS= -g -Wall -std=c99
+PCC     = ../dist/build/piccolo/piccolo
+CC      = gcc
+CFLAGS  = -g -Wall -std=c99
+LD      = gcc
+LDFLAGS = -lpiccolort -lpthread
 
-LIBFILES=$(wildcard $(LIB)/*.c)
-OBJS=$(subst .c,.o, $(LIBFILES))
-
-PTHFILES=$(wildcard *.pi)
-TARGETS=$(subst .pi,.run, $(PTHFILES))
+PIFILES = $(wildcard *.pi)
+TARGETS = $(subst .pi,.run, $(PIFILES))
 
 all: $(TARGETS)
 
-.PHONY: clean
-
-%.c:%.pi
+%.c: %.pi
 	$(PCC) $<
-%.o:%.c
-	gcc $(CFLAGS) -I $(INC) -c $< -o $@
+%.o: %.c
+	$(CC) -c $< -o $@ -I$(INC) $(CFLAGS)
 
-%.run:%.o $(OBJS)
-	gcc $(CFLAGS) -I $(INC) $^ -o $@ -lpthread
+%.run: %.o
+	$(LD) $^ -o $@ -L$(LIB) $(LDFLAGS)
 
 clean:
 	rm -f *.c *~ *.o *.run
-	rm -f basics/*.c basics/*.o basics/*.run

@@ -1,4 +1,4 @@
-module Test/Prim
+module Basics/Prim
 
 def P(c:chan<int>) =
   c?(x), #core/io:print_int(x), end

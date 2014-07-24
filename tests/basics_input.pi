@@ -1,4 +1,4 @@
-module Test/Prim
+module Basics/Prim
 
 def Main() =
   new(c:chan<int>),
