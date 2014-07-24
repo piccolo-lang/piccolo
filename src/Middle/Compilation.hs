@@ -15,7 +15,7 @@ import Back.SeqAST ( DefName(..)
                    , PrimName(..)
                    , EvalfuncName(..)
                    , Instr(DefFunction, EvalFunction,
-                           Nop, Return, Goto, Switch, Case, CaseAndLabel)
+                           Nop, Return, ReturnVal, Goto, Switch, Case, CaseAndLabel)
                    , Type (..)
                    , BExpr (Not)
                    )
@@ -123,7 +123,7 @@ compileProcess proc@PChoice {} = do
                  (
                    releaseAllChannels(chans, nbChans) #
                    pt_pc <---- startChoice #
-                   processYield(pt) #
+                   processYield(pt, scheduler) #
                    Return
                  )
                  (
@@ -134,7 +134,7 @@ compileProcess proc@PChoice {} = do
                      ifthen (pt_fuel =:== 0)
                      (
                        pt_pc <---- (choiceConts !! i) #
-                       processYield(pt) #
+                       processYield(pt, scheduler) #
                        Return
                      ) #
                      Goto (choiceConts !! i)
@@ -149,7 +149,7 @@ compileProcess proc@PChoice {} = do
     case br of
       BOutput { brChanIndex = c } -> do
         instrs   <- compileExpr (brData br)
-        evalFunc <- registerEvalFunc instrs
+        evalFunc <- registerEvalFunc $ instrs # ReturnVal
         return $ ifthen (pt_enabled i)
                  (
                    registerOutputCommitment(pt, pt_env c, evalFunc, choiceConts !! i)
@@ -180,7 +180,7 @@ compileProcess proc@PChoice {} = do
                     foldr (#) Nop loop2 #
                     acquire(pt_lock) #
                     releaseAllChannels(chans, nbChans) #
-                    processWait(pt) #
+                    processWait(pt, scheduler) #
                     Return #
                     foldr (#) Nop loop3
            )
@@ -227,7 +227,8 @@ compileBranchAction i br@BOutput { brChanIndex = c} = do
                       tryResult <-- tryResultAbort
                     )
                     (
-                      var commit InCommitType #
+                      var commit CommitType #
+                      var tryResult TryResultEnumType #
                       commit <-- tryOutputAction(commit, tryResult) #
                       ifthen (tryResult =:= tryResultEnabled)
                       (
@@ -247,7 +248,8 @@ compileBranchAction i br@BInput { brChanIndex = c, brBindIndex = x } = do
                       tryResult <-- tryResultAbort
                     )
                     (
-                      var commit OutCommitType #
+                      var commit CommitType #
+                      var tryResult TryResultEnumType #
                       commit <-- tryInputAction(commit, tryResult) #
                       ifthen (tryResult =:= tryResultEnabled)
                       (
@@ -270,20 +272,21 @@ compileAction act@AOutput { actChanIndex = c } = do
   prefixStart <- genLabel
   prefixCont  <- genLabel
   exprComp    <- compileExpr (actData act)
-  evalFunc    <- registerEvalFunc exprComp
+  evalFunc    <- registerEvalFunc $ exprComp # ReturnVal
   return $ comment (strSExpr [] act) #
            Case prefixStart #
            (begin $ var chan ChannelType #
-                    chan <-- (pt_env c) #
+                    chan <-- unboxChannelValue(pt_env c) #
                     var ok BoolType #
                     ok <-- processAcquireChannel(pt, chan) #
                     ifthen (Not ok)
                     (
                       pt_pc <---- prefixStart #
-                      processYield(pt) #
+                      processYield(pt, scheduler) #
                       Return
                     ) #
-                    var commit InCommitType #
+                    var commit CommitType #
+                    var tryResult TryResultEnumType #
                     commit <-- tryOutputAction(chan, tryResult) #
                     ifthenelse (tryResult =:= tryResultEnabled)
                     (
@@ -304,7 +307,7 @@ compileAction act@AOutput { actChanIndex = c } = do
                     registerOutputCommitment (pt, chan, evalFunc, prefixCont) #
                     acquire(pt_lock) #
                     releaseChannel(chan) #
-                    processWait(pt) #
+                    processWait(pt, scheduler) #
                     Return
            ) #
            CaseAndLabel prefixCont
@@ -315,16 +318,17 @@ compileAction act@AInput { actChanIndex = c, actBindIndex = x } = do
   return $ comment (strSExpr [] act) #
            Case prefixStart #
            (begin $ var chan ChannelType #
-                    chan <-- (pt_env c) #
+                    chan <-- unboxChannelValue(pt_env c) #
                     var ok BoolType #
                     ok <-- processAcquireChannel(pt, chan) #
                     ifthen (Not ok)
                     (
                       pt_pc <---- prefixStart #
-                      processYield(pt) #
+                      processYield(pt, scheduler) #
                       Return
                     ) #
-                    var commit OutCommitType #
+                    var commit CommitType #
+                    var tryResult TryResultEnumType #
                     commit <-- tryInputAction(chan, tryResult) #
                     ifthenelse (tryResult =:= tryResultEnabled)
                     (
@@ -352,7 +356,7 @@ compileAction act@AInput { actChanIndex = c, actBindIndex = x } = do
                     registerInputCommitment(pt, chan, x, prefixCont) #
                     acquire(pt_lock) #
                     releaseChannel(chan) #
-                    processWait(pt) #
+                    processWait(pt, scheduler) #
                     Return
            ) #
            CaseAndLabel prefixCont

@@ -22,6 +22,7 @@ emitCode mainName instr = do
   emitLn "#include <knownset_repr.h>"
   emitLn "#include <commit_repr.h>"
   emitLn "#include <scheduler_repr.h>"
+  emitLn "#include <try_action.h>"
   emitLn "#include <primitives.h>"
   emitLn ""
   emitDecls instr
@@ -50,7 +51,7 @@ emitDecls (Seq (DefFunction name ((p1, t1), (p2, t2)) _) i) = do
   emitStr ");\n"
   emitDecls i
 emitDecls (Seq (EvalFunction name (p1, t1) _) i) = do
-  emitStr "void "
+  emitStr "PICC_Value "
   emitEvalfuncName name
   emitStr "("
   emitType t1
@@ -97,7 +98,7 @@ emitInstr (DefFunction name ((p1, t1), (p2, t2)) body) = do
 emitInstr (EvalFunction name (p1, t1) body) = do
   emitLn ""
   emitIndent
-  emitStr "void "
+  emitStr "PICC_Value "
   emitEvalfuncName name
   emitStr "("
   emitType t1
@@ -121,7 +122,8 @@ emitInstr (Assign var expr)  = do
   emitBExpr expr
   emitStr ";\n"
 emitInstr Return             = emitLn "return;"
-emitInstr (Goto lbl)         = emitLn $ "goto label" ++ show lbl
+emitInstr ReturnVal          = emitLn "return pt->val;"
+emitInstr (Goto lbl)         = emitLn $ "goto label" ++ show lbl ++ ";"
 emitInstr (Increment var)    = do
   emitIndent
   emitVarName var
@@ -194,7 +196,7 @@ emitRTFun (EvalFunc n) = do
   emitEvalfuncName n
   emitStr "(NULL)"
 emitRTFun (CommitEvalFunc [pt]) = do
-  emitStr "commit->evalfunc("
+  emitStr "commit->content.out->eval_func("
   emitBExpr pt
   emitStr ")"
 emitRTFun (PrimCall n (ptVal : vs)) = do
@@ -209,18 +211,22 @@ emitRTFun (GeneratePiThread [envSize]) = do
   emitStr "PICC_create_pithread("
   emitBExpr envSize
   emitStr ", 10, 10)" -- TODO: fix params
-emitRTFun (ProcessWait [pt]) = do
+emitRTFun (ProcessWait [pt, scheduler]) = do
   emitStr "PICC_process_wait("
   emitBExpr pt
+  emitStr ", "
+  emitBExpr scheduler
   emitStr ")"
 emitRTFun (ProcessEnd [pt, status]) = do
   emitStr "PICC_process_end("
   emitBExpr pt
   emitStr ", " ; emitBExpr status
   emitStr ")"
-emitRTFun (ProcessYield [pt]) = do
+emitRTFun (ProcessYield [pt, scheduler]) = do
   emitStr "PICC_process_yield("
   emitBExpr pt
+  emitStr ", "
+  emitBExpr scheduler
   emitStr ")"
 emitRTFun (ProcessAcquireChannel [pt, chan]) = do
   emitStr "PICC_process_acquire_channel("
@@ -230,10 +236,10 @@ emitRTFun (ProcessAcquireChannel [pt, chan]) = do
   emitStr ")"
 emitRTFun (Acquire [ptLock]) = do
   emitStr "PICC_acquire("
-  emitStr "&" ; emitBExpr ptLock
+  emitBExpr ptLock
   emitStr ")"
 emitRTFun (ReleaseChannel [chan]) = do
-  emitStr "PICC_RELEASE_CHANNEL("
+  emitStr "RELEASE_CHANNEL("
   emitBExpr chan
   emitStr ")"
 emitRTFun (ReleaseAllChannels [chans, nbChans]) = do
@@ -291,7 +297,7 @@ emitRTFun (RegisterInputCommitment [pt, chan, x, contLabel]) = do
   emitBExpr contLabel
   emitStr ")"
 emitRTFun (RegisterOutputCommitment [pt, chan, efun, contLabel]) = do
-  emitStr "PICC_register_output_commiment("
+  emitStr "PICC_register_output_commitment("
   emitBExpr pt
   emitStr ", "
   emitBExpr chan
@@ -304,7 +310,7 @@ emitRTFun (KnowRegister [ptKnows, chan]) = do
   emitStr "PICC_knownset_register("
   emitBExpr ptKnows
   emitStr ", "
-  emitBExpr chan
+  emitStr "(PICC_KnownValue*)&" ; emitBExpr chan
   emitStr ")"
 emitRTFun (KnowSetForgetAll [ptKnows]) = do
   emitStr "PICC_knownset_forget_all("
@@ -344,6 +350,10 @@ emitRTFun (InitChannelValue [ptVal, chan]) = do
   emitStr "&" ; emitBExpr ptVal
   emitStr ", " ; emitBExpr chan
   emitStr ")"
+emitRTFun (UnboxChannelValue [ptVal]) = do
+  emitStr "CHANNEL_OF_CHANNEL_VALUE("
+  emitStr "&" ; emitBExpr ptVal
+  emitStr ")"
 emitRTFun _ = error "bad params when applying fun of proc"
 
 emitEnumName :: EnumName -> EmitterM ()
@@ -362,8 +372,7 @@ emitType PiValueType       = emitStr "PICC_Value"
 emitType PiThreadType      = emitStr "PICC_PiThread*"
 emitType SchedulerType     = emitStr "PICC_SchedPool*"
 emitType ChannelType       = emitStr "PICC_Channel*"
-emitType InCommitType      = emitStr "PICC_InCommit"
-emitType OutCommitType     = emitStr "PICC_OutCommit"
+emitType CommitType        = emitStr "PICC_Commit*"
 emitType ChannelArrayType  = emitStr "PICC_Channel**"
 emitType TryResultEnumType = emitStr "PICC_TryResult"
 
@@ -383,7 +392,7 @@ emitVarName ChildPC             = emitStr "child->pc"
 emitVarName ChildStatus         = emitStr "child->status"
 emitVarName ChildProc           = emitStr "child->proc"
 emitVarName (ChildEnv i)        = emitStr $ "child->env[" ++ show i ++ "]"
-emitVarName ChildKnows          = emitStr "child->knows"
+emitVarName ChildKnows          = emitStr "child->knowns"
 emitVarName Scheduler           = emitStr "scheduler"
 emitVarName SchedulerReady      = emitStr "scheduler->ready"
 emitVarName (V i)               = emitStr $ "v" ++ show i
@@ -398,8 +407,8 @@ emitVarName (CommitThreadEnv v) = do
   emitVarName v
   emitStr "]"
 emitVarName CommitVal           = emitStr "commit->val"
-emitVarName CommitRefval        = emitStr "commit->refval"
-emitVarName TryResult           = emitStr "tryResult"
+emitVarName CommitRefval        = emitStr "commit->content.in->refvar"
+emitVarName TryResult           = emitStr "try_result"
 emitVarName OK                  = emitStr "ok"
 emitVarName NbDisabled          = emitStr "nbDisabled"
 

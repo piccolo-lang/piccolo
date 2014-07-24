@@ -89,6 +89,9 @@ initStringValue (e1, s2) = ProcCall $ InitStringValue [e1, StringExpr s2]
 initChannelValue :: (BExpr, BExpr) -> Instr
 initChannelValue (e1, e2) = ProcCall $ InitChannelValue [e1, e2]
 
+unboxChannelValue :: BExpr -> BExpr
+unboxChannelValue e1 = FunCall $ UnboxChannelValue [e1]
+
 
 class BackendVars a where
   pt                    :: a
@@ -194,9 +197,9 @@ class BackendFuns a where
   commit_evalfunc            :: BExpr -> a
   generateChannel            :: () -> a
   generatePiThread           :: Int -> a
-  processWait                :: BExpr -> a
+  processWait                :: (BExpr, BExpr) -> a
   processEnd                 :: (BExpr, BExpr) -> a
-  processYield               :: BExpr -> a
+  processYield               :: (BExpr, BExpr) -> a
   processAcquireChannel      :: (BExpr, BExpr) -> a
   acquire                    :: BExpr -> a
   releaseChannel             :: BExpr -> a
@@ -218,9 +221,9 @@ instance BackendFuns BExpr where
   commit_evalfunc e1         = FunCall $ CommitEvalFunc [e1]
   generateChannel ()         = FunCall $ GenerateChannel []
   generatePiThread i1        = FunCall $ GeneratePiThread [IntExpr i1]
-  processWait e1             = FunCall $ ProcessWait [e1]
+  processWait (e1, e2)       = FunCall $ ProcessWait [e1, e2]
   processEnd (e1, e2)        = FunCall $ ProcessEnd [e1, e2]
-  processYield e1            = FunCall $ ProcessYield [e1]
+  processYield (e1, e2)      = FunCall $ ProcessYield [e1, e2]
   processAcquireChannel (e1, e2) =
     FunCall $ ProcessAcquireChannel [e1, e2]
   acquire e1                 = FunCall $ Acquire [e1]
@@ -247,9 +250,9 @@ instance BackendFuns Instr where
   commit_evalfunc e1         = ProcCall $ CommitEvalFunc [e1]
   generateChannel ()         = ProcCall $ GenerateChannel []
   generatePiThread i1        = ProcCall $ GeneratePiThread [IntExpr i1]
-  processWait e1             = ProcCall $ ProcessWait [e1]
+  processWait (e1, e2)       = ProcCall $ ProcessWait [e1, e2]
   processEnd (e1, e2)        = ProcCall $ ProcessEnd [e1, e2]
-  processYield e1            = ProcCall $ ProcessYield [e1]
+  processYield (e1, e2)      = ProcCall $ ProcessYield [e1, e2]
   processAcquireChannel (e1, e2) =
     ProcCall $ ProcessAcquireChannel [e1, e2]
   acquire e1                 = ProcCall $ Acquire [e1]

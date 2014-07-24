@@ -53,8 +53,7 @@ data Type
   | PiThreadType
   | SchedulerType
   | ChannelType
-  | InCommitType
-  | OutCommitType
+  | CommitType
   | ChannelArrayType
   | TryResultEnumType
 
@@ -97,6 +96,7 @@ data RTFun
   | InitBoolFalse             [BExpr]
   | BoolFromValue             [BExpr]
   | InitChannelValue          [BExpr]
+  | UnboxChannelValue         [BExpr]
 
 data BExpr
   = Not BExpr
@@ -122,6 +122,7 @@ data Instr
   | DeclareVar VarName Type
   | Assign VarName BExpr
   | Return
+  | ReturnVal
   | Goto Int
   | Increment VarName
   | Decrement VarName
