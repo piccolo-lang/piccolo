@@ -97,6 +97,8 @@ data RTFun
   | BoolFromValue             [BExpr]
   | InitChannelValue          [BExpr]
   | UnboxChannelValue         [BExpr]
+  | UnboxBoolValue            [BExpr]
+  | CreateEmptyKnownSet       [BExpr]
 
 data BExpr
   = Not BExpr

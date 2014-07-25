@@ -109,7 +109,7 @@ compileProcess proc@PChoice {} = do
     expr <- compileExpr (brGuard br)
     act  <- compileBranchAction i br
     return $ expr #
-             (pt_enabled i) <-- pt_val #
+             (pt_enabled i) <-- unboxBoolValue(pt_val) #
              ifthenelse (pt_enabled i)
              (
                act #
@@ -121,7 +121,7 @@ compileProcess proc@PChoice {} = do
                (
                  ifthenelse (tryResult =:= tryResultAbort)
                  (
-                   releaseAllChannels(chans, nbChans) #
+                   releaseAllChannels(chans) #
                    pt_pc <---- startChoice #
                    processYield(pt, scheduler) #
                    Return
@@ -129,7 +129,7 @@ compileProcess proc@PChoice {} = do
                  (
                    ifthen (tryResult =:= tryResultEnabled)
                    (
-                     releaseAllChannels(chans, nbChans) #
+                     releaseAllChannels(chans) #
                      decr pt_fuel #
                      ifthen (pt_fuel =:== 0)
                      (
@@ -152,12 +152,12 @@ compileProcess proc@PChoice {} = do
         evalFunc <- registerEvalFunc $ instrs # ReturnVal
         return $ ifthen (pt_enabled i)
                  (
-                   registerOutputCommitment(pt, pt_env c, evalFunc, choiceConts !! i)
+                   registerOutputCommitment(pt, unboxChannelValue(pt_env c), evalFunc, choiceConts !! i)
                  )
       BInput { brChanIndex = c, brBindIndex = x } -> do
         return $ ifthen (pt_enabled i)
                  (
-                   registerInputCommitment(pt, pt_env c, x, choiceConts !! i)
+                   registerInputCommitment(pt, unboxChannelValue(pt_env c), x, choiceConts !! i)
                  )
       _ -> return Nop
   loop3 <- forM (zip ([0..]::[Int]) (procBranches proc)) $ \(i, br) -> do
@@ -167,6 +167,7 @@ compileProcess proc@PChoice {} = do
   return $ Case startChoice #
            (begin $ var tryResult TryResultEnumType #
                     var chans ChannelArrayType #
+                    chans <-- createEmptyKnownSet() #
                     var nbDisabled IntType #
                     nbDisabled <---- 0 #
                     var nbChans IntType #
@@ -174,12 +175,12 @@ compileProcess proc@PChoice {} = do
                     foldr (#) Nop loop1 #
                     ifthen (nbDisabled =:== n)
                     (
-                      releaseAllChannels(chans, nbChans) #
+                      releaseAllChannels(chans) #
                       processEnd(pt, statusBlocked)
                     ) #
                     foldr (#) Nop loop2 #
                     acquire(pt_lock) #
-                    releaseAllChannels(chans, nbChans) #
+                    releaseAllChannels(chans) #
                     processWait(pt, scheduler) #
                     Return #
                     foldr (#) Nop loop3
@@ -221,7 +222,7 @@ compileBranchAction i br@BOutput { brChanIndex = c} = do
   expr <- compileExpr (brData br)
   return $ comment (strSExpr [] br) #
            (begin $ var chan ChannelType #
-                    chan <-- (pt_env c) #
+                    chan <-- unboxChannelValue(pt_env c) #
                     ifthenelse (Not (channelAcquireAndRegister(pt, chan, chans, nbChans)))
                     (
                       tryResult <-- tryResultAbort
@@ -229,7 +230,7 @@ compileBranchAction i br@BOutput { brChanIndex = c} = do
                     (
                       var commit CommitType #
                       var tryResult TryResultEnumType #
-                      commit <-- tryOutputAction(commit, tryResult) #
+                      commit <-- tryOutputAction(chan, tryResult) #
                       ifthen (tryResult =:= tryResultEnabled)
                       (
                         expr #
@@ -242,7 +243,7 @@ compileBranchAction i br@BOutput { brChanIndex = c} = do
 compileBranchAction i br@BInput { brChanIndex = c, brBindIndex = x } = do
   return $ comment (strSExpr [] br) #
            (begin $ var chan ChannelType #
-                    chan <-- (pt_env c) #
+                    chan <-- unboxChannelValue(pt_env c) #
                     ifthenelse (Not (channelAcquireAndRegister(pt, chan, chans, nbChans)))
                     (
                       tryResult <-- tryResultAbort
@@ -250,11 +251,10 @@ compileBranchAction i br@BInput { brChanIndex = c, brBindIndex = x } = do
                     (
                       var commit CommitType #
                       var tryResult TryResultEnumType #
-                      commit <-- tryInputAction(commit, tryResult) #
+                      commit <-- tryInputAction(chan, tryResult) #
                       ifthen (tryResult =:= tryResultEnabled)
                       (
-                        commit_evalfunc(commit_thread) #
-                        (pt_env x) <-- commit_val #
+                        (pt_env x) <-- commit_evalfunc(commit_thread) #
                         (case brBindTyp br of
                            TChannel {} -> ifthen (knowRegister(pt_knows, pt_env x))
                                           (
@@ -381,7 +381,7 @@ compileAction act@ASpawn  {} = do
              var (v i) PiValueType #
              (v i) <-- pt_val #
              (case exprTyp arg of
-                TChannel {} -> knowRegister(child_knows, v i)
+                TChannel {} -> knowRegister(child_knows, v i) # incrRefCount(v i)
                 _           -> Nop
              ) #
              (child_env (i-1)) <-- (v i)

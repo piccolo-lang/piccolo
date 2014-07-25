@@ -242,20 +242,19 @@ emitRTFun (ReleaseChannel [chan]) = do
   emitStr "RELEASE_CHANNEL("
   emitBExpr chan
   emitStr ")"
-emitRTFun (ReleaseAllChannels [chans, nbChans]) = do
+emitRTFun (ReleaseAllChannels [chans]) = do
   emitStr "PICC_release_all_channels("
   emitBExpr chans
-  emitStr ", "
-  emitBExpr nbChans
   emitStr ")"
 emitRTFun (ChannelRef [chan]) = do
   emitStr "PICC_channel_ref("
   emitBExpr chan
   emitStr ")"
 emitRTFun (ChannelIncrRefCount [chan]) = do
-  emitStr "PICC_channel_inc_ref_count("
-  emitBExpr chan
-  emitStr ")"
+  emitStr "PICC_handle_incr_ref_count("
+  emitStr "PICC_GET_HANDLE("
+  emitStr "&" ; emitBExpr chan
+  emitStr "))"
 emitRTFun (ChannelAcquireAndRegister [pt, chan, chans, nbChans]) = do
   emitStr "PICC_channel_acquire_and_register("
   emitBExpr pt
@@ -264,7 +263,7 @@ emitRTFun (ChannelAcquireAndRegister [pt, chan, chans, nbChans]) = do
   emitStr ", "
   emitBExpr chans
   emitStr ", "
-  emitBExpr nbChans
+  emitStr "&" ; emitBExpr nbChans
   emitStr ")"
 emitRTFun (Awake [sched, commitThread, commit]) = do
   emitStr "PICC_awake("
@@ -354,6 +353,12 @@ emitRTFun (UnboxChannelValue [ptVal]) = do
   emitStr "CHANNEL_OF_CHANNEL_VALUE("
   emitStr "&" ; emitBExpr ptVal
   emitStr ")"
+emitRTFun (UnboxBoolValue [ptVal]) = do
+  emitStr "PICC_BOOL_OF_BOOL_VALUE("
+  emitStr "&" ; emitBExpr ptVal
+  emitStr ")"
+emitRTFun (CreateEmptyKnownSet []) = do
+  emitStr "PICC_create_empty_knownset()"
 emitRTFun _ = error "bad params when applying fun of proc"
 
 emitEnumName :: EnumName -> EmitterM ()
@@ -373,7 +378,7 @@ emitType PiThreadType      = emitStr "PICC_PiThread*"
 emitType SchedulerType     = emitStr "PICC_SchedPool*"
 emitType ChannelType       = emitStr "PICC_Channel*"
 emitType CommitType        = emitStr "PICC_Commit*"
-emitType ChannelArrayType  = emitStr "PICC_Channel**"
+emitType ChannelArrayType  = emitStr "PICC_KnownSet*"
 emitType TryResultEnumType = emitStr "PICC_TryResult"
 
 emitVarName :: VarName -> EmitterM ()
