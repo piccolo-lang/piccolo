@@ -21,64 +21,76 @@ import Debug.Trace
 type EnvSize = Int
 type DefsEnv = Map.Map String EnvSize
 
--- (current size of all defs in the module,
---  called defs,
---  variables)
-type Environment = (DefsEnv, DefsEnv, [String])
+data Environment = Environment { defsSizes     :: DefsEnv
+                               , lexicalEnv    :: [String]
+                               , maxCalledSize :: Int
+                               , maxChoiceSize :: Int
+                               }
+
 type EnvM a = ErrorT PiccError (State Environment) a
 
 lookupSizeOfDef :: String -> EnvM EnvSize
 lookupSizeOfDef name = do
-  (defs, _, _) <- get
+  Environment { defsSizes = defs } <- get
   return $ defs Map.! name
+
+registerACall :: String -> EnvM ()
+registerACall name = do
+  size <- lookupSizeOfDef name
+  env  <- get
+  let maxCalled = maxCalledSize env
+  when (maxCalled < size) $ put env { maxCalledSize = size }
 
 lookupVar :: String -> EnvM (Maybe Int)
 lookupVar v = do
-  (_, _, env) <- get
+  Environment { lexicalEnv = env } <- get
   return $ elemIndex v env
 
-allocVar :: String -> EnvM Int
-allocVar v = do
+addVar :: String -> EnvM Int
+addVar v = do
   ind <- lookupVar v
   case ind of
     Just i  -> return i
     Nothing -> do
-      (defs, called, env) <- get
-      put (defs, called, env ++ [v])
-      return $ length env
+      env <- get
+      let lex = lexicalEnv env
+      put env { lexicalEnv = lex ++ [v] }
+      return $ length lex
 
-resetEnvs :: [String] -> EnvM ()
-resetEnvs args = do
-  (defs, _, _) <- get
-  put (defs, Map.empty, args)
+beforeDefComputation :: [String] -> EnvM ()
+beforeDefComputation args = do
+  env <- get
+  put env { lexicalEnv = args, maxCalledSize = 0, maxChoiceSize = 0 }
 
-computeDefEnvSize :: EnvM EnvSize
-computeDefEnvSize = do
-  (_, called, env) <- get
-  let mCalled = if Map.null called then 0 else maximum $ Map.elems called
-  let mEnv    = if null env    then 0 else length env
-  return $ maximum [mCalled, mEnv]
+afterDefComputation :: EnvM EnvSize
+afterDefComputation = do
+  env <- get
+  let envSize = length $ lexicalEnv env
+  let calSize = maxCalledSize env
+  return $ maximum [envSize, calSize]
 
-registerSize :: String -> EnvSize -> EnvM ()
-registerSize name size = do
-  (defs, e, f) <- get
-  put (Map.insert name size defs, e, f)
+registerDefSize :: String -> EnvSize -> EnvM ()
+registerDefSize name size = do
+  env <- get
+  let defs = defsSizes env
+  put env { defsSizes = Map.insert name size defs }
 
 
 -- | The 'computingEnvPass' function computes environment that are needed to
 -- address variable with a simple integer at the runtime. It also decorates
 -- the AST with those indexes.
+-- TODO : rewrite this function with 'fix' ?
 computingEnvPass :: Modul -> Either PiccError Modul
 computingEnvPass m = loopUntilFix m $ Map.fromList (map extractSize (modDefs m))
   where extractSize def = let i = defEnvSize def in
                           let n = defName def in
                           if i < 0 then (n, 0) else (n, i)
-        loopUntilFix modul defSizes = let (result, (defSizes', _, _)) = runState (runErrorT (envModule modul)) (defSizes, Map.empty, []) in
+        loopUntilFix modul defSizes = let (result, env) = runState (runErrorT (envModule modul)) (Environment defSizes [] 0 0) in
                                     case result of
-                                      Left err   -> Left err
-                                      Right modul' -> if defSizes == defSizes'
+                                      Left err     -> Left err
+                                      Right modul' -> if defSizes == defsSizes env
                                                       then Right modul'
-                                                      else loopUntilFix modul' defSizes'
+                                                      else loopUntilFix modul' (defsSizes env)
 
 envModule :: Modul -> EnvM Modul
 envModule m = do
@@ -87,10 +99,10 @@ envModule m = do
 
 envDefinition :: Definition -> EnvM Definition
 envDefinition def = do
-  resetEnvs $ map (\(x,_,_) -> x) (defParams def)
+  beforeDefComputation $ map (\(x,_,_) -> x) (defParams def)
   proc <- envProcess $ defBody def
-  size <- computeDefEnvSize
-  registerSize (defName def) size
+  size <- afterDefComputation
+  registerDefSize (defName def) size
   return $ def { defBody = proc }
 
 envProcess :: Process -> EnvM Process
@@ -103,9 +115,7 @@ envProcess proc@PChoice {} = do
   branches <- mapM envBranch $ procBranches proc
   return proc { procBranches = branches }
 envProcess proc@PCall { procName = name } = do
-  (e, called, f) <- get
-  callSize <- lookupSizeOfDef name
-  put (e, Map.insert name callSize called, f)
+  registerACall name
   args <- mapM envExpr $ procArgs proc
   return proc { procArgs = args }
 
@@ -128,7 +138,7 @@ envBranch br@BInput  {} = do
   case chanInd of
     Nothing -> throwError $ SimpleError "var not in scope"
     Just i  -> do
-      j <- allocVar $ brBind br
+      j <- addVar $ brBind br
       cont <- envProcess $ brCont br
       return br { brGuard = guard, brChanIndex = i, brBindIndex = j, brCont = cont }
 
@@ -145,13 +155,13 @@ envAction act@AInput  {} = do
   case chanInd of
     Nothing -> throwError $ SimpleError "var not in scope"
     Just i  -> do
-      j <- allocVar $ actBind act
+      j <- addVar $ actBind act
       return act { actChanIndex = i, actBindIndex = j }
 envAction act@ANew    {} = do
-  i <- allocVar $ actBind act
+  i <- addVar $ actBind act
   return act { actBindIndex = i }
 envAction act@ALet    {} = do
-  i <- allocVar $ actBind act
+  i <- addVar $ actBind act
   val <- envExpr $ actVal act
   return act { actBindIndex = i, actVal = val }
 envAction act@ASpawn  {} = do
