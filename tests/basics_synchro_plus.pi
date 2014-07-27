@@ -5,8 +5,8 @@ def P(c:chan<int>) =
   [true] c?(x), #core/io:print_int(x), end
 
 def Q(c:chan<int>, x:int) =
-  [#core/arith:less_than(1000, x)] c!42, end +
-  [true] tau, end
+  [#core/arith:less_than(x, 1000)] c!42, end +
+  [false] tau, end
 
 def Main() =
   new(c:chan<int>),

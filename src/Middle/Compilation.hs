@@ -121,7 +121,7 @@ compileProcess proc@PChoice {} = do
                (
                  ifthenelse (tryResult =:= tryResultAbort)
                  (
-                   releaseAllChannels(chans) #
+                   releaseAllChannels(chans, nbChans) #
                    pt_pc <---- startChoice #
                    processYield(pt, scheduler) #
                    Return
@@ -129,7 +129,7 @@ compileProcess proc@PChoice {} = do
                  (
                    ifthen (tryResult =:= tryResultEnabled)
                    (
-                     releaseAllChannels(chans) #
+                     releaseAllChannels(chans, nbChans) #
                      decr pt_fuel #
                      ifthen (pt_fuel =:== 0)
                      (
@@ -167,7 +167,7 @@ compileProcess proc@PChoice {} = do
   return $ Case startChoice #
            (begin $ var tryResult TryResultEnumType #
                     var chans ChannelArrayType #
-                    chans <-- createEmptyKnownSet() #
+                    chans <-- createEmptyChannelArray(20) # -- TODO : change 20 for the real number branches
                     var nbDisabled IntType #
                     nbDisabled <---- 0 #
                     var nbChans IntType #
@@ -175,12 +175,12 @@ compileProcess proc@PChoice {} = do
                     foldr (#) Nop loop1 #
                     ifthen (nbDisabled =:== n)
                     (
-                      releaseAllChannels(chans) #
+                      releaseAllChannels(chans, nbChans) #
                       processEnd(pt, statusBlocked)
                     ) #
                     foldr (#) Nop loop2 #
                     acquire(pt_lock) #
-                    releaseAllChannels(chans) #
+                    releaseAllChannels(chans, nbChans) #
                     processWait(pt, scheduler) #
                     Return #
                     foldr (#) Nop loop3
@@ -229,7 +229,6 @@ compileBranchAction i br@BOutput { brChanIndex = c} = do
                     )
                     (
                       var commit CommitType #
-                      var tryResult TryResultEnumType #
                       commit <-- tryOutputAction(chan, tryResult) #
                       ifthen (tryResult =:= tryResultEnabled)
                       (
@@ -250,7 +249,6 @@ compileBranchAction i br@BInput { brChanIndex = c, brBindIndex = x } = do
                     )
                     (
                       var commit CommitType #
-                      var tryResult TryResultEnumType #
                       commit <-- tryInputAction(chan, tryResult) #
                       ifthen (tryResult =:= tryResultEnabled)
                       (

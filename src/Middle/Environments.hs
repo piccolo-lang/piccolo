@@ -15,6 +15,7 @@ import Data.List
 import qualified Data.Map as Map
 import Control.Monad.Error
 import Control.Monad.State
+import Debug.Trace
 
 
 type EnvSize = Int
@@ -56,7 +57,7 @@ computeDefEnvSize = do
   (_, called, env) <- get
   let mCalled = if Map.null called then 0 else maximum $ Map.elems called
   let mEnv    = if null env    then 0 else length env
-  return $ mCalled + mEnv
+  return $ maximum [mCalled, mEnv]
 
 registerSize :: String -> EnvSize -> EnvM ()
 registerSize name size = do

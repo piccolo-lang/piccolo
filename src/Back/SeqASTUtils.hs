@@ -98,8 +98,8 @@ unboxBoolValue e1 = FunCall $ UnboxBoolValue [e1]
 incrRefCount :: BExpr -> Instr
 incrRefCount e1 = ProcCall $ ChannelIncrRefCount [e1]
 
-createEmptyKnownSet :: () -> BExpr
-createEmptyKnownSet () = FunCall $ CreateEmptyKnownSet []
+createEmptyChannelArray :: Int -> BExpr
+createEmptyChannelArray n = FunCall $ CreateEmptyChannelArray [IntExpr n]
 
 
 class BackendVars a where
@@ -212,7 +212,7 @@ class BackendFuns a where
   processAcquireChannel      :: (BExpr, BExpr) -> a
   acquire                    :: BExpr -> a
   releaseChannel             :: BExpr -> a
-  releaseAllChannels         :: BExpr -> a
+  releaseAllChannels         :: (BExpr, BExpr) -> a
   channelRef                 :: BExpr -> a
   channelIncrRefCount        :: BExpr -> a
   channelAcquireAndRegister  :: (BExpr, BExpr, BExpr, BExpr) -> a
@@ -237,7 +237,8 @@ instance BackendFuns BExpr where
     FunCall $ ProcessAcquireChannel [e1, e2]
   acquire e1                 = FunCall $ Acquire [e1]
   releaseChannel e1          = FunCall $ ReleaseChannel [e1]
-  releaseAllChannels e1      = FunCall $ ReleaseAllChannels [e1]
+  releaseAllChannels (e1, e2) =
+    FunCall $ ReleaseAllChannels [e1, e2]
   channelRef e1              = FunCall $ ChannelRef [e1]
   channelIncrRefCount e1     = FunCall $ ChannelIncrRefCount [e1]
   channelAcquireAndRegister (e1, e2, e3, e4) =
@@ -265,7 +266,8 @@ instance BackendFuns Instr where
     ProcCall $ ProcessAcquireChannel [e1, e2]
   acquire e1                 = ProcCall $ Acquire [e1]
   releaseChannel e1          = ProcCall $ ReleaseChannel [e1]
-  releaseAllChannels e1      = ProcCall $ ReleaseAllChannels [e1]
+  releaseAllChannels (e1, e2) =
+    ProcCall $ ReleaseAllChannels [e1, e2]
   channelRef e1              = ProcCall $ ChannelRef [e1]
   channelIncrRefCount e1     = ProcCall $ ChannelIncrRefCount [e1]
   channelAcquireAndRegister (e1, e2, e3, e4) =
