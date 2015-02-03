@@ -91,7 +91,7 @@ handleFiles _ [f] = do
   seqAst   <- reportResult $ compilePass withEnv
   let code = runEmitterM $ CBackend.emitCode (mainDef withEnv) seqAst
   --putStrLn code
-  (Just gccStdin, _, _, gccProc) <- createProcess (proc "gcc" ["-std=c11", "-lpiccolort", "-xc", "-"]) { std_in  = CreatePipe
+  (Just gccStdin, _, _, gccProc) <- createProcess (proc "gcc" ["-std=c11", "-xc", "-", "-lpiccolort", "-lpthread"]) { std_in  = CreatePipe
                                                                             , std_out = UseHandle stdout
                                                                             , std_err = UseHandle stderr
                                                                             }
