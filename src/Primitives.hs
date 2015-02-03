@@ -20,8 +20,8 @@ import qualified Data.Map as Map
 primTypes :: Map.Map (String,String) (TypeExpr, [TypeExpr])
 primTypes = Map.fromList
   [ (("core/arith", "add"),       (tInt, [tInt, tInt]))
-  , (("core/arith", "substract"), (tInt, [tInt, tInt]))
-  , (("core/arith", "modulo"),    (tInt, [tInt, tInt]))
+  , (("core/arith", "sub"),       (tInt, [tInt, tInt]))
+  , (("core/arith", "mod"),       (tInt, [tInt, tInt]))
   , (("core/arith", "equals"),    (tBool, [tInt, tInt]))
   , (("core/arith", "less_than"), (tBool, [tInt, tInt]))
   , (("core/io", "print_info"),   (tString, [tString]))

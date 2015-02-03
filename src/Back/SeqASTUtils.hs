@@ -1,14 +1,16 @@
 {-|
 Module         : Back.SeqASTUtils
-Description    : 
+Description    :
 Stability      : experimental
 
 This module contains the generators for constructing a 'SeqAST.Instr' in the compilation pass.
 -}
 module Back.SeqASTUtils where
 
-import Back.SeqAST
+import           Back.SeqAST
 
+
+-- language constructions
 
 var :: VarName -> Type -> Instr
 var = DeclareVar
@@ -50,6 +52,9 @@ ifthenelse = If
 (=:==) :: BExpr -> Int -> BExpr
 (=:==) e i = Equal e (IntExpr i)
 
+
+-- enumeration values
+
 statusRun :: BExpr
 statusRun = Enum StatusRun
 
@@ -71,216 +76,210 @@ tryResultDisabled = Enum TryResultDisabled
 tryResultAbort :: BExpr
 tryResultAbort = Enum TryResultAbort
 
+
 primCall :: (BExpr, PrimName, [VarName]) -> Instr
 primCall (th, pName, vs) = ProcCall (PrimCall pName (th : map Var vs))
 
+
+-- pithread functions
+
+piThreadCreate :: (Int, Int) -> BExpr
+piThreadCreate (envSize, enabledSize) = FunCall $ PiThreadCreate (IntExpr envSize) (IntExpr enabledSize)
+
+setProc :: (BExpr, String, String) -> Instr
+setProc (thread, proc1, proc2) = ProcCall $ SetProc thread (FunVal (DefProc (DefName proc1 proc2)))
+
+getPC :: BExpr -> BExpr
+getPC thread = FunCall $ GetPC thread
+
+setPC :: (BExpr, Int) -> Instr
+setPC (thread, pc) = ProcCall $ SetPC thread (IntExpr pc)
+
+getRegister :: BExpr -> BExpr
+getRegister thread = FunCall $ GetRegister thread
+
+setRegister :: (BExpr, BExpr) -> Instr
+setRegister (thread, val) = ProcCall $ SetRegister thread val
+
+registerPointer :: BExpr -> BExpr
+registerPointer thread = FunCall $ RegisterPointer thread
+
+getEnv :: (BExpr, Int) -> BExpr
+getEnv (thread, ind) = FunCall $ GetEnv thread (IntExpr ind)
+
+setEnv :: (BExpr, Int, BExpr) -> Instr
+setEnv (thread, ind, val) = ProcCall $ SetEnv thread (IntExpr ind) val
+
+setEnv' :: (BExpr, BExpr, BExpr) -> Instr
+setEnv' (thread, ind, val) = ProcCall $ SetEnv thread ind val
+
+getEnabled :: (BExpr, Int) -> BExpr
+getEnabled (thread, ind) = FunCall $ GetEnabled thread (IntExpr ind)
+
+setEnabled :: (BExpr, Int, Int) -> Instr
+setEnabled (thread, ind, val) = ProcCall $ SetEnabled thread (IntExpr ind) (IntExpr val)
+
+setEnabled' :: (BExpr, Int, BExpr) -> Instr
+setEnabled' (thread, ind, val) = ProcCall $ SetEnabled thread (IntExpr ind) val
+
+setStatus :: (BExpr, BExpr) -> Instr
+setStatus (thread, status) = ProcCall $ SetStatus thread status
+
+setSafeChoice :: (BExpr, Bool) -> Instr
+setSafeChoice (thread, b) = ProcCall $ SetSafeChoice thread (BoolExpr b)
+
+getFuel :: BExpr -> BExpr
+getFuel thread = FunCall $ GetFuel thread
+
+decrFuel :: BExpr -> Instr
+decrFuel thread = ProcCall $ DecrFuel thread
+
+forgetAllValues :: BExpr -> Instr
+forgetAllValues thread = ProcCall $ ForgetAllValues thread
+
+registerEnvValue :: (BExpr, Int) -> Instr
+registerEnvValue (thread, ind) = ProcCall $ RegisterEnvValue thread (IntExpr ind)
+
+registerRegisterValue :: BExpr -> Instr
+registerRegisterValue thread = ProcCall $ RegisterRegisterValue thread
+
+processLock :: BExpr -> Instr
+processLock thread = ProcCall $ ProcessLock thread
+
+processLockChannel :: (BExpr, BExpr) -> BExpr
+processLockChannel (thread, channel) = FunCall $ ProcessLockChannel thread channel
+
+processYield :: (BExpr, BExpr) -> Instr
+processYield (thread, sched) = ProcCall $ ProcessYield thread sched
+
+processWait :: (BExpr, BExpr) -> Instr
+processWait (thread, sched) = ProcCall $ ProcessWait thread sched
+
+processAwake :: (BExpr, BExpr) -> Instr
+processAwake (com, sched) = ProcCall $ ProcessAwake com sched
+
+processEnd :: (BExpr, BExpr) -> Instr
+processEnd (thread, status) = ProcCall $ ProcessEnd thread status
+
+
+-- value functions
+
+initNoValue :: BExpr -> Instr
+initNoValue valPtr = ProcCall $ InitNoValue valPtr
+
 initBoolTrue :: BExpr -> Instr
-initBoolTrue e1 = ProcCall $ InitBoolTrue [e1]
+initBoolTrue valPtr = ProcCall $ InitBoolTrue valPtr
 
 initBoolFalse :: BExpr -> Instr
-initBoolFalse e1 = ProcCall $ InitBoolFalse [e1]
+initBoolFalse valPtr = ProcCall $ InitBoolFalse valPtr
 
 initIntValue :: (BExpr, Int) -> Instr
-initIntValue (e1, i2) = ProcCall $ InitIntValue [e1, IntExpr i2]
+initIntValue (valPtr, i) = ProcCall $ InitIntValue valPtr (IntExpr i)
+
+initFloatValue :: (BExpr, Float) -> Instr
+initFloatValue (valPtr, f) = ProcCall $ InitFloatValue valPtr (FloatExpr f)
 
 initStringValue :: (BExpr, String) -> Instr
-initStringValue (e1, s2) = ProcCall $ InitStringValue [e1, StringExpr s2]
+initStringValue (valPtr, s) = ProcCall $ InitStringValue valPtr (StringExpr s)
 
-initChannelValue :: (BExpr, BExpr) -> Instr
-initChannelValue (e1, e2) = ProcCall $ InitChannelValue [e1, e2]
+initChannelValue :: BExpr -> Instr
+initChannelValue valPtr = ProcCall $ InitChannelValue valPtr
 
 unboxChannelValue :: BExpr -> BExpr
-unboxChannelValue e1 = FunCall $ UnboxChannelValue [e1]
+unboxChannelValue valPtr = FunCall $ UnboxChannelValue valPtr
 
 unboxBoolValue :: BExpr -> BExpr
-unboxBoolValue e1 = FunCall $ UnboxBoolValue [e1]
+unboxBoolValue valPtr = FunCall $ UnboxBoolValue valPtr
 
-incrRefCount :: BExpr -> Instr
-incrRefCount e1 = ProcCall $ ChannelIncrRefCount [e1]
+unlockChannel :: BExpr -> Instr
+unlockChannel channel = ProcCall $ UnlockChannel channel
 
-createEmptyChannelArray :: Int -> BExpr
-createEmptyChannelArray n = FunCall $ CreateEmptyChannelArray [IntExpr n]
 
+-- scheduling functions
+
+readyPushFront :: (BExpr, BExpr) -> Instr
+readyPushFront (rqueue, thread) = ProcCall $ ReadyPushFront rqueue thread
+
+schedGetReadyQueue :: BExpr -> BExpr
+schedGetReadyQueue sched = FunCall $ SchedGetReadyQueue sched
+
+-- commitment functions
+
+getThread :: BExpr -> BExpr
+getThread commitment = FunCall $ GetThread commitment
+
+getRefVar :: BExpr -> BExpr
+getRefVar commitment = FunCall $ GetRefVar commitment
+
+callEvalFunc :: BExpr -> BExpr
+callEvalFunc commitment = FunCall $ CallEvalFunc commitment
+
+registerInputCommitment :: (BExpr, BExpr, Int, Int) -> Instr
+registerInputCommitment (thread, channel, envval, cont) =
+  ProcCall $ RegisterInputCommitment thread channel (IntExpr envval) (IntExpr cont)
+
+registerOutputCommitment :: (BExpr, BExpr, EvalfuncName, Int) -> Instr
+registerOutputCommitment (thread, channel, f, cont) =
+  ProcCall $ RegisterOutputCommitment thread channel (FunVal (EvalFunc f)) (IntExpr cont)
+
+
+-- try-action functions
+
+tryInputAction :: (BExpr, BExpr) -> BExpr
+tryInputAction (channel, res) = FunCall $ TryInputAction channel res
+
+tryOutputAction :: (BExpr, BExpr) -> BExpr
+tryOutputAction (channel, res) = FunCall $ TryOutputAction channel res
+
+channelArrayCreate :: Int -> BExpr
+channelArrayCreate n = FunCall $ ChannelArrayCreate (IntExpr n)
+
+channelArrayLockAndRegister :: (BExpr, BExpr, BExpr, BExpr) -> BExpr
+channelArrayLockAndRegister (channels, nb, thread, channel) =
+  FunCall $ ChannelArrayLockAndRegister channels nb thread channel
+
+channelArrayUnlock :: (BExpr, BExpr) -> Instr
+channelArrayUnlock (channels, nb) = ProcCall $ ChannelArrayUnlock channels nb
+
+
+-- vars
 
 class BackendVars a where
   pt                    :: a
-  pt_val                :: a
-  pt_pc                 :: a
-  pt_env                :: Int -> a
-  pt_knows              :: a
-  pt_lock               :: a
-  pt_fuel               :: a
-  pt_proc               :: a
-  pt_status             :: a
-  pt_enabled            :: Int -> a
   child                 :: a
-  child_pc              :: a
-  child_status          :: a
-  child_proc            :: a
-  child_env             :: Int -> a
-  child_knows           :: a
   scheduler             :: a
-  scheduler_ready       :: a
   v                     :: Int -> a
   chan                  :: a
   chans                 :: a
   nbChans               :: a
   commit                :: a
-  commit_thread         :: a
-  commit_thread_val     :: a
-  commit_thread_env     :: VarName -> a
-  commit_val            :: a
-  commit_refval         :: a
   tryResult             :: a
   ok                    :: a
   nbDisabled            :: a
 
 instance BackendVars VarName where
   pt                    = PiThread
-  pt_val                = PiThreadVal
-  pt_pc                 = PiThreadPC
-  pt_env                = PiThreadEnv
-  pt_knows              = PiThreadKnows
-  pt_lock               = PiThreadLock
-  pt_fuel               = PiThreadFuel
-  pt_proc               = PiThreadProc
-  pt_status             = PiThreadStatus
-  pt_enabled            = PiThreadEnabled
   child                 = Child
-  child_pc              = ChildPC
-  child_status          = ChildStatus
-  child_proc            = ChildProc
-  child_env             = ChildEnv
-  child_knows           = ChildKnows
   scheduler             = Scheduler
-  scheduler_ready       = SchedulerReady
   v                     = V
   chan                  = Chan
   chans                 = Chans
   nbChans               = NbChans
   commit                = Commit
-  commit_thread         = CommitThread
-  commit_thread_val     = CommitThreadVal
-  commit_thread_env     = CommitThreadEnv
-  commit_val            = CommitVal
-  commit_refval         = CommitRefval
   tryResult             = TryResult
-  ok                    = OK
+  ok                    = Ok
   nbDisabled            = NbDisabled
 
 instance BackendVars BExpr where
   pt                    = Var PiThread
-  pt_val                = Var PiThreadVal
-  pt_pc                 = Var PiThreadPC
-  pt_env                = Var . PiThreadEnv
-  pt_knows              = Var PiThreadKnows
-  pt_lock               = Var PiThreadLock
-  pt_fuel               = Var PiThreadFuel
-  pt_proc               = Var PiThreadProc
-  pt_status             = Var PiThreadStatus
-  pt_enabled            = Var . PiThreadEnabled
   child                 = Var Child
-  child_pc              = Var ChildPC
-  child_status          = Var ChildStatus
-  child_proc            = Var ChildProc
-  child_env             = Var . ChildEnv
-  child_knows           = Var ChildKnows
   scheduler             = Var Scheduler
-  scheduler_ready       = Var SchedulerReady
   v                     = Var . V
   chan                  = Var Chan
   chans                 = Var Chans
   nbChans               = Var NbChans
   commit                = Var Commit
-  commit_thread         = Var CommitThread
-  commit_thread_val     = Var CommitThreadVal
-  commit_thread_env     = Var . CommitThreadEnv
-  commit_val            = Var CommitVal
-  commit_refval         = Var CommitRefval
   tryResult             = Var TryResult
-  ok                    = Var OK
+  ok                    = Var Ok
   nbDisabled            = Var NbDisabled
-
-
-class BackendFuns a where
-  commit_evalfunc            :: BExpr -> a
-  generateChannel            :: () -> a
-  generatePiThread           :: Int -> a
-  processWait                :: (BExpr, BExpr) -> a
-  processEnd                 :: (BExpr, BExpr) -> a
-  processYield               :: (BExpr, BExpr) -> a
-  processAcquireChannel      :: (BExpr, BExpr) -> a
-  acquire                    :: BExpr -> a
-  releaseChannel             :: BExpr -> a
-  releaseAllChannels         :: (BExpr, BExpr) -> a
-  channelRef                 :: BExpr -> a
-  channelIncrRefCount        :: BExpr -> a
-  channelAcquireAndRegister  :: (BExpr, BExpr, BExpr, BExpr) -> a
-  awake                      :: (BExpr, BExpr, BExpr) -> a
-  tryInputAction             :: (BExpr, BExpr) -> a
-  tryOutputAction            :: (BExpr, BExpr) -> a
-  registerInputCommitment    :: (BExpr, BExpr, Int, Int) -> a
-  registerOutputCommitment   :: (BExpr, BExpr, EvalfuncName, Int) -> a
-  knowRegister               :: (BExpr, BExpr) -> a
-  knowSetForgetAll           :: BExpr -> a
-  readyQueuePush             :: (BExpr, BExpr) -> a
-  boolFromValue              :: BExpr -> a
-
-instance BackendFuns BExpr where
-  commit_evalfunc e1         = FunCall $ CommitEvalFunc [e1]
-  generateChannel ()         = FunCall $ GenerateChannel []
-  generatePiThread i1        = FunCall $ GeneratePiThread [IntExpr i1]
-  processWait (e1, e2)       = FunCall $ ProcessWait [e1, e2]
-  processEnd (e1, e2)        = FunCall $ ProcessEnd [e1, e2]
-  processYield (e1, e2)      = FunCall $ ProcessYield [e1, e2]
-  processAcquireChannel (e1, e2) =
-    FunCall $ ProcessAcquireChannel [e1, e2]
-  acquire e1                 = FunCall $ Acquire [e1]
-  releaseChannel e1          = FunCall $ ReleaseChannel [e1]
-  releaseAllChannels (e1, e2) =
-    FunCall $ ReleaseAllChannels [e1, e2]
-  channelRef e1              = FunCall $ ChannelRef [e1]
-  channelIncrRefCount e1     = FunCall $ ChannelIncrRefCount [e1]
-  channelAcquireAndRegister (e1, e2, e3, e4) =
-    FunCall $ ChannelAcquireAndRegister [e1, e2, e3, e4]
-  awake (e1, e2, e3)         = FunCall $ Awake [e1, e2, e3]
-  tryInputAction (e1, e2)    = FunCall $ TryInputAction [e1, e2]
-  tryOutputAction (e1, e2)   = FunCall $ TryOutputAction [e1, e2]
-  registerInputCommitment (e1, e2, i3, i4) =
-    FunCall $ RegisterInputCommitment [e1, e2, IntExpr i3, IntExpr i4]
-  registerOutputCommitment (e1, e2, f3, i4) =
-    FunCall $ RegisterOutputCommitment [e1, e2, FunVal (EvalFunc f3), IntExpr i4]
-  knowRegister (e1, e2)      = FunCall $ KnowRegister [e1, e2]
-  knowSetForgetAll e1        = FunCall $ KnowSetForgetAll [e1]
-  readyQueuePush (e1, e2)    = FunCall $ ReadyQueuePush [e1, e2]
-  boolFromValue e1           = FunCall $ BoolFromValue [e1]
-
-instance BackendFuns Instr where
-  commit_evalfunc e1         = ProcCall $ CommitEvalFunc [e1]
-  generateChannel ()         = ProcCall $ GenerateChannel []
-  generatePiThread i1        = ProcCall $ GeneratePiThread [IntExpr i1]
-  processWait (e1, e2)       = ProcCall $ ProcessWait [e1, e2]
-  processEnd (e1, e2)        = ProcCall $ ProcessEnd [e1, e2]
-  processYield (e1, e2)      = ProcCall $ ProcessYield [e1, e2]
-  processAcquireChannel (e1, e2) =
-    ProcCall $ ProcessAcquireChannel [e1, e2]
-  acquire e1                 = ProcCall $ Acquire [e1]
-  releaseChannel e1          = ProcCall $ ReleaseChannel [e1]
-  releaseAllChannels (e1, e2) =
-    ProcCall $ ReleaseAllChannels [e1, e2]
-  channelRef e1              = ProcCall $ ChannelRef [e1]
-  channelIncrRefCount e1     = ProcCall $ ChannelIncrRefCount [e1]
-  channelAcquireAndRegister (e1, e2, e3, e4) =
-    ProcCall $ ChannelAcquireAndRegister [e1, e2, e3, e4]
-  awake (e1, e2, e3)         = ProcCall $ Awake [e1, e2, e3]
-  tryInputAction (e1, e2)    = ProcCall $ TryInputAction [e1, e2]
-  tryOutputAction (e1, e2)   = ProcCall $ TryOutputAction [e1, e2]
-  registerInputCommitment (e1, e2, i3, i4) =
-    ProcCall $ RegisterInputCommitment [e1, e2, IntExpr i3, IntExpr i4]
-  registerOutputCommitment (e1, e2, f3, i4) =
-    ProcCall $ RegisterOutputCommitment [e1, e2, FunVal (EvalFunc f3), IntExpr i4]
-  knowRegister (e1, e2)      = ProcCall $ KnowRegister [e1, e2]
-  knowSetForgetAll e1        = ProcCall $ KnowSetForgetAll [e1]
-  readyQueuePush (e1, e2)    = ProcCall $ ReadyQueuePush [e1, e2]
-  boolFromValue e1           = ProcCall $ BoolFromValue [e1]
 

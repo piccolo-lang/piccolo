@@ -62,32 +62,18 @@ noLoc = Location (-1) (-1) (-1) (-1) (-1)
 isNoLoc :: Location -> Bool
 isNoLoc = (noLoc ==)
 
+isAManagedType :: TypeExpr -> Bool
+isAManagedType TChannel {}               = True
+isAManagedType TAtom {typAtom = TString} = True
+isAManagedType TTuple {}                 = True
+isAManagedType _                         = False
+
+isBool :: TypeExpr -> Bool
+isBool TAtom {typAtom = TBool} = True
+isBool _                       = False
+
 indent :: Int -> String
 indent n = replicate n ' '
-
-instance Show TypeExpr where
-  show TUnknown {} = "unknown"
-  show typ@TAtom    {} = show $ typAtom typ
-  show typ@TChannel {} = "chan<" ++ show (typExpr typ) ++ ">"
-  show typ@TTuple   {} = "(" ++ intercalate "," (map show (typExprs typ)) ++ ")"
-  show typ@TPrim    {} = "[" ++ intercalate "," (map show (typArgs typ)) ++ "] -> " ++ show (typRet typ)
-
-instance Show TypeAtom where
-  show TBool   = "bool"
-  show TInt    = "int"
-  show TString = "string"
-
-instance Show Expr where
-  show ETrue     {} = "true"
-  show EFalse    {} = "false"
-  show e@EInt    {} = show $ exprInt e
-  show e@EString {} = exprStr e
-  show e@ETuple  {} = "(" ++ intercalate ", " (map show (exprVals e)) ++ ")"
-  show e@EVar    {} = exprVar e
-  show e@EPrim   {} = "#" ++ exprModule e ++ "/" ++ exprName e ++ "(" ++ args ++ ")"
-    where args = intercalate ", " (map show (exprVals e))
-  show e@EAnd    {} = "(" ++ show (exprLeft e) ++ ") and (" ++ show (exprRight e) ++ ")"
-  show e@EOr     {} = "(" ++ show (exprLeft e) ++ ") or (" ++ show (exprRight e) ++ ")"
 
 modSExpr :: [PrintLevel] -> Modul -> String
 modSExpr lvl m = "(module " ++ modName m ++ "\n" ++ sdefs (modDefs m) ++ "\n" ++ ")"

@@ -1,25 +1,27 @@
 
-INC     = ../../libpiccolort/include
-LIB     = ../../libpiccolort/lib
+INC=../../libpiccolort/include
+LIB=../../libpiccolort/src
 
-PCC     = ../dist/build/piccolo/piccolo
-CC      = gcc
-CFLAGS  = -g -Wall -std=c99
-LD      = gcc
-LDFLAGS = -lpiccolort -lpthread
+PCC=../src/pcc #-v 3 -debug
+CFLAGS= -g -Wall -std=c99
 
-PIFILES = $(wildcard *.pi)
-TARGETS = $(subst .pi,.run, $(PIFILES))
+LIBFILES=$(wildcard $(LIB)/*.c)
+OBJS=$(subst .c,.o, $(LIBFILES))
+
+PTHFILES=$(wildcard *.pi)
+TARGETS=$(subst .pi,.run, $(PTHFILES))
 
 all: $(TARGETS)
 
-%.c: %.pi
-	$(PCC) $<
-%.o: %.c
-	$(CC) -c $< -o $@ -I$(INC) $(CFLAGS)
+.PHONY: clean
 
-%.run: %.o
-	$(LD) $^ -o $@ -L$(LIB) $(LDFLAGS)
+%.c:%.pi
+	$(PCC) $< -o $@
+%.o:%.c
+	gcc $(CFLAGS) -I $(INC) -c $< -o $@
+
+%.run:%.o $(OBJS)
+	gcc $(CFLAGS) -I $(INC) $^ -o $@ -lpthread
 
 clean:
 	rm -f *.c *~ *.o *.run

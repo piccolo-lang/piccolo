@@ -8,7 +8,6 @@ This module defines the various types of errors that can occur during the compil
 module PiccError where
 
 import Front.AST
-import Front.ASTUtils
 
 import System.Exit
 import Control.Monad.Error

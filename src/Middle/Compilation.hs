@@ -7,22 +7,17 @@ This module contains the compilation pass. It transforms a piccolo AST to a sequ
 -}
 module Middle.Compilation (compilePass) where
 
-import PiccError
+import Back.SeqAST (BExpr (Not), DefName (..),
+                    EvalfuncName (..), Instr (DefFunction, EvalFunction, Nop, Return, ReturnRegister, Goto, Switch, Case, CaseAndLabel),
+                    PrimName (..), Type (..))
+import Back.SeqASTUtils
 import Front.AST
 import Front.ASTUtils
-import Back.SeqASTUtils
-import Back.SeqAST ( DefName(..)
-                   , PrimName(..)
-                   , EvalfuncName(..)
-                   , Instr(DefFunction, EvalFunction,
-                           Nop, Return, ReturnVal, Goto, Switch, Case, CaseAndLabel)
-                   , Type (..)
-                   , BExpr (Not)
-                   )
+import PiccError
 
-import Data.List (delete)
 import Control.Monad.Error
 import Control.Monad.State
+import Data.List (delete)
 
 
 data CompState = CompState { labelCount    :: Int
@@ -83,7 +78,7 @@ compileDefinition def = do
   procInstrs <- compileProcess (defBody def)
   return $ DefFunction name((scheduler, SchedulerType), (pt, PiThreadType))
            (
-             Switch pt_pc
+             Switch (getPC pt)
              (
                Case dEntry #
                procInstrs
@@ -91,11 +86,11 @@ compileDefinition def = do
            )
 
 compileProcess :: Process -> CompilingM Instr
-compileProcess proc@PEnd {} = do
+compileProcess proc@PEnd {} =
   return $ comment (strSExpr [] proc) #
            processEnd(pt, statusEnded) #
            Return
-           
+
 compileProcess proc@PPrefix {} = do
   pref <- compileAction $ procPref proc
   cont <- compileProcess $ procCont proc
@@ -109,31 +104,31 @@ compileProcess proc@PChoice {} = do
     expr <- compileExpr (brGuard br)
     act  <- compileBranchAction i br
     return $ expr #
-             (pt_enabled i) <-- unboxBoolValue(pt_val) #
-             ifthenelse (pt_enabled i)
+             setEnabled' (pt, i, unboxBoolValue (registerPointer pt)) #
+             ifthenelse (getEnabled(pt, i))
              (
                act #
                ifthenelse (tryResult =:= tryResultDisabled)
                (
-                 (pt_enabled i) <---- 0 #
+                 setEnabled(pt, i, 0) #
                  incr nbDisabled
                )
                (
                  ifthenelse (tryResult =:= tryResultAbort)
                  (
-                   releaseAllChannels(chans, nbChans) #
-                   pt_pc <---- startChoice #
+                   channelArrayUnlock(chans, nbChans) #
+                   setPC(pt, startChoice) #
                    processYield(pt, scheduler) #
                    Return
                  )
                  (
                    ifthen (tryResult =:= tryResultEnabled)
                    (
-                     releaseAllChannels(chans, nbChans) #
-                     decr pt_fuel #
-                     ifthen (pt_fuel =:== 0)
+                     channelArrayUnlock(chans, nbChans) #
+                     decrFuel pt #
+                     ifthen (getFuel pt =:== 0)
                      (
-                       pt_pc <---- (choiceConts !! i) #
+                       setPC(pt, choiceConts !! i) #
                        processYield(pt, scheduler) #
                        Return
                      ) #
@@ -145,21 +140,20 @@ compileProcess proc@PChoice {} = do
              (
                incr nbDisabled
              )
-  loop2 <- forM (zip ([0..]::[Int]) (procBranches proc)) $ \(i, br) -> do
-    case br of
-      BOutput { brChanIndex = c } -> do
-        instrs   <- compileExpr (brData br)
-        evalFunc <- registerEvalFunc $ instrs # ReturnVal
-        return $ ifthen (pt_enabled i)
-                 (
-                   registerOutputCommitment(pt, unboxChannelValue(pt_env c), evalFunc, choiceConts !! i)
-                 )
-      BInput { brChanIndex = c, brBindIndex = x } -> do
-        return $ ifthen (pt_enabled i)
-                 (
-                   registerInputCommitment(pt, unboxChannelValue(pt_env c), x, choiceConts !! i)
-                 )
-      _ -> return Nop
+  loop2 <- forM (zip ([0..]::[Int]) (procBranches proc)) $ \(i, br) -> case br of
+    BOutput { brChanIndex = c } -> do
+      instrs   <- compileExpr (brData br)
+      evalFunc <- registerEvalFunc $ instrs # ReturnRegister
+      return $ ifthen (getEnabled(pt, i))
+               (
+                 registerOutputCommitment(pt, unboxChannelValue(getEnv(pt, c)), evalFunc, choiceConts !! i)
+               )
+    BInput { brChanIndex = c, brBindIndex = x } ->
+      return $ ifthen (getEnabled(pt, i))
+               (
+                 registerInputCommitment(pt, unboxChannelValue(getEnv(pt, c)), x, choiceConts !! i)
+               )
+    _ -> return Nop
   loop3 <- forM (zip ([0..]::[Int]) (procBranches proc)) $ \(i, br) -> do
     cont <- compileProcess (brCont br)
     return $ CaseAndLabel (choiceConts !! i) #
@@ -167,7 +161,7 @@ compileProcess proc@PChoice {} = do
   return $ Case startChoice #
            (begin $ var tryResult TryResultEnumType #
                     var chans ChannelArrayType #
-                    chans <-- createEmptyChannelArray(20) # -- TODO : change 20 for the real number branches
+                    chans <-- channelArrayCreate 20 # -- TODO : change 20 for the real number branches
                     var nbDisabled IntType #
                     nbDisabled <---- 0 #
                     var nbChans IntType #
@@ -175,12 +169,16 @@ compileProcess proc@PChoice {} = do
                     foldr (#) Nop loop1 #
                     ifthen (nbDisabled =:== n)
                     (
-                      releaseAllChannels(chans, nbChans) #
-                      processEnd(pt, statusBlocked)
+                      channelArrayUnlock(chans, nbChans) #
+                      (if (procSafe proc)
+                         then setSafeChoice(pt, True)
+                         else Nop) #
+                      processEnd(pt, statusBlocked) #
+                      Return
                     ) #
                     foldr (#) Nop loop2 #
-                    acquire(pt_lock) #
-                    releaseAllChannels(chans, nbChans) #
+                    processLock pt #
+                    channelArrayUnlock(chans, nbChans) #
                     processWait(pt, scheduler) #
                     Return #
                     foldr (#) Nop loop3
@@ -192,38 +190,38 @@ compileProcess proc@PCall {} = do
     expr <- compileExpr arg
     return $ expr #
              var vi PiValueType #
-             vi <-- pt_val
+             vi <-- getRegister pt
   loop2 <- forM (zip ([1..]::[Int]) (procArgs proc)) $ \(i, arg) -> do
     let vi = v i
-    return $ (pt_env (i-1)) <-- vi #
-             (case exprTyp arg of
-                TChannel {} -> knowRegister(pt_knows, vi)
-                _           -> Nop
+    return $ setEnv(pt, i-1, vi) #
+             (if isAManagedType $ exprTyp arg
+                then registerEnvValue(pt, i-1)
+                else Nop
              )
   CompState { currentModule = currentModName } <- get
-  let name | null (procModule proc) = (delete '/' $ currentModName) ++ "_" ++ procName proc
-           | otherwise              = (delete '/' $ procModule proc) ++ "_" ++ procName proc
+  let (name1, name2) | null (procModule proc) = (delete '/' currentModName, procName proc)
+                     | otherwise              = (delete '/' $ procModule proc, procName proc)
   return $ comment (strSExpr [] proc) #
-           (begin $ knowSetForgetAll(pt_knows) #
+           (begin $ forgetAllValues pt #
                     foldr (#) Nop loop1 #
                     foldr (#) Nop loop2 #
-                    pt_proc  <--- name #
-                    pt_pc   <---- dEntry #
-                    pt_status <-- statusCall #
+                    setProc(pt, name1, name2) #
+                    setPC(pt, dEntry) #
+                    setStatus(pt, statusCall) #
                     Return
            )
 
 compileBranchAction :: Int -> Branch -> CompilingM Instr
-compileBranchAction i br@BTau {} = do
+compileBranchAction _ br@BTau {} =
   return $ comment (strSExpr [] br) #
            tryResult <-- tryResultEnabled
 
-compileBranchAction i br@BOutput { brChanIndex = c} = do
+compileBranchAction _ br@BOutput { brChanIndex = c} = do
   expr <- compileExpr (brData br)
   return $ comment (strSExpr [] br) #
            (begin $ var chan ChannelType #
-                    chan <-- unboxChannelValue(pt_env c) #
-                    ifthenelse (Not (channelAcquireAndRegister(pt, chan, chans, nbChans)))
+                    chan <-- unboxChannelValue(getEnv(pt, c)) #
+                    ifthenelse (Not (channelArrayLockAndRegister(chans, nbChans, pt, chan)))
                     (
                       tryResult <-- tryResultAbort
                     )
@@ -233,17 +231,17 @@ compileBranchAction i br@BOutput { brChanIndex = c} = do
                       ifthen (tryResult =:= tryResultEnabled)
                       (
                         expr #
-                        (commit_thread_env commit_refval) <-- pt_val #
-                        awake(scheduler, commit_thread, commit)
+                        setEnv'(getThread commit, getRefVar commit, getRegister pt) #
+                        processAwake(commit, scheduler)
                       )
                     )
            )
 
-compileBranchAction i br@BInput { brChanIndex = c, brBindIndex = x } = do
+compileBranchAction _ br@BInput { brChanIndex = c, brBindIndex = x } =
   return $ comment (strSExpr [] br) #
            (begin $ var chan ChannelType #
-                    chan <-- unboxChannelValue(pt_env c) #
-                    ifthenelse (Not (channelAcquireAndRegister(pt, chan, chans, nbChans)))
+                    chan <-- unboxChannelValue(getEnv(pt, c)) #
+                    ifthenelse (Not (channelArrayLockAndRegister(chans, nbChans, pt, chan)))
                     (
                       tryResult <-- tryResultAbort
                     )
@@ -252,34 +250,31 @@ compileBranchAction i br@BInput { brChanIndex = c, brBindIndex = x } = do
                       commit <-- tryInputAction(chan, tryResult) #
                       ifthen (tryResult =:= tryResultEnabled)
                       (
-                        (pt_env x) <-- commit_evalfunc(commit_thread) #
-                        (case brBindTyp br of
-                           TChannel {} -> ifthen (knowRegister(pt_knows, pt_env x))
-                                          (
-                                            channelIncrRefCount(pt_env x)
-                                          )
-                           _           -> Nop
+                        setEnv(pt, x, callEvalFunc commit) #
+                        (if isAManagedType $ brBindTyp br
+                           then registerEnvValue(pt, x)
+                           else Nop
                         ) #
-                        awake(scheduler, commit_thread, commit)
+                        processAwake(commit, scheduler)
                       )
                     )
            )
-           
+
 compileAction :: Action -> CompilingM Instr
 compileAction act@AOutput { actChanIndex = c } = do
   prefixStart <- genLabel
   prefixCont  <- genLabel
   exprComp    <- compileExpr (actData act)
-  evalFunc    <- registerEvalFunc $ exprComp # ReturnVal
+  evalFunc    <- registerEvalFunc $ exprComp # ReturnRegister
   return $ comment (strSExpr [] act) #
            Case prefixStart #
            (begin $ var chan ChannelType #
-                    chan <-- unboxChannelValue(pt_env c) #
+                    chan <-- unboxChannelValue(getEnv(pt, c)) #
                     var ok BoolType #
-                    ok <-- processAcquireChannel(pt, chan) #
+                    ok <-- processLockChannel(pt, chan) #
                     ifthen (Not ok)
                     (
-                      pt_pc <---- prefixStart #
+                      setPC(pt, prefixStart) #
                       processYield(pt, scheduler) #
                       Return
                     ) #
@@ -288,23 +283,23 @@ compileAction act@AOutput { actChanIndex = c } = do
                     commit <-- tryOutputAction(chan, tryResult) #
                     ifthenelse (tryResult =:= tryResultEnabled)
                     (
-                      releaseChannel(chan) #
+                      unlockChannel chan #
                       exprComp #
-                      (commit_thread_env commit_refval) <-- pt_val #
-                      awake(scheduler, commit_thread, commit) #
+                      setEnv'(getThread commit, getRefVar commit, getRegister pt) #
+                      processAwake(commit, scheduler) #
                       Goto prefixCont
                     )
                     (
                       ifthen (tryResult =:= tryResultDisabled)
                       (
-                        releaseChannel(chan) #
+                        unlockChannel chan #
                         processEnd(pt, statusBlocked) #
                         Return
                       )
                     ) #
                     registerOutputCommitment (pt, chan, evalFunc, prefixCont) #
-                    acquire(pt_lock) #
-                    releaseChannel(chan) #
+                    processLock pt #
+                    unlockChannel chan #
                     processWait(pt, scheduler) #
                     Return
            ) #
@@ -316,12 +311,12 @@ compileAction act@AInput { actChanIndex = c, actBindIndex = x } = do
   return $ comment (strSExpr [] act) #
            Case prefixStart #
            (begin $ var chan ChannelType #
-                    chan <-- unboxChannelValue(pt_env c) #
+                    chan <-- unboxChannelValue(getEnv(pt, c)) #
                     var ok BoolType #
-                    ok <-- processAcquireChannel(pt, chan) #
+                    ok <-- processLockChannel(pt, chan) #
                     ifthen (Not ok)
                     (
-                      pt_pc <---- prefixStart #
+                      setPC(pt, prefixStart) #
                       processYield(pt, scheduler) #
                       Return
                     ) #
@@ -330,67 +325,64 @@ compileAction act@AInput { actChanIndex = c, actBindIndex = x } = do
                     commit <-- tryInputAction(chan, tryResult) #
                     ifthenelse (tryResult =:= tryResultEnabled)
                     (
-                      releaseChannel(chan) #
-                      commit_evalfunc(commit_thread) #
-                      (pt_env x) <-- commit_thread_val #
-                      (case actBindTyp act of
-                         TChannel {} -> ifthen (knowRegister(pt_knows, pt_env x))
-                                        (
-                                          channelRef(pt_env x)
-                                        )
-                         _           -> Nop
+                      unlockChannel chan #
+                      setEnv(pt, x, callEvalFunc commit) #
+                      (if isAManagedType $ actBindTyp act
+                         then registerEnvValue(pt, x)
+                         else Nop
                       ) #
-                      awake(scheduler, commit_thread, commit) #
+                      processAwake(commit, scheduler) #
                       Goto prefixCont
                     )
                     (
                       ifthen (tryResult =:= tryResultDisabled)
                       (
-                        releaseChannel(chan) #
+                        unlockChannel chan #
                         processEnd(pt, statusBlocked) #
                         Return
                       )
                     ) #
                     registerInputCommitment(pt, chan, x, prefixCont) #
-                    acquire(pt_lock) #
-                    releaseChannel(chan) #
+                    processLock pt #
+                    unlockChannel chan #
                     processWait(pt, scheduler) #
                     Return
            ) #
            CaseAndLabel prefixCont
 
-compileAction act@ANew { actBindIndex = c } = do
+compileAction act@ANew { actBindIndex = c } =
   return $ comment (strSExpr [] act) #
-           initChannelValue (pt_env c, generateChannel())
+           initChannelValue(getEnv(pt, c)) #
+           registerEnvValue(pt, c)
 
 compileAction act@ALet { actBindIndex = x } = do
   expr <- compileExpr (actVal act)
   return $ comment (strSExpr [] act) #
            expr #
-           (pt_env x) <-- pt_val
+           setEnv(pt, x, getRegister pt)
 
 compileAction act@ASpawn  {} = do
   CompState { currentModule = currentModName } <- get
-  let name | null (actModule act) = (delete '/' $ currentModName) ++ "_" ++ actName act
-           | otherwise            = (delete '/' $ actModule act) ++ "_" ++ actName act
+  let (name1, name2) | null (actModule act) = (delete '/' currentModName, actName act)
+                     | otherwise            = (delete '/' $ actModule act, actName act)
   loop <- forM (zip ([1..]::[Int]) (actArgs act)) $ \(i, arg) -> do
     expr <- compileExpr arg
     return $ expr #
              var (v i) PiValueType #
-             (v i) <-- pt_val #
-             (case exprTyp arg of
-                TChannel {} -> knowRegister(child_knows, v i) # incrRefCount(v i)
-                _           -> Nop
-             ) #
-             (child_env (i-1)) <-- (v i)
+             (v i) <-- getRegister pt #
+             setEnv(child, i-1, v i) #
+             (if isAManagedType $ exprTyp arg
+                then registerEnvValue(child, i-1)
+                else Nop
+             )
   return $ comment (strSExpr [] act) #
            (begin $ var child PiThreadType #
-                    child <-- generatePiThread(10) # -- TODO: use the real env size !
+                    child <-- piThreadCreate(10, 10) # -- TODO user the computed env sizes !
                     foldr (#) Nop loop #
-                    child_proc  <--- name #
-                    child_pc   <---- dEntry #
-                    child_status <-- statusRun #
-                    readyQueuePush(scheduler_ready, child)
+                    setProc(child, name1, name2) #
+                    setPC(child, dEntry) #
+                    setStatus(child, statusRun) #
+                    readyPushFront(schedGetReadyQueue scheduler, child)
            )
 
 compileAction act@APrim {} = do
@@ -399,44 +391,44 @@ compileAction act@APrim {} = do
     let vi = v i
     return $ (vi, var vi PiValueType #
                   expr #
-                  vi <-- pt_val
+                  vi <-- getRegister pt
              )
   let (vs, loop) = unzip loops
   let primName   = PrimName (actModule act) (actName act)
   return $ comment (strSExpr [] act) #
            (begin $ foldr (#) Nop loop #
-                    primCall(pt_val, primName, vs)
+                    primCall(registerPointer pt, primName, vs)
            )
 
 compileExpr:: Expr -> CompilingM Instr
-compileExpr ETrue     {} = return $ initBoolTrue(pt_val)
-compileExpr EFalse    {} = return $ initBoolFalse(pt_val)
-compileExpr e@EInt    {} = return $ initIntValue(pt_val, exprInt e)
-compileExpr e@EString {} = return $ initStringValue(pt_val, exprStr e)
-compileExpr e@EVar    {} = return $ pt_val <-- pt_env (exprIndex e)
+compileExpr ETrue     {} = return $ initBoolTrue(registerPointer pt)
+compileExpr EFalse    {} = return $ initBoolFalse(registerPointer pt)
+compileExpr e@EInt    {} = return $ initIntValue(registerPointer pt, exprInt e)
+compileExpr e@EString {} = return $ initStringValue(registerPointer pt, exprStr e) # registerRegisterValue pt
+compileExpr e@EVar    {} = return $ setRegister(pt, getEnv(pt, exprIndex e))
 compileExpr ETuple    {} = throwError $ TodoError "tuples not yet supported"
 
 compileExpr e@EPrim   {} = do
   loops <- forM (zip ([1..]::[Int]) (exprArgs e)) $ \(i, arg) -> do
     expr <- compileExpr arg
-    return $ (v i, var (v i) PiValueType #
-                   expr #
-                   (v i) <-- pt_val
-             )
+    return (v i, var (v i) PiValueType #
+                 expr #
+                 (v i) <-- getRegister pt
+           )
   let (vs, loop) = unzip loops
   let primName   = PrimName (exprModule e) (exprName e)
   return $ begin $ foldr (#) Nop loop #
-                   primCall(pt_val, primName, vs)
+                   primCall(registerPointer pt, primName, vs)
 
 compileExpr e@EAnd    {} = do
   i1 <- compileExpr (exprLeft e)
   i2 <- compileExpr (exprRight e)
   return $ i1 #
-           ifthen (boolFromValue pt_val) i2
+           ifthen (unboxBoolValue (registerPointer pt)) i2
 
 compileExpr e@EOr     {} = do
   i1 <- compileExpr (exprLeft e)
   i2 <- compileExpr (exprRight e)
   return $ i1 #
-           ifthen (Not (boolFromValue pt_val)) i2
+           ifthen (Not (unboxBoolValue (registerPointer pt))) i2
 

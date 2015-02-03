@@ -34,7 +34,7 @@ putVarType v t = do
 
 getVarType :: String -> Location -> TypingM TypeExpr
 getVarType v loc = do
-  (defs,vars) <- lift get
+  (_,vars) <- lift get
   case Map.lookup v vars of
     Just t  -> return t
     Nothing -> throwError $ VarNotFoundError v loc
@@ -59,14 +59,18 @@ tcDefinition def = do
   return def { defBody = proc }
 
 tcProcess :: Process -> TypingM Process
+
 tcProcess proc@PEnd    {} = return proc
+
 tcProcess proc@PPrefix {} = do
   action   <- tcAction $ procPref proc
   cont     <- tcProcess $ procCont proc
   return proc { procPref = action, procCont = cont }
+
 tcProcess proc@PChoice {} = do
   branches <- mapM tcBranch $ procBranches proc
   return proc { procBranches = branches }
+
 tcProcess proc@PCall { procName = name } = do
   (defs, _) <- lift get
   def <- case find (\d -> defName d == name) defs of
@@ -74,61 +78,69 @@ tcProcess proc@PCall { procName = name } = do
            Just d  -> return d
   let typParams = map (\(_,t,_) -> t) $ defParams def
   args <- mapM tcExpr $ procArgs proc
-  let typArgs = map exprTyp args
-  when (length typParams /= length typArgs) $
-    throwError $ ArityError name (localize proc) (length typParams) (length typArgs)
-  forM_ (zip typParams typArgs) (\(p,a) -> when (p /= a) $ throwError (SimpleError "bad type in proc"))
+  let typOfArgs = map exprTyp args
+  when (length typParams /= length typOfArgs) $
+    throwError $ ArityError name (localize proc) (length typParams) (length typOfArgs)
+  forM_ (zip typParams typOfArgs) (\(p,a) -> when (p /= a) $ throwError (SimpleError "bad type in proc"))
   return proc { procArgs = args }
 
 tcBranch :: Branch -> TypingM Branch
+
 tcBranch br@BTau    {} = do
-  guard <- tcExpr $ brGuard br
-  cont  <- tcProcess $ brCont br
-  return br { brGuard = guard, brCont = cont }
+  gard <- tcExpr $ brGuard br
+  cont <- tcProcess $ brCont br
+  return br { brGuard = gard, brCont = cont }
+
 tcBranch br@BOutput {} = do
-  guard   <- tcExpr $ brGuard br
+  gard    <- tcExpr $ brGuard br
   chanTyp <- getVarType (brChan br) (localize br)
   dat     <- tcExpr $ brData br
   when (chanTyp /= TChannel (exprTyp dat) noLoc) $
     throwError (SimpleError "bad channel type for output")
   cont    <- tcProcess $ brCont br
-  return br { brGuard = guard, brData = dat, brCont = cont }
+  return br { brGuard = gard, brData = dat, brCont = cont }
+
 tcBranch br@BInput {} = do
-  guard   <- tcExpr $ brGuard br
+  gard    <- tcExpr $ brGuard br
   chanTyp <- getVarType (brChan br) (localize br)
   dataTyp <- case chanTyp of
-    TChannel { typExpr = typExpr } -> return typExpr
+    typ@TChannel {} -> return $ typExpr typ
     _ -> throwError (SimpleError "input on a variable that is not a channel")
   putVarType (brBind br) dataTyp
   cont    <- tcProcess $ brCont br
-  return br { brGuard = guard, brCont = cont }
+  return br { brGuard = gard, brBindTyp = dataTyp, brCont = cont }
 
 tcAction :: Action -> TypingM Action
+
 tcAction act@AOutput {} = do
   chanTyp <- getVarType (actChan act) (localize act)
   dat     <- tcExpr (actData act)
   when (chanTyp /= TChannel (exprTyp dat) noLoc) $
     throwError (SimpleError "bad channel type for output")
   return act { actData = dat }
+
 tcAction act@AInput  {} = do
   chanTyp <- getVarType (actChan act) (localize act)
   dataTyp <- case chanTyp of
-    TChannel { typExpr = typExpr } -> return typExpr
+    typ@TChannel {} -> return $ typExpr typ
     _ -> throwError (SimpleError "input on a variable that is not a channel")
   putVarType (actBind act) dataTyp
-  return act
+  return act { actBindTyp = dataTyp }
+
 tcAction act@ANew    {} = do
   case actTyp act of
     TChannel {} -> return ()
     _ -> throwError (SimpleError "creating with \"new\" a var that is not a channel")
   putVarType (actBind act) (actTyp act)
   return act
+
 tcAction act@ALet    {} = do
   val <- tcExpr $ actVal act
   when (actTyp act /= exprTyp val) $
     throwError (SimpleError "wrong type in let")
   putVarType (actBind act) (actTyp act)
   return act { actVal = val }
+
 tcAction act@ASpawn { actName = name} = do
   (defs,_) <- lift get
   def <- case find (\d -> defName d == name) defs of
@@ -136,12 +148,13 @@ tcAction act@ASpawn { actName = name} = do
            Just d  -> return d
   let typParams = map (\(_,t,_) -> t) $ defParams def
   args <- mapM tcExpr $ actArgs act
-  let typArgs   = map exprTyp args
-  when (length typParams /= length typArgs) $
-    throwError $ ArityError name (localize act) (length typParams) (length typArgs)
-  forM_ (zip typParams typArgs) (\(p,a) ->
+  let typOfArgs   = map exprTyp args
+  when (length typParams /= length typOfArgs) $
+    throwError $ ArityError name (localize act) (length typParams) (length typOfArgs)
+  forM_ (zip typParams typOfArgs) (\(p,a) ->
     when (p /= a) $ throwError (SimpleError "bad type in spawn"))
   return act { actArgs = args }
+
 tcAction act@APrim { actModule = m, actName = n } = do
   (_, typParams) <- case Map.lookup (m,n) primTypes of
     Nothing -> throwError $ PrimNotFoundError ("#" ++ m ++ ":" ++ n) (localize act)
@@ -166,33 +179,29 @@ tcExpr e@EVar { exprVar = v } = do
   typ <- getVarType v (localize e)
   return e { exprTyp = typ }
 tcExpr e@EPrim   { exprModule = m, exprName = n } = do
-  (typRet, typParams) <- case Map.lookup (m,n) primTypes of
+  (typOfRet, typParams) <- case Map.lookup (m,n) primTypes of
     Nothing -> throwError $ PrimNotFoundError ("#" ++ m ++ ":" ++ n) (localize e)
     Just t  -> return t
   args <- mapM tcExpr $ exprArgs e
-  let typArgs = map exprTyp args
-  when (length typParams /= length typArgs) $
-    throwError $ ArityError (m ++ "#" ++ n) (localize e) (length typParams) (length typArgs)
-  forM_ (zip typParams typArgs) (\(p,a) -> when (p /= a) $
+  let typOfArgs = map exprTyp args
+  when (length typParams /= length typOfArgs) $
+    throwError $ ArityError (m ++ "#" ++ n) (localize e) (length typParams) (length typOfArgs)
+  forM_ (zip typParams typOfArgs) (\(p,a) -> when (p /= a) $
     throwError (SimpleError "bad type in prim"))
-  return e { exprArgs = args, exprTyp = typRet }
+  return e { exprArgs = args, exprTyp = typOfRet }
 tcExpr e@EAnd    {} = do
   tLeft  <- tcExpr (exprLeft e)
   tRight <- tcExpr (exprRight e)
-  case exprTyp tLeft of
-    TAtom { typAtom = TBool } -> return tLeft
-    _ -> throwError $ SimpleError "bad type in and (left)"
-  case exprTyp tRight of
-    TAtom { typAtom = TBool } -> return tRight
-    _ -> throwError $ SimpleError "bad type in and (right)"
+  when (not (isBool (exprTyp tLeft))) $
+    throwError $ SimpleError "bad type in and (left)"
+  when (not (isBool (exprTyp tRight))) $
+    throwError $ SimpleError "bad type in and (right)"
   return $ e { exprLeft = tLeft, exprRight = tRight }
 tcExpr e@EOr     {} = do
   tLeft  <- tcExpr (exprLeft e)
   tRight <- tcExpr (exprRight e)
-  case exprTyp tLeft of
-    TAtom { typAtom = TBool } -> return tLeft
-    _ -> throwError $ SimpleError "bad type in and (left)"
-  case exprTyp tRight of
-    TAtom { typAtom = TBool } -> return tRight
-    _ -> throwError $ SimpleError "bad type in and (right)"
+  when (not (isBool (exprTyp tLeft))) $
+    throwError $ SimpleError "bad type in or(left)"
+  when (not (isBool (exprTyp tRight))) $
+    throwError $ SimpleError "bad type in or (right)"
   return $ e { exprLeft = tLeft, exprRight = tRight }

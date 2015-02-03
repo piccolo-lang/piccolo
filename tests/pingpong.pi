@@ -3,6 +3,7 @@ module Test/PingPong
 def PingPong(i:chan<string>,o:chan<string>,msg:string) =
   i?(m),
   #core/io:print_str(m),
+  __picc_snapshot,
   o!msg,
   PingPong(i,o,msg)
 

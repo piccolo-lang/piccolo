@@ -17,25 +17,26 @@ It waits for one or more pi-file names and produces by default C code in a.out.
 module Main where
 
 import PiccError
-import Front.PilParser
+--import Front.PilParser
+import Front.Parser
 import Front.AST
 import Front.ASTUtils
 import Middle.Typing
 import Middle.Environments
 import Middle.Compilation
-import Back.SeqAST
 import Back.CodeEmitter
 import qualified Back.CBackend as CBackend
-import qualified Back.GenericBackend as GenericBackend
+--import qualified Back.GenericBackend as GenericBackend
 
 import System.Environment
 import System.Console.GetOpt
 import System.IO
 import System.Exit
-import System.FilePath.Posix
-import Control.Monad
-import Control.Monad.Error
+--import System.FilePath.Posix
+import System.Process
+--import Control.Monad
 import Data.List
+import Data.Maybe
 
 -- | Main function
 main :: IO ()
@@ -44,9 +45,10 @@ main = do
   handleFiles args files
 
 -- | The 'handleFiles' function takes a list of flags and a list of files and compiles them
+{-
 handleFiles :: [Flag] -> [String] -> IO ()
-handleFiles args [] = return ()
-handleFiles args (f:fs) = do
+handleFiles _ [] = return ()
+handleFiles args [f] = do
   content     <- readFile f
   ast         <- reportResult $ parseModule content
   when (SAST SimplePrint  `elem` args) $ do
@@ -64,24 +66,57 @@ handleFiles args (f:fs) = do
     putStrLn (strSExpr [PrintIndexes] withEnv)
     putStrLn ""
   seqAst      <- reportResult $ compilePass withEnv
-  if Generic `elem` args
+  if GenericBack `elem` args
     then do let code  = runEmitterM $ GenericBackend.emitCode (mainDef withEnv) seqAst
-            let fname = replaceExtension f "out"
+            let fname = getOutputFileName args (replaceExtension f "out")
             hOut <- openFile fname WriteMode
             hPutStr hOut code
             hClose hOut
-    else do let code  = runEmitterM $ CBackend.emitCode (mainDef withEnv) seqAst
-            let fname = replaceExtension f "c"
+    else do let code = runEmitterM $ CBackend.emitCode (mainDef withEnv) seqAst
+            let fname = getOutputFileName args (replaceExtension f "c")
             hOut <- openFile fname WriteMode
             hPutStr hOut code
             hClose hOut
   where mainDef m = delete '/' (modName m) ++ "_Main"
+handleFiles _ _ = error "one file at once please..."
+-}
+
+handleFiles :: [Flag] -> [String] -> IO ()
+handleFiles _ [] = return ()
+handleFiles _ [f] = do
+  content  <- readFile f
+  ast      <- reportResult $ parseModule content
+  typedAst <- reportResult $ typingPass ast
+  withEnv  <- reportResult $ computingEnvPass typedAst
+  seqAst   <- reportResult $ compilePass withEnv
+  let code = runEmitterM $ CBackend.emitCode (mainDef withEnv) seqAst
+  --putStrLn code
+  (Just gccStdin, _, _, gccProc) <- createProcess (proc "gcc" ["-std=c11", "-lpiccolort", "-xc", "-"]) { std_in  = CreatePipe
+                                                                            , std_out = UseHandle stdout
+                                                                            , std_err = UseHandle stderr
+                                                                            }
+  hPutStr gccStdin code
+  hClose gccStdin
+  _ <- waitForProcess gccProc
+  return ()
+  where mainDef m = delete '/' (modName m) ++ "_Main"
+handleFiles _ _ = error "one file at once please..."
+
+getOutputFileName :: [Flag] -> String -> String
+getOutputFileName args defaultt =
+  case mapMaybe f args of
+    []  -> defaultt
+    x:_ -> x
+  where f (OutputFile s) = Just s
+        f _              = Nothing
 
 -- | Various flags for compiler options
 data Flag
   = Help              -- ^ \--help or -h
-  | Generic           -- ^ \--generic or -g
+  | GenericBack       -- ^ \--generic or -g
+  | CBack             -- ^ \--cback or -c
   | SAST PrintLevel   -- ^ \--sast or -s
+  | OutputFile String
   deriving Eq
 
 -- | Flags description to parse with "System.Console.GetOpt" module
@@ -89,14 +124,18 @@ flags :: [OptDescr Flag]
 flags =
   [ Option "h" ["help"] (NoArg Help)
       "Print this help message"
-  , Option "g" ["generic"] (NoArg Generic)
-      "Produce generic code instead of C code"
+  , Option "g" ["generic"] (NoArg GenericBack)
+      "Produce generic code instead of C++ code"
+  , Option "c" ["cback"] (NoArg CBack)
+      "Produce c code instead of C++ code"
   , Option "" ["sast0"] (NoArg (SAST SimplePrint))
       "Print AST in s-epxressions style for debugging purposes"
   , Option "" ["sast1"] (NoArg (SAST PrintTypes))
       "Print AST in s-epxressions style for debugging purposes"
   , Option "" ["sast2"] (NoArg (SAST PrintIndexes))
       "Print AST in s-epxressions style for debugging purposes"
+  , Option "o" ["out"] (ReqArg OutputFile "")
+      "Specify the filename of the compiled file"
   ]
 
 -- | The function 'parseArgs' use the "System.Console.GetOpt" module to parse executable options

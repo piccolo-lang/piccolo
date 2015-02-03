@@ -8,7 +8,7 @@ def Gen(i:int, n:int, p: int, gen:chan<int>) =
 
 def PrimeFilter(n:int, in:chan<int>, out:chan<int>) =
   in?(x), 
-    [#core/arith:equals(#core/arith:modulo(x, n), 0)] tau, PrimeFilter(n, in, out) +
+    [#core/arith:equals(#core/arith:mod(x, n), 0)] tau, PrimeFilter(n, in, out) +
     [true] out!x, PrimeFilter(n, in, out)
 
 def EndFilter(in:chan<int>, primes:chan<int>) =
@@ -21,4 +21,4 @@ def Printer(primes:chan<int>) =
   primes?(x), #core/io:print_int(x), #core/io:print_str(" "), Printer(primes)  
 
 def Main() =
-  new(primes:chan<int>), spawn{Primes(primes, 100)}, Printer(primes)
+  new(primes:chan<int>), spawn{Primes(primes, 1000)}, Printer(primes)

@@ -15,35 +15,15 @@ data EvalfuncName = EvalfuncName Int
 
 data VarName
   = PiThread
-  | PiThreadVal
-  | PiThreadPC
-  | PiThreadEnv Int
-  | PiThreadKnows
-  | PiThreadLock
-  | PiThreadFuel
-  | PiThreadProc
-  | PiThreadStatus
-  | PiThreadEnabled Int
   | Child
-  | ChildPC
-  | ChildStatus
-  | ChildProc
-  | ChildEnv Int
-  | ChildKnows
   | Scheduler
-  | SchedulerReady
   | V Int
   | Chan
   | Chans
   | NbChans
   | Commit
-  | CommitThread
-  | CommitThreadVal
-  | CommitThreadEnv VarName
-  | CommitVal
-  | CommitRefval
   | TryResult
-  | OK
+  | Ok
   | NbDisabled
 
 data Type
@@ -68,42 +48,72 @@ data EnumName
 
 data RTFun
   = EvalFunc EvalfuncName
-  | CommitEvalFunc            [BExpr]
-  | PrimCall PrimName         [BExpr]
-  | GenerateChannel           [BExpr]
-  | GeneratePiThread          [BExpr]
-  | ProcessWait               [BExpr]
-  | ProcessEnd                [BExpr]
-  | ProcessYield              [BExpr]
-  | ProcessAcquireChannel     [BExpr]
-  | Acquire                   [BExpr]
-  | ReleaseChannel            [BExpr]
-  | ReleaseAllChannels        [BExpr]
-  | ChannelRef                [BExpr]
-  | ChannelIncrRefCount       [BExpr]
-  | ChannelAcquireAndRegister [BExpr]
-  | Awake                     [BExpr]
-  | TryInputAction            [BExpr]
-  | TryOutputAction           [BExpr]
-  | RegisterInputCommitment   [BExpr]
-  | RegisterOutputCommitment  [BExpr]
-  | KnowRegister              [BExpr]
-  | KnowSetForgetAll          [BExpr]
-  | ReadyQueuePush            [BExpr]
-  | InitIntValue              [BExpr]
-  | InitStringValue           [BExpr]
-  | InitBoolTrue              [BExpr]
-  | InitBoolFalse             [BExpr]
-  | BoolFromValue             [BExpr]
-  | InitChannelValue          [BExpr]
-  | UnboxChannelValue         [BExpr]
-  | UnboxBoolValue            [BExpr]
-  | CreateEmptyChannelArray   [BExpr]
+  | PrimCall PrimName           [BExpr]
+  | DefProc  DefName
+
+  -- pithread.h
+  | PiThreadCreate              BExpr BExpr
+  | SetProc                     BExpr BExpr
+  | GetPC                       BExpr
+  | SetPC                       BExpr BExpr
+  | GetRegister                 BExpr
+  | SetRegister                 BExpr BExpr
+  | RegisterPointer             BExpr
+  | GetEnv                      BExpr BExpr
+  | SetEnv                      BExpr BExpr BExpr
+  | GetEnabled                  BExpr BExpr
+  | SetEnabled                  BExpr BExpr BExpr
+  | SetStatus                   BExpr BExpr
+  | SetSafeChoice               BExpr BExpr
+  | GetFuel                     BExpr
+  | DecrFuel                    BExpr
+  | ForgetAllValues             BExpr
+  | RegisterEnvValue            BExpr BExpr
+  | RegisterRegisterValue       BExpr
+  | ProcessLock                 BExpr
+  | ProcessLockChannel          BExpr BExpr
+  | ProcessYield                BExpr BExpr
+  | ProcessWait                 BExpr BExpr
+  | ProcessAwake                BExpr BExpr
+  | ProcessEnd                  BExpr BExpr
+
+  -- value.h
+  | InitNoValue                 BExpr
+  | InitBoolTrue                BExpr
+  | InitBoolFalse               BExpr
+  | InitIntValue                BExpr BExpr
+  | InitFloatValue              BExpr BExpr
+  | InitStringValue             BExpr BExpr
+  | InitChannelValue            BExpr
+  | UnboxChannelValue           BExpr
+  | UnboxBoolValue              BExpr
+  | UnlockChannel               BExpr
+
+  -- scheduler.h
+  | ReadyPushFront              BExpr BExpr
+  | SchedGetReadyQueue          BExpr
+
+  -- commit.h
+  | GetThread                   BExpr
+  | GetRefVar                   BExpr
+  | CallEvalFunc                BExpr
+  | RegisterInputCommitment     BExpr BExpr BExpr BExpr
+  | RegisterOutputCommitment    BExpr BExpr BExpr BExpr
+
+  -- tryaction.h
+  | TryInputAction              BExpr BExpr
+  | TryOutputAction             BExpr BExpr
+  | ChannelArrayCreate          BExpr
+  | ChannelArrayLockAndRegister BExpr BExpr BExpr BExpr
+  | ChannelArrayUnlock          BExpr BExpr
+
 
 data BExpr
   = Not BExpr
   | Equal BExpr BExpr
+  | BoolExpr Bool
   | IntExpr Int
+  | FloatExpr Float
   | StringExpr String
   | Var VarName
   | Enum EnumName
@@ -124,7 +134,7 @@ data Instr
   | DeclareVar VarName Type
   | Assign VarName BExpr
   | Return
-  | ReturnVal
+  | ReturnRegister
   | Goto Int
   | Increment VarName
   | Decrement VarName
@@ -133,4 +143,3 @@ data Instr
   | Case Int
   | CaseAndLabel Int
   | ProcCall RTFun
-

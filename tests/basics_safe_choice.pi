@@ -1,0 +1,14 @@
+module Tests/UnsafeChoice
+
+def Gen(n: int, r: chan<int>) =
+  %safe {
+    [#core/arith:less_than(0, n)] tau, r!n, Gen(#core/arith:sub(n, 1), r)
+  }
+
+def Printer(p: chan<int>) =
+  [true] tau, p?(x), #core/io:print_int(x), Printer(p)
+
+def Main() =
+  new (c: chan<int>),
+  spawn{Gen(5, c)},
+  Printer(c)

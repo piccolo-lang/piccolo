@@ -9,6 +9,8 @@ during the whole compilation process.
 -}
 module Front.AST where
 
+import Data.List (intercalate)
+
 -- | The 'Location' type is a record of line and columns informations
 data Location
   = Location { locOffset      :: !Int  -- ^ absolute offset of the block in the file
@@ -38,12 +40,24 @@ data TypeExpr
   | TTuple   { typExprs :: [TypeExpr], typLoc :: Location }
   | TPrim    { typArgs :: [TypeExpr], typRet :: TypeExpr, typLoc :: Location }
 
+instance Show TypeExpr where
+  show TUnknown {} = "unknown"
+  show typ@TAtom    {} = show $ typAtom typ
+  show typ@TChannel {} = "chan<" ++ show (typExpr typ) ++ ">"
+  show typ@TTuple   {} = "(" ++ intercalate "," (map show (typExprs typ)) ++ ")"
+  show typ@TPrim    {} = "[" ++ intercalate "," (map show (typArgs typ)) ++ "] -> " ++ show (typRet typ)
+
 -- | Atomic types are in the separate datatype 'TypeAtom' which is used by 'TypeExpr'
 data TypeAtom
   = TBool
   | TInt
   | TString
   deriving (Eq)
+
+instance Show TypeAtom where
+  show TBool   = "bool"
+  show TInt    = "int"
+  show TString = "string"
 
 -- | 'TypeExpr' expressions are compared upto location data
 instance Eq TypeExpr where
@@ -71,10 +85,22 @@ data Expr
   | EAnd    { exprTyp :: TypeExpr, exprLoc :: Location, exprLeft :: Expr, exprRight :: Expr }
   | EOr     { exprTyp :: TypeExpr, exprLoc :: Location, exprLeft :: Expr, exprRight :: Expr }
 
+instance Show Expr where
+  show ETrue     {} = "true"
+  show EFalse    {} = "false"
+  show e@EInt    {} = show $ exprInt e
+  show e@EString {} = exprStr e
+  show e@ETuple  {} = "(" ++ intercalate ", " (map show (exprVals e)) ++ ")"
+  show e@EVar    {} = exprVar e
+  show e@EPrim   {} = "#" ++ exprModule e ++ "/" ++ exprName e ++ "(" ++ args ++ ")"
+    where args = intercalate ", " (map show (exprVals e))
+  show e@EAnd    {} = "(" ++ show (exprLeft e) ++ ") and (" ++ show (exprRight e) ++ ")"
+  show e@EOr     {} = "(" ++ show (exprLeft e) ++ ") or (" ++ show (exprRight e) ++ ")"
+
 data Process
   = PEnd    { procLoc :: Location }
   | PPrefix { procPref :: Action, procCont :: Process, procLoc :: Location }
-  | PChoice { procBranches :: [Branch], procLoc :: Location }
+  | PChoice { procBranches :: [Branch], procSafe :: Bool, procLoc :: Location }
   | PCall   { procModule :: String, procName :: String, procArgs :: [Expr], procLoc ::  Location }
 
 data Branch
@@ -88,12 +114,12 @@ data Branch
 -- Moreover, to manipulate value expressions, we defines a "let" and a primitive call action.
 -- 'ASpawn' action is used to spawn a parallel process which will be executing the given piccolo process definition.
 data Action
-  = AOutput { actChan :: String, actData :: Expr, actChanIndex :: Int, actLoc :: Location }
-  | AInput  { actChan :: String, actBind :: String, actBindTyp :: TypeExpr, actChanIndex :: Int, actBindIndex :: Int, actLoc :: Location }
-  | ANew    { actBind :: String, actBindIndex :: Int, actTyp :: TypeExpr, actLoc :: Location }
-  | ALet    { actBind :: String, actBindIndex :: Int, actTyp :: TypeExpr, actVal :: Expr, actLoc :: Location }
-  | ASpawn  { actModule :: String, actName :: String, actArgs :: [Expr], actLoc :: Location }
-  | APrim   { actModule :: String, actName :: String, actArgs :: [Expr], actLoc :: Location }
+  = AOutput   { actChan :: String, actData :: Expr, actChanIndex :: Int, actLoc :: Location }
+  | AInput    { actChan :: String, actBind :: String, actBindTyp :: TypeExpr, actChanIndex :: Int, actBindIndex :: Int, actLoc :: Location }
+  | ANew      { actBind :: String, actBindIndex :: Int, actTyp :: TypeExpr, actLoc :: Location }
+  | ALet      { actBind :: String, actBindIndex :: Int, actTyp :: TypeExpr, actVal :: Expr, actLoc :: Location }
+  | ASpawn    { actModule :: String, actName :: String, actArgs :: [Expr], actLoc :: Location }
+  | APrim     { actModule :: String, actName :: String, actArgs :: [Expr], actLoc :: Location }
 
 -- | To spawn or (possibly recursively) call a process definition, the 'Definition' type defines
 -- a process definition attached with parameter names and types.

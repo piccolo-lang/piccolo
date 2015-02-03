@@ -15,7 +15,6 @@ import Data.List
 import qualified Data.Map as Map
 import Control.Monad.Error
 import Control.Monad.State
-import Debug.Trace
 
 
 type EnvSize = Int
@@ -53,9 +52,9 @@ addVar v = do
     Just i  -> return i
     Nothing -> do
       env <- get
-      let lex = lexicalEnv env
-      put env { lexicalEnv = lex ++ [v] }
-      return $ length lex
+      let lexEnv = lexicalEnv env
+      put env { lexicalEnv = lexEnv ++ [v] }
+      return $ length lexEnv
 
 beforeDefComputation :: [String] -> EnvM ()
 beforeDefComputation args = do
@@ -121,26 +120,27 @@ envProcess proc@PCall { procName = name } = do
 
 envBranch :: Branch -> EnvM Branch
 envBranch br@BTau    {} = do
-  guard <- envExpr $ brGuard br
-  cont  <- envProcess $ brCont br
-  return br { brGuard = guard, brCont = cont }
+  gard <- envExpr $ brGuard br
+  cont <- envProcess $ brCont br
+  return br { brGuard = gard, brCont = cont }
 envBranch br@BOutput {} = do
-  guard <- envExpr $ brGuard br
+  gard    <- envExpr $ brGuard br
   chanInd <- lookupVar $ brChan br
   case chanInd of
     Just i  -> do
+      dat  <- envExpr $ brData br
       cont <- envProcess $ brCont br
-      return br { brGuard = guard, brChanIndex = i, brCont = cont }
+      return br { brGuard = gard, brChanIndex = i, brData = dat, brCont = cont }
     Nothing -> throwError $ SimpleError "var not in scope"
 envBranch br@BInput  {} = do
-  guard <- envExpr $ brGuard br
+  gard    <- envExpr $ brGuard br
   chanInd <- lookupVar $ brChan br
   case chanInd of
     Nothing -> throwError $ SimpleError "var not in scope"
     Just i  -> do
       j <- addVar $ brBind br
       cont <- envProcess $ brCont br
-      return br { brGuard = guard, brChanIndex = i, brBindIndex = j, brCont = cont }
+      return br { brGuard = gard, brChanIndex = i, brBindIndex = j, brCont = cont }
 
 envAction :: Action -> EnvM Action
 envAction act@AOutput {} = do

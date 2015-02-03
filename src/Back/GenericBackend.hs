@@ -9,7 +9,9 @@ are written.
 module Back.GenericBackend where
 
 import Back.SeqAST
+import Back.CodeEmitter
 
+emitCode :: String -> Instr -> EmitterM ()
 emitCode = error "emitCode not yet implemented"
 
 
