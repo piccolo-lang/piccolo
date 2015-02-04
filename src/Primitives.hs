@@ -21,6 +21,8 @@ primTypes :: Map.Map (String,String) (TypeExpr, [TypeExpr])
 primTypes = Map.fromList
   [ (("core/arith", "add"),       (tInt, [tInt, tInt]))
   , (("core/arith", "sub"),       (tInt, [tInt, tInt]))
+  , (("core/arith", "mul"),       (tInt, [tInt, tInt]))
+  , (("core/arith", "div"),       (tInt, [tInt, tInt]))
   , (("core/arith", "mod"),       (tInt, [tInt, tInt]))
   , (("core/arith", "equals"),    (tBool, [tInt, tInt]))
   , (("core/arith", "less_than"), (tBool, [tInt, tInt]))
