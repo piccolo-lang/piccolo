@@ -52,7 +52,6 @@ handleFiles _ [f] = do
   let ccInc  = ["-I", dataDir ++ "/runtime"]
       ccLib  = ["-L", dataDir ++ "/runtime"]
       ccArgs = ["-std=c11", "-xc", "-"] ++ ccInc ++ ccLib ++ ["-lpiccolort", "-lpthread"]
-  putStrLn $ "invoking: gcc -std=c11 -xc - " ++ show ccInc ++ show ccLib ++ "-lpiccolort -lpthread"
   (Just ccStdin, _, _, ccProc) <- createProcess (proc "gcc" ccArgs) { std_in  = CreatePipe
                                                                     , std_out = UseHandle stdout
                                                                     , std_err = UseHandle stderr

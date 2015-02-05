@@ -1,5 +1,5 @@
 a.out
-runtime/.o
+runtime/*.o
 runtime/libpiccolort.a
 cabal.sandbox.config
 .cabal-sandbox

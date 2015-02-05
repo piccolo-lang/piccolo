@@ -7,7 +7,6 @@ Pre-requisites
 - The GHC compiler
 - cabal (>= 1.18)
 - The gcc compiler
-- [The piccolo runtime library](https://github.com/fredokun/libpiccolort/tree/new-piccolo)
 
 How to use
 --------------
