@@ -8,16 +8,11 @@ The piccolo can be invoked with the following options:
 
   * --help or -h                   prints the help
 
-  * --generic or -g                produces generic code
-
-  * --sast<level> or -s<level>     print AST<level> in s-expressions style for debugging purposes
-
-It waits for one or more pi-file names and produces by default C code in a.out.
+It waits for a pi-file name and produces by default binary file a.out.
 -}
 module Main where
 
 import PiccError
---import Front.PilParser
 import Front.Parser
 import Front.AST
 import Front.ASTUtils
@@ -26,60 +21,23 @@ import Middle.Environments
 import Middle.Compilation
 import Back.CodeEmitter
 import qualified Back.CBackend as CBackend
---import qualified Back.GenericBackend as GenericBackend
 
 import System.Environment
 import System.Console.GetOpt
 import System.IO
 import System.Exit
---import System.FilePath.Posix
 import System.Process
---import Control.Monad
 import Data.List
 import Data.Maybe
+
+import Paths_piccolo
+
 
 -- | Main function
 main :: IO ()
 main = do
   (args, files) <- getArgs >>= parseArgs
   handleFiles args files
-
--- | The 'handleFiles' function takes a list of flags and a list of files and compiles them
-{-
-handleFiles :: [Flag] -> [String] -> IO ()
-handleFiles _ [] = return ()
-handleFiles args [f] = do
-  content     <- readFile f
-  ast         <- reportResult $ parseModule content
-  when (SAST SimplePrint  `elem` args) $ do
-    putStrLn "------------------------------ output of the parsed AST"
-    putStrLn (strSExpr [] ast)
-    putStrLn ""
-  typedAst    <- reportResult $ typingPass ast
-  when (SAST PrintTypes   `elem` args) $ do
-    putStrLn "------------------------------ output of the typed AST"
-    putStrLn (strSExpr [PrintTypes] typedAst)
-    putStrLn ""
-  withEnv     <- reportResult $ computingEnvPass typedAst
-  when (SAST PrintIndexes `elem` args) $ do
-    putStrLn "------------------------------ output of the decorated AST"
-    putStrLn (strSExpr [PrintIndexes] withEnv)
-    putStrLn ""
-  seqAst      <- reportResult $ compilePass withEnv
-  if GenericBack `elem` args
-    then do let code  = runEmitterM $ GenericBackend.emitCode (mainDef withEnv) seqAst
-            let fname = getOutputFileName args (replaceExtension f "out")
-            hOut <- openFile fname WriteMode
-            hPutStr hOut code
-            hClose hOut
-    else do let code = runEmitterM $ CBackend.emitCode (mainDef withEnv) seqAst
-            let fname = getOutputFileName args (replaceExtension f "c")
-            hOut <- openFile fname WriteMode
-            hPutStr hOut code
-            hClose hOut
-  where mainDef m = delete '/' (modName m) ++ "_Main"
-handleFiles _ _ = error "one file at once please..."
--}
 
 handleFiles :: [Flag] -> [String] -> IO ()
 handleFiles _ [] = return ()
@@ -89,15 +47,19 @@ handleFiles _ [f] = do
   typedAst <- reportResult $ typingPass ast
   withEnv  <- reportResult $ computingEnvPass typedAst
   seqAst   <- reportResult $ compilePass withEnv
-  let code = runEmitterM $ CBackend.emitCode (mainDef withEnv) seqAst
-  --putStrLn code
-  (Just gccStdin, _, _, gccProc) <- createProcess (proc "gcc" ["-std=c11", "-xc", "-", "-lpiccolort", "-lpthread"]) { std_in  = CreatePipe
-                                                                            , std_out = UseHandle stdout
-                                                                            , std_err = UseHandle stderr
-                                                                            }
-  hPutStr gccStdin code
-  hClose gccStdin
-  _ <- waitForProcess gccProc
+  let code   = runEmitterM $ CBackend.emitCode (mainDef withEnv) seqAst
+  dataDir  <- getDataDir
+  let ccInc  = ["-I", dataDir ++ "/runtime"]
+      ccLib  = ["-L", dataDir ++ "/runtime"]
+      ccArgs = ["-std=c11", "-xc", "-"] ++ ccInc ++ ccLib ++ ["-lpiccolort", "-lpthread"]
+  putStrLn $ "invoking: gcc -std=c11 -xc - " ++ show ccInc ++ show ccLib ++ "-lpiccolort -lpthread"
+  (Just ccStdin, _, _, ccProc) <- createProcess (proc "gcc" ccArgs) { std_in  = CreatePipe
+                                                                    , std_out = UseHandle stdout
+                                                                    , std_err = UseHandle stderr
+                                                                    }
+  hPutStr ccStdin code
+  hClose ccStdin
+  _ <- waitForProcess ccProc
   return ()
   where mainDef m = delete '/' (modName m) ++ "_Main"
 handleFiles _ _ = error "one file at once please..."

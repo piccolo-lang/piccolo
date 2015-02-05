@@ -1,5 +1,6 @@
-.DS_Store
-*.cmi
-*.cmo
-*.annot
-*.output
+a.out
+runtime/.o
+runtime/libpiccolort.a
+cabal.sandbox.config
+.cabal-sandbox
+dist

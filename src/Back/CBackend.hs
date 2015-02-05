@@ -15,7 +15,7 @@ import           Data.List        (delete)
 
 emitCode :: String -> Instr -> EmitterM ()
 emitCode mainName instr = do
-  emitLn "#include <piccolo/runtime.h>"
+  emitLn "#include <runtime.h>"
   emitLn ""
   emitDecls instr
   emitLn ""
