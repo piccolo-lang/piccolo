@@ -1,11 +1,13 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <pthread.h>
 #include "scheduler_impl.h"
 #include "pithread_impl.h"
 #include "queue_impl.h"
 #include "gc2_impl.h"
 #include "errors_impl.h"
+#include "logger_impl.h"
 
 PICC_SchedPool *PICC_schedpool_alloc()
 {
@@ -47,9 +49,21 @@ void PICC_schedpool_master(PICC_SchedPool *sp, int std_gc_fuel,
 
   while (sp->running) {
     while ((current = PICC_readyqueue_pop_front(sp->ready))) {
+      
+      // TODO: signal slaves that there is some work to be done!
+      /*if (PICC_readyqueue_size(sp->ready) >= 1 && sp->nb_waiting_slaves > 0) {
+        pthread_mutex_lock(sp->lock);
+        pthread_cond_signal(sp->cond);
+        pthread_mutex_unlock(sp->lock);
+      }*/
+
+      PICC_LOG("[MASTER] start %p\n", current);
+
       do {
         current->proc(sp, current);
       } while (current->status == PICC_STATUS_CALL);
+
+      PICC_LOG("[MASTER] end   %p\n", current);
 
       if (current->status == PICC_STATUS_ENDED) {
         PICC_pithread_free(current);
@@ -91,12 +105,18 @@ void PICC_schedpool_master(PICC_SchedPool *sp, int std_gc_fuel,
 void *PICC_schedpool_slave(PICC_SchedPool *sp)
 {
   PICC_PiThread *current;
+  pthread_t slave_id = pthread_self();
 
   while (sp->running) {
     while ((current = PICC_readyqueue_pop_front(sp->ready))) {
+
+      PICC_LOG("[SLAVE %u] start %p\n", slave_id, current);
+
       do {
         current->proc(sp, current);
       } while (current->status == PICC_STATUS_CALL);
+
+      PICC_LOG("[SLAVE %u] end   %p\n", slave_id, current);
 
       if (current->status == PICC_STATUS_ENDED) {
         PICC_pithread_free(current);
@@ -110,11 +130,13 @@ void *PICC_schedpool_slave(PICC_SchedPool *sp)
       }
     }
 
+    PICC_LOG("[SLAVE %u] now waiting\n", slave_id);
     pthread_mutex_lock(sp->lock);
     sp->nb_waiting_slaves++;
     pthread_cond_wait(sp->cond, sp->lock);
     sp->nb_waiting_slaves--;
     pthread_mutex_unlock(sp->lock);
+    PICC_LOG("[SLAVE %u] awaken\n", slave_id);
   }
 
   return NULL;

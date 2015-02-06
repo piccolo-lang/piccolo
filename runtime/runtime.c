@@ -5,12 +5,15 @@
 #include "runtime.h"
 #include "pithread_impl.h"
 #include "scheduler_impl.h"
+#include "logger_impl.h"
 #include "errors.h"
 
 void PICC_main(int nb_core_threads, PICC_PiThreadProc *entrypoint,
                int std_gc_fuel, int quick_gc_fuel, int active_factor,
                int entry_env_length, int entry_enabled_length)
 {
+  PICC_logger_open();
+
   PICC_SchedPool *sp = PICC_schedpool_alloc();
 
   int status;
@@ -44,4 +47,6 @@ void PICC_main(int nb_core_threads, PICC_PiThreadProc *entrypoint,
 
   free(threads);
   PICC_schedpool_free(sp);
+
+  PICC_logger_close();
 }
