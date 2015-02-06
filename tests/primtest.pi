@@ -1,5 +1,0 @@
-module Test/PingPong
-
-def PingPong(i:chan<string>,o:chan<string>,msg:string) = i?(m), #core/arith:add(m, 2), PingPong(o,i,m)
-
-def Main() = new(c1:chan<string>),new(c2:chan<string>),spawn{PingPong(c1,c2,"<PING>")}, c1!"<PONG>", PingPong(c2,c1,"<PONG>")

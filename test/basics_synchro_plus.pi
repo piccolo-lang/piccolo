@@ -1,0 +1,14 @@
+module Basics/Prim
+
+def P(c:chan<int>) =
+  [false] tau, end +
+  [true] c?(x), #core/io:print_int(x), end
+
+def Q(c:chan<int>, x:int) =
+  [#core/arith:less_than(x, 1000)] c!42, end +
+  [false] tau, end
+
+def Main() =
+  new(c:chan<int>),
+  spawn{P(c)},
+  Q(c, 42)

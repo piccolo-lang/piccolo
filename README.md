@@ -1,35 +1,26 @@
-piccolo parallel compiler
+Piccolo
 =========================
+
+Pre-requisites
+--------------
+
+- The GHC compiler
+- cabal (>= 1.18)
+- The gcc compiler
 
 How to use
 --------------
 
-First, compile the sources in src/ with make. Compile also the libpiccort project with make in the libpiccort directory.
+### Installation:
 
-Then, you will find some tests to run in the tests/ directory. To run a test, for example Fibonacci.pth, type (once in the tests directory):
+```
+cabal install
+```
 
-	make Fibonacci.run
- 
-It will produce Fibonacci.run executable, run it with ./Fibonacci.run
+### Using the piccolo compiler:
 
-If you want to get the Fibonacci.c, type instead:
+```
+piccolo file.pi
+```
 
-	make Fibonacci.c
-
-The picc and libpirt directories must be located in the same parent directory. The arborescence must look like:
-
-- parent_folder/
-    - picc/
-        - src/
-        - tests/
-    - libpirt/
-        - include/
-        -  src/
-        - tests/   
-
-
-
-
-Enjoy. 
-
-The Piccolo team
+This will hopefully generate the executable *a.out* in the current directory.

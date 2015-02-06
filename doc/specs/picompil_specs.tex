@@ -1,9 +1,9 @@
 \documentclass[a4paper,11pt]{article}
 
 \usepackage[utf8]{inputenc}
-\usepackage{color}
+\usepackage{xcolor}
 \usepackage{graphicx}
-\usepackage[pdfborder = {0 0 0}]{hyperref}
+\usepackage[hidelinks=true, pdfborder = {0 0 .1}, linkbordercolor= {gray}]{hyperref}
 
 \definecolor{compilecolor}{gray}{0.45}
 \definecolor{synchrocolor}{rgb}{0.1, 0.2, 0.8}
@@ -23,11 +23,12 @@
 \newcommand{\pindent}{\hspace{2em}\=}
 \newcommand{\compiletime}[1]{\textcolor{compilecolor}{#1}}
 \newcommand{\synchro}[1]{\textcolor{synchrocolor}{#1}}
+\newcommand{\code}[1]{\textsf{#1}}
 
 \newcommand{\algotitle}[1]{\noindent\\ \noindent#1\par\nobreak\vspace{3pt}\hrule\vspace{6pt}}
 \newcommand{\algosection}[1]{
   \phantomsection
-  \addcontentsline{toc}{subsection}{#1}
+%  \addcontentsline{toc}{subsubsection}{#1}
   \algotitle{#1}
 }
 \newcommand{\myref}[1]{
@@ -68,21 +69,8 @@ $ $\newline
 
 
 %%%%%%%%%%%%%%% Section DATA STRUCTURES %%%%%%%%%%%
-\section{Data structures and operations}
+\section{Basic data structures and operation signatures}
 
-\label{SchedPool}
-\algosection{SchedPool}
-\begin{program}
-  \kw{record} SchedPool \{ \\
-  \pindent ready : \synchro{\myref{ConcurrentReadyQueue}}[\myref{PiThread}], \\
-  \> wait : \synchro{\myref{ConcurrentWaitQueue}}[\myref{PiThread}] \\
-  \> \synchro{lock : Mutex} \\
-  \> \synchro{cond : Condition} \\
-  \> nb\_slaves : \kw{int} \\
-  \> nb\_waiting\_slaves : \kw{int} \\
-  \} \\ \\
-  \myref{GC2} : SchedPool $\rightarrow$ \kw{boolean}
-\end{program}
 
 \label{PiThread}
 \algosection{PiThread}
@@ -90,7 +78,7 @@ $ $\newline
   \kw{record} PiThread \{ \\
   \pindent status : \{STATUS\_RUN, STATUS\_CALL, STATUS\_WAIT, STATUS\_ENDED\}, \\
   \> enabled : Array[\kw{boolean}], \\
-  \> knows : \myref{KnowsSet}[\myref{Channel}], \\
+  \> knows : \myref{KnowSet}[\myref{Channel}], \\
   \> env : Array[Object], \\
   \> commit : Commit \\
   \> commits : Set[Commit] \\
@@ -104,8 +92,6 @@ $ $\newline
   \myref{CanAwake} : \myref{PiThread} x \myref{Commit} $\rightarrow$ \kw{boolean} \\
   \myref{Awake} : \myref{SchedPool} x \myref{PiThread} x Commit $\rightarrow$ \kw{void}
 \end{program}
-
-\newpage
 
 \label{Channel}
 \algosection{Channel}
@@ -160,8 +146,6 @@ $ $\newline
   \}
 \end{program}
 
-\newpage
-
 \algosection{CommitList}
 \begin{program}
   /* CommitListAdd add the selected element at the end of the CommitList */ \\
@@ -200,27 +184,954 @@ $ $\newline
   \myref{WaitQueueMaxActiveReset} : WaitQueue $\rightarrow$ \kw{int}
 \end{program}
 
-\newpage
-
-\algosection{KnowsSet}
+\algosection{KnowSet}
 \begin{program}
   \kw{type} KnowsState : \{UNKNOWN, KNOWN, FORGET\} \\ \\
-  /* KnowsSetKnows returns a subset of all KNOWN-state in a KnowsSet */ \\
-  \kw{abstract} KnowsSetKnows : KnowsSet $\rightarrow$ KnowsSet \\ \\
-  /* KnowsSetForget returns a subset of all FORGET-state in a KnowsSet */ \\
-  \kw{abstract} KnowsSetForget : KnowsSet $\rightarrow$ KnowsSet \\ \\
-  /* KnowsSetForgetToUnknown switches an element of a KnowsSet from the FORGET-State to the UNKNOWN-state */ \\
-  \kw{abstract} KnowsSetForgetToUnknown : KnowsSet x \myref{Channel} \kw{var} $\rightarrow$ \kw{void} \\ \\
-  /* KnowsSetForgetAll switches all KNOWN-state elements of a KnowsSet to FORGET-state */ \\
-  \kw{abstract} KnowsSetForgetAll : KnowsSet $\rightarrow$ \kw{void} \\ \\
-  /* KnowsRegister looks for a channel in a KnowsSet : \\
-  \pindent * if the channel is in the KnowsSet in KNOWN-state, it returns false \\
-  \> * if the channel is in the KnowsSet in FORGET-state, it switches it to KNOWN then returns false \\
-  \> * else it adds the channel in the KnowsSet (KNOWS-state) then returns true */ \\
-  \kw{abstract} KnowsRegister : KnowsSet x \myref{Channel} \kw{var} $\rightarrow$ \kw{boolean}
+  /* KnowSetKnows returns a subset of all KNOWN-state in a KnowSet */ \\
+  \kw{abstract} KnowSetKnows : KnowSet $\rightarrow$ KnowSet \\ \\
+  /* KnowSetForget returns a subset of all FORGET-state in a KnowSet */ \\
+  \kw{abstract} KnowSetForget : KnowSet $\rightarrow$ KnowSet \\ \\
+  /* KnowSetForgetToUnknown switches an element of a KnowSet from the FORGET-State to the UNKNOWN-state */ \\
+  \kw{abstract} KnowSetForgetToUnknown : KnowSet x \myref{Channel} \kw{var} $\rightarrow$ \kw{void} \\ \\
+  /* KnowSetForgetAll switches all KNOWN-state elements of a KnowSet to FORGET-state */ \\
+  \kw{abstract} KnowSetForgetAll : KnowSet $\rightarrow$ \kw{void} \\ \\
+  /* KnowsRegister looks for a channel in a KnowSet : \\
+  \pindent * if the channel is in the KnowSet in KNOWN-state, it returns false \\
+  \> * if the channel is in the KnowSet in FORGET-state, it switches it to KNOWN then returns false \\
+  \> * else it adds the channel in the KnowSet (KNOWS-state) then returns true */ \\
+  \kw{abstract} KnowsRegister : KnowSet x \myref{Channel} \kw{var} $\rightarrow$ \kw{boolean}
 \end{program}
 
-\newpage
+
+%%%%%%%%%%%%%%% Section SYNTAX %%%%%%%%%%%%%%%
+
+\section{Syntax}
+
+
+\begin{tabular}{llll}
+Module & ::= & \kw{module} $moduleId$ Definition$+$ & (module definition) \\
+\\
+Definition & ::= &  \kw{def} $D(x_1:T_1, ..., x_n:T_n) = $ Process & (process definition) \\
+\\
+Process & ::= & \kw{end} & (end process) \\
+        &    &  $|$ $D(e_1$:T$_1, ..., e_n$:T$_n)$ & (tail-call process) \\
+        &    &  $|$ PrefixProcess & (prefixed process) \\
+        &    &  $|$ ChoiceProcess & (choice process) \\
+\\
+PrefixProcess & ::= & $chan$\code{!}$expr$ \code{,} Process & (output prefix) \\
+              &     & $|$ $chan$\code{?}$(x:T)$ \code{,} Process & (input prefix) \\
+              &     & $|$ \kw{new}$(chan:T)$ \code{,} Process & (new channel prefix) \\
+              &     & $|$ \kw{spawn}\code{\{}$(D(e_1$:T$_1, ..., e_n$:T$_n))$\code{\}} \code{,} Process & (spawn process prefix) \\
+              &     & $|$ \kw{let}$(x:T=e)$\code{,} Process & (let prefix) \\
+              &     & $|$ \code{\#}$prim(e_1$:T$_1, ..., e_n$:T$_n)$\code{,} Process & (primitive call prefix) \\
+\\
+ChoiceProcess & ::= & $\sum_{i=0}^{n-1}$\code{[}Expression$_i$\code{]} ProcessBranch$_i$ \\
+\\
+ProcessBranch & ::= & \kw{tau} \code{,} Process & (silent branch) \\
+              &     & $|$ $chan$\code{!}$val$ \code{,} Process & (output branch) \\
+              &     & $|$ $chan$\code{?}$(x:T)$ \code{,} Process & (input branch) \\
+\\
+\\
+Expression & ::= & Constant \\
+           &     & $|$ $v$  & (free variable) \\
+           &     & $|$ \kw{op} Expression & (unary operator) \\
+           &     & $|$ Expression$_l$ \kw{op} Expression$_r$  & (binary operator) \\
+           &     & $|$ \code{\#}$vprim(e_1$:T$_1, ..., e_n$:T$_n)$ & (value primitive) \\
+\end{tabular}
+
+
+%%%%%%%%%%%%%%% Section COMPILATION %%%%%%%%%%%%%%%
+\section{Compilation outlines and runtime functions}
+
+\subsection{Compilation of expressions}
+
+\label{CompileExpr}
+\algosection{Compilation outline for constants}
+\begin{program}
+  \compiletime{CompileExpr(\kw{true}) $\rightarrow$} \\
+  $pt.val \leftarrow$ \kw{true}
+\end{program}
+
+\begin{program}
+  \compiletime{CompileExpr(\kw{false}) $\rightarrow$} \\
+  $pt.val \leftarrow$ \kw{false}
+\end{program}
+
+\algosection{Compilation outline for var}
+\begin{program}
+  \compiletime{CompileExpr($v$ : \kw{var}) $\rightarrow$} \\
+  $pt.val \leftarrow pt.env[v]$
+\end{program}
+
+\algosection{Compilation outline for unary operators}
+\begin{program}
+  \compiletime{CompileExpr(\kw{op} $b$) $\rightarrow$} \\
+  \compiletime{CompileExpr($b$)} \\
+  $pt.val \leftarrow$ \kw{op} $pt.val$
+\end{program}
+
+\algosection{Compilation outline for binary operators}
+\begin{program}
+  \compiletime{CompileExpr($a$ \kw{and} $b$) $\rightarrow$} \\
+  \compiletime{CompileExpr($a$)} \\
+  \kw{if} $pt.val$ \kw{then} \\
+  \pindent\compiletime{CompileExpr($b$)} \\
+  \kw{endif}
+\end{program}
+
+\begin{program}
+  \compiletime{CompileExpr($a$ \kw{or} $b$) $\rightarrow$} \\
+  \compiletime{CompileExpr($a$)} \\
+  \kw{if} \kw{not} $pt.val$ \kw{then} \\
+  \pindent\compiletime{CompileExpr($b$)} \\
+  \kw{endif}
+\end{program}
+
+\begin{program}
+  \compiletime{CompileExpr($a$ \kw{op} $b$) $\rightarrow$} \\
+  \kw{begin} \\
+  \pindent\compiletime{CompileExpr($a$)} \\
+  \>\kw{var} $temp$ : \kw{Value} \\
+  \>$temp \leftarrow pt.val$ \\
+  \>\compiletime{CompileExpr($b$)} \\
+  \>$pt.val \leftarrow pt.val$ \kw{op} $temp$ \\
+  \kw{end}
+\end{program}
+
+\algosection{Compilation outline for value primitives}
+\begin{program}
+\compiletime{CompileExpr(\code{\#}$vprim(e_1$:T$_1, ..., e_n$:T$_n)$) $\rightarrow$} \\
+  \kw{begin} \\
+  \pindent \compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $1$ \kw{to} $n$ \kw{do}} \\
+  \> \pindent \kw{var} $v_i$ : T$_i$ \\
+  \> \> \compiletime{CompileExpr($e_i$)} \\
+  \> \> $v_i \leftarrow pt.val$ \\
+  \> \compiletime{\kw{cendfor}} \\
+  \> $pt.val \leftarrow$ \code{\#}$vprim$($v_1$, $\ldots$, $v_n$) \\
+  \kw{end}
+\end{program}
+
+
+\subsection{Compilation of Processes}
+
+\algosection{Compilation outline for definition}
+\begin{program}
+  \compiletime{Compile(\kw{def} $D(x_1, ..., x_n) = P$) $\rightarrow$} \\ \\
+  \compiletime{\kw{cvar} $D\_entry$ : \kw{DynLabel}} \\
+  \compiletime{$D\_entry \leftarrow$ GenerateLabel()} \\
+  \kw{function} $D$(\myref{SchedPool} $scheduler$, \myref{PiThread} $pt$) \{ \\
+  \pindent\kw{switch} $pt.pc$ \{ \\
+  \>\kw{case} $@D\_entry:$ \\
+  \>\pindent\compiletime{Compile($P$)} \\
+  \>\} \\
+  \}
+\end{program}
+
+\algosection{Compilation outline for termination}
+\begin{program}
+  \compiletime{Compile(\kw{end}) $\rightarrow$} \\ \\
+  ProcessEnd($pt$, STATUS\_ENDED) \\
+  \kw{return}
+\end{program}
+
+\label{ProcessEnd}
+\algosection{Runtime: process end}
+
+\begin{program}
+  \kw{procedure} ProcessEnd($pt$ : \myref{PiThread}, $status$ : \myref{ProcessStatus})\\
+\kw{begin} \\
+\pindent  \kw{foreach} $chan$ : \myref{Channel} in \myref{KnowSetKnows}($pt.knows$) \\
+\> \pindent\myref{ChannelDecRefCount}($chan$) \\
+\>  \kw{endfor} \\
+\>  \kw{foreach} $chan$ : \myref{Channel} in \myref{KnowSetForget}($pt.knows$) \\
+\>  \pindent\myref{ChannelDecRefCount}($chan$) \\
+\>  \kw{endfor} \\
+\>  $pt.status \leftarrow status$ \\
+\kw{end}
+\end{program}
+
+
+\algosection{Compilation outline for call}
+\begin{program}
+  \compiletime{Compile($D(v_1$:T$_1, ..., v_n$:T$_n)) \rightarrow$} \\ \\
+  \kw{begin} \\
+  \pindent\myref{KnowSetForgetAll}($pt.knows$) \\
+  \>\\
+  \>\compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $1$ \kw{to} $n$} \\
+  \>\pindent var $v_i$ : $T_i$ \\
+  \>\>\compiletime{\myref{CompileExpr}($v_{i}$)} \\
+  \>\>$v_i \leftarrow pt.val$ \\
+  \>\compiletime{\kw{cendfor}} \\
+  \>\\
+  \>\compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $1$ \kw{to} $n$} \\
+  \>\pindent $pt.env[i-1] \leftarrow v_i$ \\
+  \>\>\compiletime{\kw{cif} ischannel(T$_{i}$) \kw{then}} \\
+  \>\>\pindent\myref{KnowsRegister}($pt.knows, v_i$) \\
+  \>\>\compiletime{\kw{cendif}} \\
+  \>\compiletime{\kw{cendfor}} \\
+  \>\\
+  \>$pt.proc \leftarrow D$ \\
+  \>$pt.pc \leftarrow @D\_entry$ \\
+  \>$pt.status \leftarrow$ STATUS\_CALL \\
+  \>\kw{return} \\
+  \kw{end}
+\end{program}
+
+\subsection{Compilation of prefixed processes}
+
+\algosection{Compilation of prefixed process}
+\begin{program}
+  \compiletime{Compile($\alpha$,$P$)} $\rightarrow$ \\
+\compiletime{CompilePrefix($\alpha$)} \\
+\compiletime{Compile($P$)}\\
+\end{program}
+
+\algosection{Compilation outline for output prefix}
+\begin{program}
+  \compiletime{CompilePrefix($c!e$:T)} $\rightarrow$ \\ 
+  \compiletime{cvar @prefix\_start : dynLabel} \\
+  \compiletime{@prefix\_start $\leftarrow$ GenerateLabel()} \\
+  \compiletime{cvar @prefix\_cont : dynLabel} \\
+  \compiletime{@prefix\_cont $\leftarrow$ GenerateLabel()} \\
+  \kw{case} @prefix\_start: \\
+  \kw{begin} \\
+   \pindent \kw{var} $ok$ : \kw{bool} \\
+   \> \kw{var} $outchan$ : \myref{Channel} \\
+   \> $outchan \leftarrow pt.env[c]$ \\
+   \> $ok \leftarrow $ ProcessAcquireChannel($pt$, $outchan$) \\
+  \> \kw{if} \kw{not} $ok$  \kw{then} \\
+  \> \pindent $pt.pc \leftarrow $ @prefix\_start \\
+  \>  \> ProcessYield($pt$) \\
+  \>  \> \kw{return}\\
+  \>  \kw{endif} \\
+   \>\kw{var} $commit$ : \myref{InCommit} \\
+  \> $commit \leftarrow$ TryOutputAction($outchan$, $\& tryResult$)\\
+  \>\kw{if} $tryResult$ = ENABLED \kw{then} \\
+  \>\pindent \synchro{ReleaseChannel($outchan$)} \\
+  \>\>\compiletime{\myref{CompileExpr}($e$)} \\
+  \>\>$commit.thread.env[commit.refval] \leftarrow pt.val$ \\
+  \>\>\myref{Awake}($scheduler$, $commit.thread$, $commit$) \\
+  \>\>\kw{goto} @prefix\_cont \\
+ \> \kw{elseif} $tryResult$ = DISABLED \kw{then} \\
+ \> \> \synchro{ReleaseChannel($outchan$)} \\
+ \> \> \myref{ProcessEnd}($pt$, STATUS\_BLOCKED) \\
+ \> \> \kw{return} \\
+ \> \kw{endif}\\
+\\
+  \>\kw{var} $eval$ : \kw{function}($pt$ : PiThread) : Value = \\
+  \>\pindent\kw{begin} \\
+  \>\>\pindent\compiletime{\myref{CompileExpr}($v$)} \\
+  \>\>\>\kw{return} $pt.val$ \\
+  \>\> \kw{end} \\
+  \> \myref{RegisterOutputCommitment}($pt, outchan, eval, @prefix\_cont$) \\
+  \>\synchro{Acquire($pt.lock$)} \\
+  \>\synchro{\myref{ReleaseChannel}($outchan$)} \\
+  \>\synchro{\myref{ProcessWait}($pt$)} \\
+  \>\kw{return} \\
+  \kw{end} \\
+ \kw{case} \@prefix\_cont:
+\end{program}
+
+\algosection{Runtime : try output action}
+\begin{program}
+  \kw{type} TryResult = \{ DISABLED, ENABLED, COMMIT \} \\
+\\
+  \kw{function} TryOutputAction(\=$pt$ : \myref{PiThread}, $outchan$ : \myref{Channel}, $tryResult$: \&TryStatus) : \myref{InCommit} \\
+  \kw{begin} \\
+  \pindent\kw{if} $outchan.globalrc = 1$ \kw{then} \\
+  \>\pindent$tryResult \leftarrow$ DISABLED \\
+  \>\>\kw{return} \kw{null} \\
+  \>\kw{endif} \\
+  \>\kw{var} $commit$ : \myref{InCommit} \\
+  \>\kw{var} $ok$ : \{CANNOT\_ACQUIRE, VALID\_COMMITMENT, INVALID\_COMMITMENT\} \\
+  \>\\
+  \>\kw{do} \\
+  \>\pindent$commit \leftarrow$ \myref{FetchInputCommitment}($outchan$) \\
+  \>\>\kw{if} $commit =$ \kw{null} \kw{then} \\
+  \>\>\pindent$tryresult \leftarrow$ COMMIT \\
+  \>\>\>\kw{return} \kw{null} \\
+  \>\>\kw{endif} \\
+
+  \>\>\kw{do} \\
+  \>\>\pindent$ok \leftarrow$ \myref{CanAwake}($commit.thread, commit$) \\
+  \>\>\>\kw{if} $ok =$ CANNOT\_ACQUIRE \kw{then} \\
+  \>\>\>\pindent\synchro{lowLevelYield()} \\
+  \>\>\>\kw{endif} \\
+  \>\>\kw{while} $ok =$ CANNOT\_ACQUIRE \\
+  \>\>\\
+  \>\>\kw{if} $ok =$ VALID\_COMMITMENT \kw{then} \\
+  \>\>\> $tryResult \leftarrow$ ENABLED \\
+  \>\>\> \kw{return} commit \\
+  \>\>\kw{endif} \\
+  \>\kw{while} $outchan.incommits \neq \{\}$ \\
+  \> errorDeadCodeReached() \\
+  \kw{end}
+\end{program}
+
+\algosection{Runtime : Process acquire channel}
+\begin{program}
+  \kw{function} ProcessAcquireChannel($pt$ : \myref{PiThread}, $outchan$ : \myref{Channel}) : \kw{bool} \\
+\kw{begin} \\
+  \pindent \kw{while} \kw{not} \synchro{TryAcquireChannel($outchan$)} \kw{do} \\
+  \> \pindent $pt.fuel \leftarrow pt.fuel - 1$ \\
+  \> \> \kw{if} $pt.fuel = 0$ \kw{then} \\
+  \> \> \pindent \kw{return} \kw{false} \\
+  \> \> \kw{endif} \\
+  \> \> \synchro{low\_level\_yield()} \\
+  \> \kw{endwhile} \\
+  \> \kw{return} \kw{true} \\
+\kw{end} 
+
+\end{program}
+
+
+\label{ProcessWait}
+\algosection{Runtime: process wait}
+\begin{program}
+  \kw{procedure} ProcessWait($pt$ : \myref{PiThread})\\
+\kw{begin} \\
+\pindent  $pt.pc \leftarrow$ INVALID\_PC \\
+\>  $pt.fuel \leftarrow$ FUEL\_INIT \\
+\>  \kw{foreach} $chan$ : \myref{Channel} in \myref{KnowSetForget}($pt.knows$) \\
+\>  \pindent\myref{ChannelDecRefCount}($chan$) \\
+\>  \>\myref{KnowSetForgetToUnknown}($pt.knows, chan$) \\
+\>  \kw{endfor} \\
+\>  $pt.status \leftarrow$ STATUS\_WAIT \\
+\>  \synchro{\myref{WaitQueuePush}($scheduler.wait$, $pt$)} \\
+\>  \synchro{Release($pt.lock$)} \\
+\kw{end}
+\end{program}
+
+
+\label{ProcessYield}
+\algosection{Runtime: process yield}
+
+\begin{program}
+  \kw{procedure} ProcessYield($pt$ : \myref{PiThread})\\
+\kw{begin} \\
+\pindent  $pt.fuel \leftarrow$ FUEL\_INIT \\
+\>  \kw{foreach} $chan$ : \myref{Channel} in \myref{KnowSetForget}($pt.knows$) \\
+\>  \pindent\myref{ChannelDecRefCount}($chan$) \\
+\>  \>\myref{KnowSetForgetToUnknown}($pt.knows, chan$) \\
+\>  \kw{endfor} \\
+\>  \synchro{\myref{ReadyQueueAdd}($scheduler.ready, pt$)} \\
+\kw{end}
+\end{program}
+
+\algosection{Compilation outline for input prefix}
+\begin{program}
+  \compiletime{CompilePrefix($c?x$:T) $\rightarrow$} \\ \\
+  \compiletime{cvar @prefix\_start : dynLabel} \\
+  \compiletime{@prefix\_start $\leftarrow$ GenerateLabel()} \\
+  \compiletime{cvar @prefix\_cont : dynLabel} \\
+  \compiletime{@prefix\_cont $\leftarrow$ GenerateLabel()} \\
+  \kw{case} @prefix\_start: \\
+  \kw{begin} \\
+   \pindent \kw{var} $ok$ : \kw{bool} \\
+   \> \kw{var} $inchan$ : \myref{Channel} \\
+   \> $inchan \leftarrow pt.env[c]$ \\
+   \> $ok \leftarrow $ ProcessAcquireChannel($pt$, $inchan$) \\
+  \> \kw{if} \kw{not} $ok$  \kw{then} \\
+  \> \pindent $pt.pc \leftarrow $ @prefix\_start \\
+  \>  \> ProcessYield($pt$) \\
+  \>  \> \kw{return}\\
+  \>  \kw{endif} \\
+  \pindent\kw{var} $commit$ : \myref{OutCommit} \\
+  \> $commit \leftarrow$ TryInputAction($inchan$, $\& tryResult$) \\
+  \>\kw{if} $tryResult =$ ENABLED \kw{then} \\
+  \>\pindent \synchro{ReleaseChannel($inchan$)} \\
+  \>\> $pt.env[x] \leftarrow$ commit.evalfunc($commit.thread$) \\
+  \>\>\compiletime{\kw{cif} ischannel(T) \kw{then}} \\
+  \>\>\pindent\kw{if} \myref{KnowsRegister}($pt.knows, pt.env[x]$) \kw{then} \\
+  \>\>\>\pindent \myref{ChannelRef}($pt.env[x]$) \\
+  \>\>\>\kw{endif} \\
+  \>\>\compiletime{\kw{cendif}} \\
+  \>\>\myref{Awake}($scheduler, commit.thread, commit$) \\
+  \>\>\kw{goto} @prefix\_cont \\
+  \>\kw{elseif} $tryResult =$ DISABLED \kw{then} \\
+  \>\> \synchro{ReleaseChannel($inchan$)} \\
+ \> \> \myref{ProcessEnd}($pt$, STATUS\_BLOCKED) \\
+ \> \> \kw{return} \\
+  \>\kw{endif} \\
+\\
+  \> \myref{RegisterInputCommitment}($pt, inchan, x, @prefix\_cont$) \\
+  \>\synchro{Acquire($pt.lock$)} \\
+  \>\synchro{\myref{ReleaseChannel}($inchan$)} \\
+  \>\synchro{\myref{ProcessWait}($pt$)} \\
+  \>\kw{return} \\
+  \kw{end} \\
+ \kw{case} \@prefix\_cont:
+\end{program}
+
+\algosection{Runtime : try input action}
+\begin{program}
+  \kw{type} TryResult = \{ DISABLED, ENABLED, COMMIT \} \\
+\\
+  \kw{function} TryInputAction($inchan$ : \myref{Channel} , $tryResult$: \&TryResult) : \myref{OutCommit} \\
+  \kw{begin} \\
+  \pindent\kw{if} $inchan.globalrc = 1$ \kw{then} \\
+  \>\pindent$tryResult \leftarrow$ DISABLED \\
+  \>\>\kw{return} \kw{null} \\
+  \>\kw{endif} \\
+  \>\kw{var} $commit$ : \myref{OutCommit} \\
+  \>\kw{var} $ok$ : \{CANNOT\_ACQUIRE, VALID\_COMMITMENT, INVALID\_COMMITMENT\} \\
+  \>\\
+  \>\kw{do} \\
+  \>\pindent$commit \leftarrow$ \myref{FetchOutputCommitment}($inchan$) \\
+  \>\>\kw{if} $commit =$ \kw{null} \kw{then} \\
+  \>\>\pindent$tryresult \leftarrow$ COMMIT \\
+  \>\>\>\kw{return} \kw{null} \\
+  \>\>\kw{endif} \\
+
+  \>\>\kw{do} \\
+  \>\>\pindent$ok \leftarrow$ \myref{CanAwake}($commit.thread, commit$) \\
+  \>\>\>\kw{if} $ok =$ CANNOT\_ACQUIRE \kw{then} \\
+  \>\>\>\pindent\synchro{lowLevelYield()} \\
+  \>\>\>\kw{endif} \\
+  \>\>\kw{while} $ok =$ CANNOT\_ACQUIRE \\
+  \>\>\\
+  \>\>\kw{if} $ok =$ VALID\_COMMITMENT \kw{then} \\
+  \>\>\> $tryResult \leftarrow$ ENABLED \\
+  \>\>\> \kw{return} commit \\
+  \>\>\kw{endif} \\
+  \>\kw{while} $inchan.outcommits \neq \{\}$ \\
+  \> errorDeadCodeReached() \\
+  \kw{end}
+\end{program}
+
+
+\algosection{Compilation outline for channel creation}
+\begin{program}
+  \compiletime{CompilePrefix(\kw{new}($c$)) $\rightarrow$} \\ 
+  $pt.env[c] \leftarrow $ GenerateChannel($pt$) \\
+\end{program}
+
+\label{GenerateChannel}
+\algosection{Runtime : channel generation}
+\begin{program}
+  \kw{function} GenerateChannel($pt$ : \myref{PiThread}) \\
+  \pindent\kw{var} $newchan$ : \myref{Channel} \\
+  \>$newchan \leftarrow$ \kw{new} Channel \\
+  \>$newchan.incommits \leftarrow$ \kw{new} CommitList[\myref{InCommit}] \\
+  \>$newchan.outcommits \leftarrow$ \kw{new} CommitList[\myref{OutCommit}] \\
+  \>$newchan.globalrc \leftarrow 1$ \\ 
+  \>\myref{KnowSetSwitch}($pt.knows, newchan$, KNOWN) \\
+  \> \kw{return} $newchan$ \\
+  \kw{endfunction}
+\end{program}
+
+\algosection{Compilation outline for thread creation}
+\begin{program}
+  \compiletime{CompilePrefix(\kw{spawn}\{D($e_1$:T$_1, ..., e_n$:T$_n$)\}) $\rightarrow$} \\ 
+  \kw{begin} \\
+  \pindent\kw{var} $child$ : \myref{PiThread} \\
+  \>$child \leftarrow$ \myref{GeneratePiThread}(\compiletime{COMPUTED\_ENV\_SIZE}) \\
+  \>\\
+  \>\compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $1$ \kw{to} $n$} \\
+  \>\pindent \kw{var} $v_i$ : Value \\
+  \>\pindent\compiletime{\myref{CompileExpr}($e_i$)} \\
+  \>\>$v_i \leftarrow pt.val$ \\
+  \>\>\compiletime{\kw{cif} ischannel(T$_i$) \kw{then}} \\
+  \>\>\pindent \myref{KnowsRegister}($child.knows, v_i$) \\
+  \>\>\compiletime{\kw{cendif}} \\
+  \>\>$child.env[i-1] \leftarrow v_i$ \\
+  \>\compiletime{\kw{cendfor}} \\
+  \>\\
+  \>$child.proc \leftarrow D$ \\
+  \>$child.pc \leftarrow @D\_entry$ \\
+  \>$child.status \leftarrow$ STATUS\_RUN \\
+  \>\synchro{\myref{ReadyQueuePush}($scheduler.ready, child$)} \\
+  \kw{end}
+\end{program}
+
+\label{GeneratePiThread}
+\algosection{Runtime : thread generation}
+\begin{program}
+  \kw{function} GeneratePiThread($env\_size$ : \kw{int}) \\
+  \pindent\kw{var} $newthread$ : \myref{PiThread} \\
+  \> $newthread \leftarrow$ \kw{new} PiThread($env\_size$) \\
+  \> $newthread.knows \leftarrow$ \kw{new} KnowSet[\myref{Channel}] \\
+  \> $newthread.fuel \leftarrow$ FUEL\_INIT \\
+  \> \kw{return} $newthread$ \\
+  \kw{endfunction}
+\end{program}
+
+\algosection{Compilation outline for let binding}
+\begin{program}
+  \compiletime{CompilePrefix(\kw{let}($x$:T = $e$)) $\rightarrow$} \\ 
+  \compiletime{CompileExpr($e$)} \\
+  $pt.env[x] \leftarrow $ $pt.val$ \\
+\end{program}
+
+\algosection{Compilation outline for prefix primitives}
+\begin{program}
+\compiletime{CompilePrefix(\code{\#}$prim(e_1$:T$_1, ..., e_n$:T$_n)$) $\rightarrow$} \\
+  \kw{begin} \\
+  \pindent \compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $1$ \kw{to} $n$ \kw{do}} \\
+  \> \pindent \kw{var} $v_i$ : T$_i$ \\
+  \> \> \compiletime{CompileExpr($e_i$)} \\
+  \> \> $v_i \leftarrow pt.val$ \\
+  \> \compiletime{\kw{cendfor}} \\
+  \> \code{\#}$vprim$($v_1$, $\ldots$, $v_n$) \\
+  \kw{end}
+\end{program}
+
+\section{Compilation of choice process}
+
+\algosection{Compilation outline for guarded choice}
+\begin{program}
+  \compiletime{Compile($\sum_{i=0}^{n-1}[g_i]\alpha_i.P_i$) $\rightarrow$} \\
+  \compiletime{cvar @choice\_start : dynLabel} \\
+  \compiletime{@choice\_start $\leftarrow$ GenerateLabel()} \\
+  \compiletime{\kw{cvar} $choice\_cont$ : Array[\kw{dynLabel}]} \\
+  \kw{case} @choice\_start: \\
+  \kw{begin} \\ 
+  \pindent\kw{var} $tryresult$ : \{ENABLED, DISABLED, COMMIT, ABORT\} \\
+  \>\kw{var} $nbdisabled$ : \kw{int} \\
+  \>$nbdisabled \leftarrow 0$ \\
+  \>\kw{var} $chans$ : Array[\myref{Channel}]($n$) \\
+  \>\kw{var} $nbchans$ : \kw{int} \\
+  \>$nbchans \leftarrow 0$ \\
+  \>\compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $0$ \kw{to} $n-1$} \\
+  \>\pindent\compiletime{$choice\_cont[i] \leftarrow$ GenerateLabel()} \\
+  \>\>\compiletime{\myref{CompileExpr}($g_i$)} \\
+  \>\>$pt.enabled[i] \leftarrow pt.val$ \\
+  \>\>\kw{if} $pt.enabled[i]$ \kw{then} \\
+  \>\>\pindent\compiletime{\myref{CompileTryAction}($\alpha_i$)}[$chans$, $nbchans$,$tryResult$] \\
+  \>\>\>\kw{if} $tryresult =$ DISABLED \kw{then} \\
+  \>\>\>\pindent$pt.enabled[i] \leftarrow$ \kw{false} \\
+  \>\>\>\>$nbdisabled \leftarrow nbdisabled + 1$ \\
+  \>\>\>\kw{elseif} $tryresult =$ ABORT \kw{then} \\
+  \>\>\>\>\synchro{\myref{ReleaseAllChannels}($chans$, $nbchans$)} \\
+  \>\>\>\> $pt.pc \leftarrow$ @choice\_start \\
+  \>\>\>\> ProcessYield($pt$) \\
+  \>\>\>\> \kw{return} \\
+  \>\>\>\kw{elseif} $tryresult =$ ENABLED \kw{then} \\
+  \>\>\>\pindent\synchro{\myref{ReleaseAllChannels}($chans$, $nbchans$)} \\
+  \>\>\>\pindent$pt.fuel \leftarrow pt.fuel - 1$ \\
+  \>\>\>\>\kw{if} $pt.fuel = 0$ \kw{then} \\
+  \>\>\>\>\pindent $pt.pc \leftarrow choice\_cont[i]$ \\
+  \>\>\>\>\>\myref{ProcessYield}($pt$) \\
+  \>\>\>\>\>\kw{return} \\
+  \>\>\>\>\kw{endif} \\
+  \>\>\>\>\kw{goto} $@choice\_cont[i]$ \\
+  \>\>\>\kw{endif} \\
+    \>\>\kw{else} \\
+  \>\>\pindent$nbdisabled \leftarrow nbdisabled + 1$ \\
+  \>\>\kw{endif} \\
+  \>\compiletime{\kw{cendfor}} \\
+  \>\kw{if} $nbdisabled = n$ \kw{then} \\
+  \>\pindent\synchro{\myref{ReleaseAllChannels}($chans$, $nbchans$)} \\
+  \>\>ProcessEnd($pt$, STATUS\_BLOCKED) \\
+  \>\>\kw{return} \\
+  \>\kw{endif} \\
+  \>\compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $0$ \kw{to} $n-1$} \\
+  \>\pindent\kw{if} $pt.enabled[i]$ \kw{then} \\
+  \>\>\pindent\compiletime{\kw{cif} $\alpha_i$ is $c!v$ \kw{then}} \\
+  \>\>\>\pindent\kw{var} $eval$ : \kw{function}($pt$ : PiThread) : Value \{ \\
+  \>\>\>\>\pindent\kw{begin} \\
+  \>\>\>\>\>\pindent\compiletime{\myref{CompileExpr}($v$)} \\
+  \>\>\>\>\>\>\kw{return} $pt.val$ \\
+  \>\>\>\>\>\kw{end} \\
+  \>\>\>\>\} \\
+  \>\>\>\>\myref{RegisterOutputCommitment}($pt, pt.env[c], eval, choice\_cont[i]$) \\
+  \>\>\>\compiletime{\kw{elseif} $\alpha_i$ is $c?x$ \kw{then}} \\
+  \>\>\>\pindent\myref{RegisterInputCommitment}($pt, pt.env[c], x, choice\_cont[i]$) \\
+  \>\>\>\compiletime{\kw{cendif}} \\
+  \>\>\kw{endif} \\
+  \>\compiletime{\kw{cendfor}} \\
+  \>\synchro{Acquire($pt.lock$)} \\
+  \>\synchro{\myref{ReleaseAllChannels}($chans$, $nbchans$)} \\
+  \>\synchro{\myref{ProcessWait}($pt$:\myref{PiThread})} \\
+  \>\kw{return} \\
+  \>\compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $0$ \kw{to} $n-1$} \\
+  \>\pindent \kw{case} $@choice\_cont[i]:$ \\
+  \>\>\compiletime{Compile($P_i$)} \\
+  \>\compiletime{\kw{cendfor}} \\
+  \kw{end}
+\end{program}
+
+\label{CompileTryAction}
+\algosection{Compilation outline for tau prefix try}
+\begin{program}
+  \compiletime{CompileTryAction(\kw{tau})}[\ldots $tryresult$:\{ENABLED, DISABLED, COMMIT, ABORT\}] $\rightarrow$ \\ \\
+  $tryresult \leftarrow$ ENABLED \\
+\end{program}
+
+\algosection{Compilation outline for output prefix try}
+\begin{program}
+  \compiletime{CompileTryAction($c!v$:T)} $\rightarrow$ \\ 
+  \kw{begin} \\
+  \pindent \kw{var} $outchan$ : \myref{Channel} \\
+  \> $outchan \leftarrow pt.env[c]$ \\
+  \> \kw{if} \kw{not} ChannelAcquireAndRegister($pt$, $outchan$, $chans$, $nbchans$) \kw{then} \\
+  \> \pindent $tryresult \leftarrow$ ABORT \\
+  \> \kw{else} \\
+  \>\>\kw{var} $commit$ : \myref{InCommit} \\
+  \>\> $commit \leftarrow$ TryOutputAction($outchan$, $\& tryResult$)\\
+  \>\>\kw{if} $tryResult$ = ENABLED \kw{then} \\
+  \>\>\pindent\compiletime{\myref{CompileExpr}($v$)} \\
+  \>\>\>$commit.thread.env[commit.refval] \leftarrow pt.val$ \\
+  \>\>\>\myref{Awake}($scheduler$, $commit.thread$, $commit$) \\
+  \>\> \kw{endif}\\
+  \>\kw{endif} \\
+  \kw{end}
+\end{program}
+
+\algosection{Runtime : acquire and register channel if acquired}
+\begin{program}
+  \kw{function} ChannelAcquireAndRegister($pt$ : \myref{PiThread}, $newchan$ : \myref{Channel}, $chans$: Array[\myref{Channel}], $nbchans$ : \&\kw{int}) : \kw{bool} \\
+  \kw{begin}\\
+  \pindent \kw{var} $i$ : \kw{int} \\
+  \> $i \leftarrow$ 0 \\
+  \> \kw{while} $i$ $<$ $nbchans$ \kw{do}\\
+  \> \pindent \kw{if} $chans$[$i$] = $newchan$ \kw{then} \\
+  \> \> \pindent \kw{return} true \\
+  \> \> \kw{endif} \\
+  \> \> $i \leftarrow$ $i$ + 1 \\
+  \> \kw{endwhile} \\
+  \> \kw{if} \kw{not} ProcessAcquireChannel($pt$, $newchan$) \kw{then} \\
+  \>\> \kw{return} false \\
+  \> \kw{endif} \\
+  \> $chans$[$nbchans$] = $newchan$ \\
+  \> $nbchans \leftarrow$ $nbchans$ + 1 \\
+  \> \kw{return} true
+  \kw{end}
+\end{program}
+
+\algosection{Compilation outline for input prefix try}
+\begin{program}
+  \compiletime{CompileTryAction($c?x$:T) $\rightarrow$} \\ 
+  \kw{begin} \\
+  \pindent \kw{var} $inchan$ : \myref{Channel} \\
+  \> $inchan \leftarrow pt.env[c]$ \\
+  \> \kw{if} \kw{not} ChannelAcquireAndRegister($pt$, $inchan$, $chans$, $nbchans$) \kw{then} \\
+  \> \pindent $tryresult \leftarrow$ ABORT \\
+  \> \kw{else} \\
+  \>\>\kw{var} $commit$ : \myref{OutCommit} \\
+  \>\> $commit \leftarrow$ TryInputAction($inchan$, $\& tryResult$) \\
+  \>\>\kw{if} $tryResult =$ ENABLED \kw{then} \\
+  \>\>\pindent $pt.env[x] \leftarrow$ commit.evalfunc($commit.thread$) \\
+  \>\>\>\compiletime{\kw{cif} ischannel(T) \kw{then}} \\
+  \>\>\>\pindent\kw{if} \myref{KnowsRegister}($pt.knows, pt.env[x]$) \kw{then} \\
+  \>\>\>\>\pindent \myref{ChannelIncrRefCount}($pt.env[x]$) \\
+  \>\>\>\>\kw{endif} \\
+  \>\>\>\compiletime{\kw{cendif}} \\
+  \>\>\>\myref{Awake}($scheduler, commit.thread, commit$) \\
+  \>\>\kw{endif} \\
+  \kw{end}
+\end{program}
+
+
+\algosection{Runtime : atomic boolean acquisition}
+\begin{program}
+  \kw{function} Acquire($c$ : AtomicBoolean) \\
+  \pindent\kw{while} CompareAndSwap($c$, \kw{false}, \kw{true}) $\neq$ \kw{false} \\
+  \>\pindent// could not acquire \\
+  \>\>\synchro{low\_level\_yield()} \\
+  \>\kw{endwhile} \\
+  \kw{endfunction}
+\end{program}
+
+\algosection{Runtime : atomic integer release}
+\begin{program}
+  \kw{function} Release($c$ : AtomicBoolean) \\
+  \pindent\kw{if} CompareAndSwap($c$, \kw{true} \kw{false}) $\neq$ \kw{true} \kw{then} \\
+  \>\pindent Crash(KERNEL\_ERROR) \\
+  \>\kw{endif} \\
+  \kw{endfunction}
+\end{program}
+
+\label{FetchInputCommitment}
+\algosection{Runtime : input commitment search}
+\begin{program}
+  \kw{function} FetchInputCommitment($c$ : \myref{Channel}) \\
+  \pindent\kw{var} $current$ : \myref{InCommit} \\
+  \>$current \leftarrow$ \myref{CommitListFetch}($c.incommits$) \\
+  \>\kw{while} $current \neq$ \kw{null} \kw{do} \\
+  \>\pindent\kw{if} \myref{IsValidInCommit}($current$) \kw{then} \\
+  \>\>\pindent\kw{return} $current$ \\
+  \>\>\kw{endif} \\
+  \>\>$current \leftarrow$ \myref{CommitListFetch}($c.incommits$) \\
+  \>\kw{endwhile} \\
+  \>\kw{return} \kw{null} \\
+  \kw{endfunction}
+\end{program}
+
+\label{FetchOutputCommitment}
+\algosection{Runtime : output commitment search}
+\begin{program}
+  \kw{function} FetchOutputCommitment($c$ : \myref{Channel}) \\
+  \pindent\kw{var} $current$ : \myref{OutCommit} \\
+  \>$current \leftarrow$ \myref{CommitListFetch}($c.outcommits$) \\
+  \>\kw{while} $current \neq$ \kw{null} \kw{do} \\
+  \>\pindent\kw{if} \myref{IsValidOutCommit}($current$) \kw{then} \\
+  \>\>\pindent\kw{return} $current$ \\
+  \>\>\kw{endif} \\
+  \>\>$current \leftarrow$ \myref{CommitListFetch}($c.outcommits$) \\
+  \>\kw{endwhile} \\
+  \>\kw{return} \kw{null} \\
+  \kw{endfunction}
+\end{program}
+
+
+\label{RegisterInputCommitment}
+\algosection{Runtime : input commitment register}
+\begin{program}
+  \kw{function} RegisterInputCommitment($pt$: \myref{PiThread}, $c$ : \myref{Channel}, $x$ : \kw{int}, $cont\_pc$ : \kw{int}) \\
+  \pindent\kw{var} $newcommit$ : \myref{InCommit} \\
+  \>$newcommit \leftarrow$ \kw{new} InCommit \\
+  \>$newcommit.thread \leftarrow pt$ \\
+  \>$newcommit.cont\_pc \leftarrow cont\_pc$ \\
+  \>$newcommit.refvar \leftarrow x$\\
+  \>$newcommit.clock \leftarrow pt.clock$ \\
+  \>$newcommit.clockval \leftarrow pt.clock.val$ \\
+  \>$newcommit.channel \leftarrow c$ \\
+  \>\myref{CommitListAdd}($pt.env[c].incommits$, $newcommit$) \\
+  \kw{endfunction}
+\end{program}
+
+\label{RegisterOutputCommitment}
+\algosection{Runtime : output commitment register}
+\begin{program}
+  \kw{function} RegisterOutputCommitment($pt$: \myref{PiThread}, $c$ : \myref{Channel}, $v$ : \kw{function}(\myref{PiThread}), $cont\_pc$ : \kw{int}) \\
+  \pindent\kw{var} $newcommit$ : \myref{OutCommit} \\
+  \>$newcommit \leftarrow$ \kw{new} OutCommit \\
+  \>$newcommit.thread \leftarrow pt$ \\
+  \>$newcommit.cont\_pc \leftarrow cont\_pc$ \\
+  \>$newcommit.evalfunc \leftarrow v$ \\
+  \>$newcommit.clock \leftarrow pt.clock$ \\
+  \>$newcommit.clockval \leftarrow pt.clock.val$ \\
+  \>$newcommit.channel \leftarrow c$ \\
+  \>\myref{CommitListAdd}($pt.env[c].outcommits$, $newcommit$) \\
+  \kw{endfunction}
+\end{program}
+
+\label{IsValidInCommit}
+\algosection{Runtime : input commitment validation}
+\begin{program}
+  \kw{function} IsValidInCommit($commit$ : \myref{InCommit}) \\
+  \pindent\kw{if} $commit.clock = commit.thread.clock$ \kw{then} \\
+  \>\pindent\kw{if} $commit.clockval = commit.thread.clock.val$ \kw{then} \\
+  \>\>\pindent \kw{return} \kw{true} \\
+  \>\>\kw{endif} \\
+  \>\kw{endif} \\
+  \>\kw{return} \kw{false} \\
+  \kw{endfunction}
+\end{program}
+
+\label{IsValidOutCommit}
+\algosection{Runtime : output commitment validation}
+\begin{program}
+  \kw{function} IsValidOutCommit($commit$ : \myref{OutCommit}) \\
+  \pindent\kw{if} $commit.clock = commit.thread.clock$ \kw{then} \\
+  \>\pindent\kw{if} $commit.clockval = commit.thread.clock.val$ \kw{then} \\
+  \>\>\pindent \kw{return} \kw{true} \\
+  \>\>\kw{endif} \\
+  \>\kw{endif} \\
+  \>\kw{return} \kw{false} \\
+  \kw{endfunction}
+\end{program}
+
+
+\label{CanAwake}
+\algosection{Runtime : thread awake test}
+\begin{program}
+  \kw{function} CanAwake($thread$ : \myref{PiThread}, $commit$ : \myref{Commit}) \\
+  \pindent\kw{if} \synchro{\kw{not} TryAcquire($thread.lock$)} \kw{then} \\
+  \>\pindent\kw{return} CANNOT\_ACQUIRE \\
+  \>\kw{endif} \\
+  \>\kw{if} ($commit.clock \neq clock$) \kw{or} ($commit.clockval \neq commit.clock.val$) \kw{then} \\
+  \>\pindent\synchro{Release($thread.lock$)} \\
+  \>\>\kw{return} INVALID\_COMMITMENT \\
+  \>\kw{endif} \\
+  \>\kw{if} $thread.clock.val =$ MAX\_INT \kw{then} \\
+  \>\pindent\kw{var} $oldclock \leftarrow thread.clock$ \\
+  \>\>$thread.clock \leftarrow$ \kw{Null} \\
+  \>\>ReclaimClock($oldclock$) \\
+  \>\>$thread.clock \leftarrow$ \myref{GenerateClock()} \\
+  \>\kw{else} \\
+  \>\pindent$thread.clock.val \leftarrow thread.clock.val + 1$ \\
+  \>\kw{endif} \\
+  \>$thread.commit \leftarrow commit$ \\
+  \>\synchro{Release($thread.lock$)} \\
+  \>\kw{return} VALID\_COMMITMENT \\
+  \kw{endfunction}
+\end{program}
+
+\label{Awake}
+\algosection{Runtime : effective thread awake}
+\begin{program}
+  \kw{function} Awake($scheduler$ : \myref{Scheduler}, $thread$ : \myref{PiThread}) \\
+  \pindent\kw{if} $thread.commit \neq commit$ \kw{then} \\
+  \>\pindent Crash() \\
+  \>\kw{endif} \\
+  \>\synchro{\myref{WaitQueueFetch}($scheduler.wait, thread$)} \\
+  \>$thread.commit \leftarrow$ \kw{null} \\
+  \>$thread.pc \leftarrow commit.cont\_pc$ \\
+  \>$thread.status \leftarrow$ STATUS\_RUN \\
+  \>\synchro{\myref{ReadyQueuePush}($scheduler.ready, thread$)} \\
+  \kw{endfunction}
+\end{program}
+
+\label{GenerateClock}
+\algosection{Runtime : clock generation}
+\begin{program}
+  \kw{function} GenerateClock() \\
+  \pindent\kw{var} $clock$ : \myref{Clock} \\
+  \>$clock \leftarrow$ \kw{new} Clock \\
+  \>$clock.val = 0$ \\
+  \>\kw{return} $clock$ \\
+  \kw{endfunction}
+\end{program}
+
+\label{ChannelIncrRefCount}
+\algosection{Runtime : channel ref count incrementation}
+\begin{program}
+  \kw{function} ChannelIncrRefCount($chan$ : \myref{Channel}) \\
+  \pindent\synchro{Acquire($chan.lock$)} \\
+  \>$chan.globalrc \leftarrow chan.globalrc + 1$ \\
+  \>\synchro{Release($chan.lock$)} \\
+  \kw{endfunction}
+\end{program}
+
+\label{ChanneldDecRefCount}
+\algosection{Runtime : channel ref count decrementation}
+\begin{program}
+  \kw{function} ChannelDecRefCount($chan$ : \myref{Channel}) \\
+  \pindent\synchro{Acquire($chan.lock$)} \\
+  \>$chan.globalrc \leftarrow chan.globalrc - 1$ \\
+  \>\kw{if} $chan.globalrc = 0$ \kw{then} \\
+  \>\pindent\synchro{Release($chan.lock$)} \\
+  \>\> ReclaimChannel($chan$) \\
+  \>\kw{else} \\
+  \>\pindent\synchro{Release($chan.lock$)} \\
+  \>\kw{endif} \\
+  \kw{endfunction}
+\end{program}
+
+\label{Main}
+\algosection{Runtime : program entry point}
+\begin{program}
+  \kw{procedure} Main($nb\_core\_threads$ : \kw{int}, $entrypoint$ : \kw{function}) \\
+  \pindent\kw{var} $schedpool$ : \myref{SchedPool} \\
+  \>$schedpool \leftarrow$ \kw{new} SchedPool \\
+  \>$schedpool.waiting\_slaves \leftarrow 0$ \\
+  \>$schedpool.running \leftarrow$ \kw{true} \\
+  \>\\
+  \>\kw{for} $i$ : \kw{int} \kw{from} $0$ \kw{to} $nb\_core\_threads - 1$ \\
+  \>\pindent ThreadCreate($\myref{SchedulerSlave}, schedpool$) \\
+  \>\>$schedpool.nb\_slaves \leftarrow schedpool.nb\_slaves + 1$ \\
+  \>\kw{endfor} \\
+  \>\\
+  \>\kw{while} $schedpool.wait\_slaves \neq schedpool\_nb\_slaves$ \\
+  \>\pindent\synchro{low\_level\_yield()} \\
+  \>\kw{endwhile} \\
+  \>\\
+  \>\kw{var} $initthread$ : \myref{PiThread} \\
+  \>$initthread \leftarrow$ \myref{GenerateThread}() \\
+  \>$initthread.proc \leftarrow entrypoint$ \\
+  \>$initthread.pc \leftarrow @entrypoint\_entry$ \\
+  \>\\
+  \>\myref{ReadyQueuePush}($schedpool.ready, initthread$) \\
+  \>\myref{SchedulerMaster}($schedpool$) \\
+  \kw{endprocedure}
+\end{program}
+
+
+\section{Scheduler}
+
+\algosection{Scheduler datastructure}
+
+\label{SchedPool}
+\algosection{SchedPool}
+\begin{program}
+  \kw{record} SchedPool \{ \\
+  \pindent ready : \synchro{\myref{ConcurrentReadyQueue}}[\myref{PiThread}], \\
+  \> wait : \synchro{\myref{ConcurrentWaitQueue}}[\myref{PiThread}] \\
+  \> \synchro{lock : Mutex} \\
+  \> \synchro{cond : Condition} \\
+  \> nb\_slaves : \kw{int} \\
+  \> nb\_waiting\_slaves : \kw{int} \\
+  \} \\ \\
+  \myref{GC2} : SchedPool $\rightarrow$ \kw{boolean}
+\end{program}
+
+
+\label{SchedulerSlave}
+\algosection{Runtime : slave scheduler}
+\begin{program}
+  \kw{procedure} SchedulerSlave($schedpool$ : \myref{SchedPool}) \\
+  \pindent\kw{var} $current$ : \myref{PiThread} \\
+  \>\kw{while} $schedpool.running$ \\
+  \>\pindent\kw{while} ReadyQueueSize($schedpool.ready$) $\neq 0$ \\
+  \>\>\pindent$current \leftarrow$ \synchro{\myref{ReadyQueuePop}($schedpool.ready$)} \\
+  \>\>\>\kw{do} \\
+  \>\>\>\pindent$current.proc$($schedpool, current$) \\
+  \>\>\>\kw{while} $current.status =$ STATUS\_CALL \\
+  \>\>\>\kw{if} $safe\_choice$ \kw{and} $current.status =$ STATUS\_BLOCKED \kw{then} \\
+  \>\>\>\pindent Crash(DEADLOCK) \\
+  \>\>\>\kw{endif} \\
+  \>\>\kw{endwhile} \\
+  \>\>\synchro{Acquire($schedpool.lock$)} \\
+  \>\>$schedpool.nb\_waiting\_slaves \leftarrow schedpool.nb\_waiting\_slaves + 1$ \\
+  \>\>\synchro{CondWait($schedpool.lock, schedpool.cond$)} \\
+  \>\>$schedpool.nb\_waiting\_slaves \leftarrow schedpool.nb\_waiting\_slaves - 1$ \\
+  \>\>\synchro{Release($schedpool.lock$)} \\
+  \>\kw{endwhile} \\
+  \kw{endprocedure}
+\end{program}
+
+\label{SchedulerMaster}
+\algosection{Runtime : master scheduler}
+\begin{program}
+  \kw{procedure} SchedulerMaster($schedpool$ : \myref{SchedPool}, $std\_gc\_fuel$ : \kw{int}, $quick\_gc\_fuel$ : \kw{int}, $active\_factor$ : \kw{int}) \\
+  \pindent\kw{var} $current$ : \myref{PiThread} \\
+  \>\kw{var} $gc\_fuel$ : \kw{int} \\
+  \>$gc\_fuel \leftarrow std\_gc\_fuel$ \\
+  \>\\
+  \> /* \kw{pre} : schedpool.running = true */ \\
+  \>\kw{while} $schedpool.running$ \\
+  \>\pindent\kw{while} ReadyQueueSize($schedpool.ready$) $\neq 0$ \\
+  \>\>\pindent$current \leftarrow$ \synchro{\myref{ReadyQueuePop}($schedpool.ready$)} \\
+  \>\>\>\kw{if} \myref{ReadyQueueSize}($schedpool.ready$) $\ge 1$ \kw{and} $schedpool.nb\_waiting\_slaves < schedpool.nb\_slaves$ \kw{then} \\
+  \>\>\>\pindent\synchro{Acquire($schedpool.lock$)} \\
+  \>\>\>\>\synchro{CondSignal($schedpool.lock, schedpool.cond$)} \\
+  \>\>\>\>\synchro{Release($schedpool.lock$)} \\
+  \>\>\>\kw{endif} \\
+  \>\>\>\kw{do} \\
+  \>\>\>\pindent$current.proc(schedpool, current)$ \\
+  \>\>\>\kw{while} $current.status =$ STATUS\_CALL \\
+  \>\>\>\kw{if} $safe\_choice$ \kw{and} $current.status =$ STATUS\_BLOCKED \kw{then} \\
+  \>\>\>\pindent Crash(DEADLOCK) \\
+  \>\>\>\kw{endif} \\
+  \>\>\>\\
+  \>\>\>$gc\_fuel \leftarrow gc\_fuel - 1$ \\
+  \>\>\>\kw{if} $gc\_fuel = 0$ \kw{then} \\
+  \>\>\>\pindent\kw{var} $maxactive$ : \kw{int} \\
+  \>\>\>\>$maxactive \leftarrow$ WaitQueueMaxActive($schedpool.wait$) \\
+  \>\>\>\>\kw{if} WaitQueueSize($schedpool.wait$) $> maxactive * active\_factor$ \kw{then} \\
+  \>\>\>\>\pindent WaitQueueMaxActiveReset($schedpool.wait$) \\
+  \>\>\>\>\>\kw{var} $gc\_ok$ : \kw{boolean} \\
+  \>\>\>\>\>$gc\_ok \leftarrow$ GC2($schedpool$) \\
+  \>\>\>\>\>\kw{if} \kw{not} $gc\_ok$ \kw{or} WaitQueueSize($schedpool.wait$) $> maxactive * active\_factor$ \kw{then} \\
+  \>\>\>\>\>\pindent$gc\_fuel \leftarrow quick\_gc\_fuel$ \\
+  \>\>\>\>\>\kw{else} \\
+  \>\>\>\>\>\pindent$gc\_fuel \leftarrow std\_gc\_fuel$ \\
+  \>\>\>\>\>\kw{endif} \\
+  \>\>\>\>\kw{endif} \\
+  \>\>\>\kw{endif} \\
+  \>\>\kw{endwhile} \\
+  \>\> \\
+  \>\>\synchro{Acquire($schedpool.lock$)} \\
+  \>\>\kw{if} $schedpool.nb\_waiting\_slaves = schedpool.nb\_slaves$ \kw{then} \\
+  \>\>\pindent $schedpool.running \leftarrow$ \kw{false} \\
+  \>\>\synchro{CondBroadcast($schedpool.lock, schedpool.cond$)} \\
+  \>\>\kw{endif} \\
+  \>\>\synchro{Release($schedpool.lock$)} \\
+  \>\kw{endwhile} \\
+  \kw{endprocedure}
+\end{program}
 
 \section{Thread queues implementation}
 
@@ -435,679 +1346,7 @@ $ $\newline
   \kw{endfunction}
 \end{program}
 
-\newpage
-
-%%%%%%%%%%%%%%% Section COMPILATION %%%%%%%%%%%%%%%
-\section{Compilation outlines and runtime functions}
-
-\label{CompileExpr}
-\algosection{Compilation outline for constants}
-\begin{program}
-  \compiletime{CompileExpr(\kw{true}) $\rightarrow$} \\
-  $pt.val \leftarrow$ \kw{true}
-\end{program}
-
-\begin{program}
-  \compiletime{CompileExpr(\kw{false}) $\rightarrow$} \\
-  $pt.val \leftarrow$ \kw{false}
-\end{program}
-
-\algosection{Compilation outline for var}
-\begin{program}
-  \compiletime{CompileExpr($v$ : \kw{var}) $\rightarrow$} \\
-  $pt.val \leftarrow pt.env[v]$
-\end{program}
-
-\algosection{Compilation outline for unary operators}
-\begin{program}
-  \compiletime{CompileExpr(\kw{op} $b$) $\rightarrow$} \\
-  \compiletime{CompileExpr($b$)} \\
-  $pt.val \leftarrow$ \kw{op} $pt.val$
-\end{program}
-
-\algosection{Compilation outline for binary operators}
-\begin{program}
-  \compiletime{CompileExpr($a$ \kw{and} $b$) $\rightarrow$} \\
-  \compiletime{CompileExpr($a$)} \\
-  \kw{if} $pt.val$ \kw{then} \\
-  \pindent\compiletime{CompileExpr($b$)} \\
-  \kw{endif}
-\end{program}
-
-\begin{program}
-  \compiletime{CompileExpr($a$ \kw{or} $b$) $\rightarrow$} \\
-  \compiletime{CompileExpr($a$)} \\
-  \kw{if} \kw{not} $pt.val$ \kw{then} \\
-  \pindent\compiletime{CompileExpr($b$)} \\
-  \kw{endif}
-\end{program}
-
-\begin{program}
-  \compiletime{CompileExpr($a$ \kw{op} $b$) $\rightarrow$} \\
-  \kw{begin} \\
-  \pindent\compiletime{CompileExpr($a$)} \\
-  \>\kw{var} $temp$ : \kw{Value} \\
-  \>$temp \leftarrow pt.val$ \\
-  \>\compiletime{CompileExpr($b$)} \\
-  \>$pt.val \leftarrow pt.val$ \kw{op} $temp$ \\
-  \kw{end}
-\end{program}
-
-\newpage
-
-\algosection{Compilation outline for definition}
-\begin{program}
-  \compiletime{Compile(\kw{def} $D(x_1, ..., x_n) = P$) $\rightarrow$} \\ \\
-  \compiletime{\kw{cvar} $D\_entry$ : \kw{DynLabel}} \\
-  \compiletime{$D\_entry \leftarrow$ GenerateLabel()} \\
-  \kw{function} $D$(\myref{SchedPool} $scheduler$, \myref{PiThread} $pt$) \{ \\
-  \pindent\kw{switch} $pt.pc$ \{ \\
-  \>\kw{case} $@D\_entry:$ \\
-  \>\pindent\compiletime{Compile($P$)} \\
-  \>\} \\
-  \}
-\end{program}
-
-\algosection{Compilation outline for termination}
-\begin{program}
-  \compiletime{Compile(\kw{end}, $status$) $\rightarrow$} \\ \\
-  \kw{foreach} $chan$ : \myref{Channel} in \myref{KnowsSetKnows}($pt.knows$) \\
-  \pindent\myref{ChannelDecRefCount}($chan$) \\
-  \kw{endfor} \\
-  \kw{foreach} $chan$ : \myref{Channel} in \myref{KnowsSetForget}($pt.knows$) \\
-  \pindent\myref{ChannelDecRefCount}($chan$) \\
-  \kw{endfor} \\
-  $pt.status \leftarrow status$ \\
-  \kw{return}
-\end{program}
-
-\label{CompileWait}
-\algosection{Compilation outline for wait}
-\begin{program}
-  \compiletime{CompileWait($chans$ : \kw{Set}[\kw{record} Channel]) $\rightarrow$} \\ \\
-  /* \kw{property} : $chans \cap knows.FORGET = \{\}$ */ \\
-  $pt.pc \leftarrow$ INVALID\_PC \\
-  $pt.fuel \leftarrow$ FUEL\_INIT \\
-  \kw{foreach} $chan$ : \myref{Channel} in \myref{KnowsSetForget}($pt.knows$) \\
-  \pindent\myref{ChannelDecRefCount}($chan$) \\
-  \>\myref{KnowsSetForgetToUnknown}($pt.knows, chan$) \\
-  \kw{endfor} \\
-  $pt.status \leftarrow$ STATUS\_WAIT \\
-  \synchro{\myref{WaitQueuePush}($scheduler.wait$, $pt$)} \\
-  \synchro{Release($pt.lock$)} \\
-  \kw{return}
-\end{program}
-
-\newpage
-
-\label{CompileYield}
-\algosection{Compilation outline for yield}
-\begin{program}
-  \compiletime{CompileYield($label\_cont$) $\rightarrow$} \\ \\
-  $pt.pc \leftarrow @label\_cont$ \\
-  $pt.fuel \leftarrow$ FUEL\_INIT \\
-  \kw{foreach} $chan$ : \myref{Channel} in \myref{KnowsSetForget}($pt.knows$) \\
-  \pindent\myref{ChannelDecRefCount}($chan$) \\
-  \>\myref{KnowsSetForgetToUnknown}($pt.knows, chan$) \\
-  \kw{endfor} \\
-  \synchro{\myref{ReadyQueueAdd}($scheduler.ready, pt$)} \\
-  \kw{return}
-\end{program}
-
-\algosection{Compilation outline for guarded choice}
-\begin{program}
-  \compiletime{Compile($\sum_{i=0}^{n-1}[g_i]\alpha_i.P_i$) $\rightarrow$} \\ \\
-  \kw{begin} \\
-  \pindent\compiletime{\kw{cvar} $after\_wait\_fuel$ : \kw{label}} \\
-  \>\kw{var} $tryresult$ : \{ENABLED, DISABLED, COMMIT\} \\
-  \>\kw{var} $nbdisabled$ : \kw{int} \\
-  \>$nbdisabled \leftarrow 0$ \\
-  \>\compiletime{\kw{cvar} $choice\_cont$ : Array[\kw{dynLabel}]} \\
-  \>\kw{var} $chans$ : Set[\myref{Channel}] \\
-  \>$chans \leftarrow \{\}$ \\
-  \>\\
-  \>\compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $0$ \kw{to} $n-1$} \\
-  \>\pindent\compiletime{$choice\_cont[i] \leftarrow$ GenerateLabel()} \\
-  \>\>\compiletime{\myref{CompileExpr}($g_i$)} \\
-  \>\>$pt.enabled[i] \leftarrow pt.val$ \\
-  \>\>\kw{if} $pt.enabled[i]$ \kw{then} \\
-  \>\>\pindent\compiletime{\myref{CompileTryAction}($\alpha_i, chans$)} \\
-  \>\>\>\kw{if} $tryresult =$ DISABLED \kw{then} \\
-  \>\>\>\pindent$pt.enabled[i] \leftarrow$ \kw{false} \\
-  \>\>\>\>$nbdisabled \leftarrow nbdisabled + 1$ \\
-  \>\>\>\kw{else} \kw{if} $tryresult =$ ENABLED \kw{then} \\
-  \>\>\>\pindent$pt.fuel \leftarrow pt.fuel - 1$ \\
-  \>\>\>\>\kw{if} $pt.fuel = 0$ \kw{then} \\
-  \>\>\>\>\pindent\synchro{\myref{ReleaseAllChannels}($chans$)} \\
-  \>\>\>\>\>\compiletime{\myref{CompileYield}($choice\_cont[i]$)} \\
-  \>\>\>\>\kw{endif} \\
-  \>\>\>\>\kw{goto} $@choice\_cont[i]$ \\
-  \>\>\>\kw{endif} \\
-    \>\>\kw{else} \\
-  \>\>\pindent$nbdisabled \leftarrow nbdisabled + 1$ \\
-  \>\>\kw{endif} \\
-  \>\compiletime{\kw{cendfor}} \\
-  \>\\
-  \>\kw{if} $nbdisabled = n$ \kw{then} \\
-  \>\pindent\synchro{\myref{ReleaseAllChannels}($chans$)} \\
-  \>\>\compiletime{Compile(\kw{end}, STATUS\_BLOCKED)} \\
-  \>\kw{endif} \\
-  \>\\
-  \>\compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $0$ \kw{to} $n-1$} \\
-  \>\pindent\kw{if} $pt.enabled[i]$ \kw{then} \\
-  \>\>\pindent\compiletime{\kw{cif} $\alpha_i$ is $c!v$ \kw{then}} \\
-  \>\>\>\pindent\kw{var} $eval$ : \kw{function}($pt$ : PiThread) : Value \{ \\
-  \>\>\>\>\pindent\kw{begin} \\
-  \>\>\>\>\>\pindent\compiletime{\myref{CompileExpr}($v$)} \\
-  \>\>\>\>\>\>\kw{return} $pt.val$ \\
-  \>\>\>\>\>\kw{end} \\
-  \>\>\>\>\} \\
-  \>\>\>\>\myref{RegisterOutputCommitment}($pt, pt.env[c], eval, choice\_cont[i]$) \\
-  \>\>\>\compiletime{\kw{elseif} $\alpha_i$ is $c?x$ \kw{then}} \\
-  \>\>\>\pindent\myref{RegisterInputCommitment}($pt, pt.env[c], x, choice\_cont[i]$) \\
-  \>\>\>\compiletime{\kw{cendif}} \\
-  \>\>\kw{endif} \\
-  \>\compiletime{\kw{cendfor}} \\
-  \>\\
-  \>\synchro{Acquire($pt.lock$)} \\
-  \>\synchro{\myref{ReleaseAllChannels}($chans$)} \\
-  \>\compiletime{\myref{CompileWait()}} \\
-  \>\\
-  \>\compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $0$ \kw{to} $n-1$} \\
-  \>\pindent \kw{case} $@choice\_cont[i]:$ \\
-  \>\>\compiletime{Compile($P_i$)} \\
-  \>\compiletime{\kw{cendfor}} \\
-  \kw{end}
-\end{program}
-
-\algosection{Compilation outline for call}
-\begin{program}
-  \compiletime{Compile($D(v_1$:T$_1, ..., v_n$:T$_n)) \rightarrow$} \\ \\
-  \kw{begin} \\
-  \pindent\kw{var} $args$ : Array[$n$ * Value] \\
-  \>\myref{KnowsSetForgetAll}($pt.knows$) \\
-  \>\\
-  \>\compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $0$ \kw{to} $n-1$} \\
-  \>\pindent\compiletime{\myref{CompileExpr}($v_{i+1}$)} \\
-  \>\>$args[i] \leftarrow pt.val$ \\
-  \>\compiletime{\kw{cendfor}} \\
-  \>\\
-  \>\compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $0$ \kw{to} $n-1$} \\
-  \>\pindent $pt.env[i] \leftarrow args[i]$ \\
-  \>\>\compiletime{\kw{cif} ischannel(T$_{i+1}$) \kw{then}} \\
-  \>\>\pindent\myref{KnowsRegister}($pt.knows, args[i]$) \\
-  \>\>\compiletime{\kw{cendif}} \\
-  \>\compiletime{\kw{cendfor}} \\
-  \>\\
-  \>$pt.proc \leftarrow D$ \\
-  \>$pt.pc \leftarrow @D\_entry$ \\
-  \>$pt.status \leftarrow$ STATUS\_CALL \\
-  \>\kw{return} \\
-  \kw{end}
-\end{program}
-
-\label{CompileTryAction}
-\algosection{Compilation outline for tau prefix try}
-\begin{program}
-  \compiletime{CompileTryAction(\kw{tau}, $chans$ : Set[\myref{Channel}]) $\rightarrow$} \\ \\
-  $tryresult \leftarrow$ ENABLED \\
-\end{program}
-
-\newpage
-
-\algosection{Compilation outline for output prefix try}
-\begin{program}
-  \compiletime{CompileTryAction($c!v$:T, $chans$ : Set[\myref{Channel}]) $\rightarrow$} \\ \\
-  \kw{begin} \\
-  \pindent\compiletime{\kw{cvar} $label\_endoftry$ : \kw{label}} \\
-  \>\compiletime{$label\_endoftry \leftarrow$ GenerateLabel()} \\
-  \>\kw{if} SetAdd($chans, pt.env[c]$) \kw{then} \\
-  \>\pindent\synchro{Acquire($pt.env[c].lock$)} \\
-  \>\kw{endif} \\
-  \>\kw{if} $c.globalrc = 1$ \kw{then} \\
-  \>\pindent$tryresult \leftarrow$ DISABLED \\
-  \>\>\kw{goto} $@label\_endoftry$ \\
-  \>\kw{endif} \\
-  \>\kw{var} $commit$ : \myref{InCommit} \\
-  \>\kw{var} $ok$ : \{CANNOT\_ACQUIRE, VALID\_COMMITMENT, INVALID\_COMMITMENT\} \\
-  \>\\
-  \>\kw{do} \\
-  \>\pindent$commit \leftarrow$ \myref{FetchInputCommitment}($pt.env[c]$) \\
-  \>\>\kw{if} $commit =$ \kw{null} \kw{then} \\
-  \>\>\pindent$tryresult \leftarrow$ COMMIT \\
-  \>\>\>\kw{goto} $@label\_endoftry$ \\
-  \>\>\kw{endif} \\
-  \>\>\kw{do} \\
-  \>\>\pindent$ok \leftarrow$ \myref{CanAwake}($commit.thread, commit$) \\
-  \>\>\>\kw{if} $ok =$ CANNOT\_ACQUIRE \kw{then} \\
-  \>\>\>\pindent\synchro{low\_level\_yield()} \\
-  \>\>\>\kw{endif} \\
-  \>\>\kw{while} $ok =$ CANNOT\_ACQUIRE \\
-  \>\>\\
-  \>\>\kw{if} $ok =$ VALID\_COMMITMENT \kw{then} \\
-  \>\>\pindent\compiletime{\myref{CompileExpr}($v$)} \\
-  \>\>\>$commit.thread.env[commit.refval] \leftarrow pt.val$ \\
-  \>\>\>\myref{Awake}($scheduler, commit.thread, commit$) \\
-  \>\>\>$tryresult \leftarrow$ ENABLED \\
-  \>\>\>\kw{goto} $@label\_endoftry$ \\
-  \>\>\kw{endif} \\
-  \>\kw{while} $pt.env[c].incommits \neq \{\}$ \\
-  \>$@label\_endoftry$ \\
-  \kw{end}
-\end{program}
-
-\newpage
-
-\algosection{Compilation outline for input prefix try}
-\begin{program}
-  \compiletime{CompileTryAction($c?x$:T, Set[\myref{Channel}]) $\rightarrow$} \\ \\
-  \kw{begin} \\
-  \pindent\compiletime{\kw{cvar} $label\_endoftry$ : \kw{label}} \\
-  \>\compiletime{$label\_endoftry \leftarrow$ GenerateLabel()} \\
-  \>\kw{if} SetAdd($chans, pt.env[c]$) \kw{then} \\
-  \>\pindent\synchro{Acquire($pt.env[c].lock$)} \\
-  \>\kw{endif} \\
-  \>\kw{if} $c.globalrc = 1$ \kw{then} \\
-  \>\pindent$tryresult \leftarrow$ DISABLED \\
-  \>\>\kw{goto} $@label\_endoftry$ \\
-  \>\kw{endif} \\
-  \>\kw{var} $commit$ : \myref{OutCommit} \\
-  \>\kw{var} $ok$ : \{CANNOT\_ACQUIRE, VALID\_COMMITMENT, INVALID\_COMMITMENT\} \\
-  \> \\
-  \>\kw{do} \\
-  \>\pindent$commit \leftarrow$ \myref{FetchOutputCommitment}($pt.env[c]$) \\
-  \>\>\kw{if} $commit =$ \kw{null} \kw{then} \\
-  \>\>\pindent$tryresult \leftarrow$ COMMIT \\
-  \>\>\>\kw{goto} $@label\_endoftry$ \\
-  \>\>\kw{endif} \\
-  \>\>\kw{do} \\
-  \>\>\pindent$ok \leftarrow$ \myref{CanAwake}($commit.thread, commit$) \\
-  \>\>\>\kw{if} $ok =$ CANNOT\_ACQUIRE \kw{then} \\
-  \>\>\>\pindent\synchro{low\_level\_yield()} \\
-  \>\>\>\kw{endif} \\
-  \>\>\kw{while} $ok =$ CANNOT\_ACQUIRE \\
-  \>\>\\
-  \>\>\kw{if} $ok =$ VALID\_COMMITMENT \kw{then} \\
-  \>\>\pindent\kw{var} $val$ : Value \\
-  \>\>\>$val \leftarrow$ commit.evalfunc($commit.thread$) \\
-  \>\>\>$pt.env[x] \leftarrow val$ \\
-  \>\>\>\compiletime{\kw{cif} ischannel(T) \kw{then}} \\
-  \>\>\>\pindent\kw{if} \myref{KnowsRegister}($pt.knows, pt.env[x]$) \kw{then} \\
-  \>\>\>\>\pindent \myref{ChannelIncrRefCount}($pt.env[x]$) \\
-  \>\>\>\>\kw{endif} \\
-  \>\>\>\compiletime{\kw{cendif}} \\
-  \>\>\>\myref{Awake}($scheduler, commit.thread, commit$) \\
-  \>\>\>$tryresult \leftarrow$ ENABLED \\
-  \>\>\>\kw{goto} $@label\_endoftry$ \\
-  \>\>\kw{endif} \\
-  \>\kw{while} $pt.env[c].outcommits \neq \{\}$ \\
-  \>$@label\_endoftry$ \\
-  \kw{end}
-\end{program}
-
-\newpage
-
-\algosection{Runtime : atomic boolean acquisition}
-\begin{program}
-  \kw{function} Acquire($c$ : AtomicBoolean) \\
-  \pindent\kw{while} CompareAndSwap($c$, \kw{false}, \kw{true}) $\neq$ \kw{false} \\
-  \>\pindent// could not acquire \\
-  \>\>\synchro{low\_level\_yield()} \\
-  \>\kw{endwhile} \\
-  \kw{endfunction}
-\end{program}
-
-\algosection{Runtime : atomic integer release}
-\begin{program}
-  \kw{function} Release($c$ : AtomicBoolean) \\
-  \pindent\kw{if} CompareAndSwap($c$, \kw{true} \kw{false}) $\neq$ \kw{true} \kw{then} \\
-  \>\pindent Crash(KERNEL\_ERROR) \\
-  \>\kw{endif} \\
-  \kw{endfunction}
-\end{program}
-
-\label{FetchInputCommitment}
-\algosection{Runtime : input commitment search}
-\begin{program}
-  \kw{function} FetchInputCommitment($c$ : \myref{Channel}) \\
-  \pindent\kw{var} $current$ : \myref{InCommit} \\
-  \>$current \leftarrow$ \myref{CommitListFetch}($c.incommits$) \\
-  \>\kw{while} $current \neq$ \kw{null} \kw{do} \\
-  \>\pindent\kw{if} \myref{IsValidInCommit}($current$) \kw{then} \\
-  \>\>\pindent\kw{return} $current$ \\
-  \>\>\kw{endif} \\
-  \>\>$current \leftarrow$ \myref{CommitListFetch}($c.incommits$) \\
-  \>\kw{endwhile} \\
-  \>\kw{return} \kw{null} \\
-  \kw{endfunction}
-\end{program}
-
-\label{FetchOutputCommitment}
-\algosection{Runtime : output commitment search}
-\begin{program}
-  \kw{function} FetchOutputCommitment($c$ : \myref{Channel}) \\
-  \pindent\kw{var} $current$ : \myref{OutCommit} \\
-  \>$current \leftarrow$ \myref{CommitListFetch}($c.outcommits$) \\
-  \>\kw{while} $current \neq$ \kw{null} \kw{do} \\
-  \>\pindent\kw{if} \myref{IsValidOutCommit}($current$) \kw{then} \\
-  \>\>\pindent\kw{return} $current$ \\
-  \>\>\kw{endif} \\
-  \>\>$current \leftarrow$ \myref{CommitListFetch}($c.outcommits$) \\
-  \>\kw{endwhile} \\
-  \>\kw{return} \kw{null} \\
-  \kw{endfunction}
-\end{program}
-
-\newpage
-
-\label{RegisterInputCommitment}
-\algosection{Runtime : input commitment register}
-\begin{program}
-  \kw{function} RegisterInputCommitment($pt$: \myref{PiThread}, $c$ : \myref{Channel}, $x$ : \kw{int}, $cont\_pc$ : \kw{int}) \\
-  \pindent\kw{var} $newcommit$ : \myref{InCommit} \\
-  \>$newcommit \leftarrow$ \kw{new} InCommit \\
-  \>$newcommit.thread \leftarrow pt$ \\
-  \>$newcommit.cont\_pc \leftarrow cont\_pc$ \\
-  \>$newcommit.refvar \leftarrow x$\\
-  \>$newcommit.clock \leftarrow pt.clock$ \\
-  \>$newcommit.clockval \leftarrow pt.clock.val$ \\
-  \>$newcommit.channel \leftarrow c$ \\
-  \>\myref{CommitListAdd}($pt.env[c].incommits$, $newcommit$) \\
-  \kw{endfunction}
-\end{program}
-
-\label{RegisterOutputCommitment}
-\algosection{Runtime : output commitment register}
-\begin{program}
-  \kw{function} RegisterOutputCommitment($pt$: \myref{PiThread}, $c$ : \myref{Channel}, $v$ : \kw{function}(\myref{PiThread}), $cont\_pc$ : \kw{int}) \\
-  \pindent\kw{var} $newcommit$ : \myref{OutCommit} \\
-  \>$newcommit \leftarrow$ \kw{new} OutCommit \\
-  \>$newcommit.thread \leftarrow pt$ \\
-  \>$newcommit.cont\_pc \leftarrow cont\_pc$ \\
-  \>$newcommit.evalfunc \leftarrow v$ \\
-  \>$newcommit.clock \leftarrow pt.clock$ \\
-  \>$newcommit.clockval \leftarrow pt.clock.val$ \\
-  \>$newcommit.channel \leftarrow c$ \\
-  \>\myref{CommitListAdd}($pt.env[c].outcommits$, $newcommit$) \\
-  \kw{endfunction}
-\end{program}
-
-\label{IsValidInCommit}
-\algosection{Runtime : input commitment validation}
-\begin{program}
-  \kw{function} IsValidInCommit($commit$ : \myref{InCommit}) \\
-  \pindent\kw{if} $commit.clock = commit.thread.clock$ \kw{then} \\
-  \>\pindent\kw{if} $commit.clockval = commit.thread.clock.val$ \kw{then} \\
-  \>\>\pindent \kw{return} \kw{true} \\
-  \>\>\kw{endif} \\
-  \>\kw{endif} \\
-  \>\kw{return} \kw{false} \\
-  \kw{endfunction}
-\end{program}
-
-\label{IsValidOutCommit}
-\algosection{Runtime : output commitment validation}
-\begin{program}
-  \kw{function} IsValidOutCommit($commit$ : \myref{OutCommit}) \\
-  \pindent\kw{if} $commit.clock = commit.thread.clock$ \kw{then} \\
-  \>\pindent\kw{if} $commit.clockval = commit.thread.clock.val$ \kw{then} \\
-  \>\>\pindent \kw{return} \kw{true} \\
-  \>\>\kw{endif} \\
-  \>\kw{endif} \\
-  \>\kw{return} \kw{false} \\
-  \kw{endfunction}
-\end{program}
-
-\newpage
-
-\label{CanAwake}
-\algosection{Runtime : thread awake test}
-\begin{program}
-  \kw{function} CanAwake($thread$ : \myref{PiThread}, $commit$ : \myref{Commit}) \\
-  \pindent\kw{if} \synchro{\kw{not} TryAcquire($thread.lock$)} \kw{then} \\
-  \>\pindent\kw{return} CANNOT\_ACQUIRE \\
-  \>\kw{endif} \\
-  \>\kw{if} ($commit.clock \neq clock$) \kw{or} ($commit.clockval \neq commit.clock.val$) \kw{then} \\
-  \>\pindent\synchro{Release($thread.lock$)} \\
-  \>\>\kw{return} INVALID\_COMMITMENT \\
-  \>\kw{endif} \\
-  \>\kw{if} $thread.clock.val =$ MAX\_INT \kw{then} \\
-  \>\pindent\kw{var} $oldclock \leftarrow thread.clock$ \\
-  \>\>$thread.clock \leftarrow$ \kw{Null} \\
-  \>\>ReclaimClock($oldclock$) \\
-  \>\>$thread.clock \leftarrow$ \myref{GenerateClock()} \\
-  \>\kw{else} \\
-  \>\pindent$thread.clock.val \leftarrow thread.clock.val + 1$ \\
-  \>\kw{endif} \\
-  \>$thread.commit \leftarrow commit$ \\
-  \>\synchro{Release($thread.lock$)} \\
-  \>\kw{return} VALID\_COMMITMENT \\
-  \kw{endfunction}
-\end{program}
-
-\label{Awake}
-\algosection{Runtime : effective thread awake}
-\begin{program}
-  \kw{function} Awake($scheduler$ : \myref{Scheduler}, $thread$ : \myref{PiThread}) \\
-  \pindent\kw{if} $thread.commit \neq commit$ \kw{then} \\
-  \>\pindent Crash() \\
-  \>\kw{endif} \\
-  \>\synchro{\myref{WaitQueueFetch}($scheduler.wait, thread$)} \\
-  \>$thread.commit \leftarrow$ \kw{null} \\
-  \>$thread.pc \leftarrow commit.cont\_pc$ \\
-  \>$thread.status \leftarrow$ STATUS\_RUN \\
-  \>\synchro{\myref{ReadyQueuePush}($scheduler.ready, thread$)} \\
-  \kw{endfunction}
-\end{program}
-
-\label{GenerateClock}
-\algosection{Runtime : clock generation}
-\begin{program}
-  \kw{function} GenerateClock() \\
-  \pindent\kw{var} $clock$ : \myref{Clock} \\
-  \>$clock \leftarrow$ \kw{new} Clock \\
-  \>$clock.val = 0$ \\
-  \>\kw{return} $clock$ \\
-  \kw{endfunction}
-\end{program}
-
-\label{ChannelIncrRefCount}
-\algosection{Runtime : channel ref count incrementation}
-\begin{program}
-  \kw{function} ChannelIncrRefCount($chan$ : \myref{Channel}) \\
-  \pindent\synchro{Acquire($chan.lock$)} \\
-  \>$chan.globalrc \leftarrow chan.globalrc + 1$ \\
-  \>\synchro{Release($chan.lock$)} \\
-  \kw{endfunction}
-\end{program}
-
-\label{ChanneldDecRefCount}
-\algosection{Runtime : channel ref count decrementation}
-\begin{program}
-  \kw{function} ChannelDecRefCount($chan$ : \myref{Channel}) \\
-  \pindent\synchro{Acquire($chan.lock$)} \\
-  \>$chan.globalrc \leftarrow chan.globalrc - 1$ \\
-  \>\kw{if} $chan.globalrc = 0$ \kw{then} \\
-  \>\pindent\synchro{Release($chan.lock$)} \\
-  \>\> ReclaimChannel($chan$) \\
-  \>\kw{else} \\
-  \>\pindent\synchro{Release($chan.lock$)} \\
-  \>\kw{endif} \\
-  \kw{endfunction}
-\end{program}
-
-\algosection{Compilation outline for channel creation}
-\begin{program}
-  \compiletime{CompileTryAction(\kw{new}($c$), Set[\myref{Channel}]) $\rightarrow$} \\ \\
-  \kw{begin} \\
-  \pindent\kw{var} $channel$ : \myref{Channel} \\
-  \>$channel \leftarrow$ \myref{GenerateChannel}() \\
-  \>$pt.env[c] \leftarrow channel$ \\
-  \>\myref{KnowsSetSwitch}($pt.knows, channel$, KNOWN) \\
-  \>$tryresult \leftarrow$ ENABLED \\
-  \kw{end}
-\end{program}
-
-\label{GenerateChannel}
-\algosection{Runtime : channel generation}
-\begin{program}
-  \kw{function} GenerateChannel() \\
-  \pindent\kw{var} $newchan$ : \myref{Channel} \\
-  \>$newchan \leftarrow$ \kw{new} Channel \\
-  \>$newchan.incommits \leftarrow$ \kw{new} CommitList[\myref{InCommit}] \\
-  \>$newchan.outcommits \leftarrow$ \kw{new} CommitList[\myref{OutCommit}] \\
-  \>$newchan.globalrc \leftarrow 1$ \\ 
-  \> \kw{return} $newchan$ \\
-  \kw{endfunction}
-\end{program}
-
-\newpage
-
-\algosection{Compilation outline for thread creation}
-\begin{program}
-  \compiletime{CompileTryAction(\kw{spawn}\{D($v_1$:T$_1, ..., v_n$:T$_n$)\}, Set[\myref{Channel}]) $\rightarrow$} \\ \\
-  \kw{begin} \\
-  \pindent\kw{var} $args$ : Array[$n$ * Value] \\
-  \>\kw{var} $child$ : \myref{PiThread} \\
-  \>$child \leftarrow$ \myref{GeneratePiThread}() \\
-  \>\\
-  \>\compiletime{\kw{cfor} $i$ : \kw{int} \kw{from} $1$ \kw{to} $n$} \\
-  \>\pindent\compiletime{\myref{CompileExpr}($v_i$)} \\
-  \>\>$args[i-1] \leftarrow pt.val$ \\
-  \>\>\compiletime{\kw{cif} ischannel(T$_i$) \kw{then}} \\
-  \>\>\pindent \myref{KnowsRegister}($child.knows, args[i-1]$) \\
-  \>\>\compiletime{\kw{cendif}} \\
-  \>\>$child.env[i-1] \leftarrow args[i-1]$ \\
-  \>\compiletime{\kw{cendfor}} \\
-  \>\\
-  \>$child.proc \leftarrow D$ \\
-  \>$child.pc \leftarrow @D\_entry$ \\
-  \>$child.status \leftarrow$ STATUS\_RUN \\
-  \>\synchro{\myref{ReadyQueuePush}($scheduler.ready, child$)} \\
-  \>$tryresult \leftarrow$ ENABLED \\
-  \kw{end}
-\end{program}
-
-\label{GeneratePiThread}
-\algosection{Runtime : thread generation}
-\begin{program}
-  \kw{function} GeneratePiThread() \\
-  \pindent\kw{var} $newthread$ : \myref{PiThread} \\
-  \> $newthread \leftarrow$ \kw{new} PiThread \\
-  \> $newthread.knows \leftarrow$ \kw{new} KnowsSet[\myref{Channel}] \\
-  \> $newthread.fuel \leftarrow$ FUEL\_INIT \\
-  \> \kw{return} $newthread$ \\
-  \kw{endfunction}
-\end{program}
-
-\newpage
-
-\label{Main}
-\algosection{Runtime : program entry point}
-\begin{program}
-  \kw{procedure} Main($nb\_core\_threads$ : \kw{int}, $entrypoint$ : \kw{function}) \\
-  \pindent\kw{var} $schedpool$ : \myref{SchedPool} \\
-  \>$schedpool \leftarrow$ \kw{new} SchedPool \\
-  \>$schedpool.waiting\_slaves \leftarrow 0$ \\
-  \>$schedpool.running \leftarrow$ \kw{true} \\
-  \>\\
-  \>\kw{for} $i$ : \kw{int} \kw{from} $0$ \kw{to} $nb\_core\_threads - 1$ \\
-  \>\pindent ThreadCreate($\myref{SchedulerSlave}, schedpool$) \\
-  \>\>$schedpool.nb\_slaves \leftarrow schedpool.nb\_slaves + 1$ \\
-  \>\kw{endfor} \\
-  \>\\
-  \>\kw{while} $schedpool.wait\_slaves \neq schedpool\_nb\_slaves$ \\
-  \>\pindent\synchro{low\_level\_yield()} \\
-  \>\kw{endwhile} \\
-  \>\\
-  \>\kw{var} $initthread$ : \myref{PiThread} \\
-  \>$initthread \leftarrow$ \myref{GenerateThread}() \\
-  \>$initthread.proc \leftarrow entrypoint$ \\
-  \>$initthread.pc \leftarrow @entrypoint\_entry$ \\
-  \>\\
-  \>\myref{ReadyQueuePush}($schedpool.ready, initthread$) \\
-  \>\myref{SchedulerMaster}($schedpool$) \\
-  \kw{endprocedure}
-\end{program}
-
-\label{SchedulerSlave}
-\algosection{Runtime : slave scheduler}
-\begin{program}
-  \kw{procedure} SchedulerSlave($schedpool$ : \myref{SchedPool}) \\
-  \pindent\kw{var} $current$ : \myref{PiThread} \\
-  \>\kw{while} $schedpool.running$ \\
-  \>\pindent\kw{while} ReadyQueueSize($schedpool.ready$) $\neq 0$ \\
-  \>\>\pindent$current \leftarrow$ \synchro{\myref{ReadyQueuePop}($schedpool.ready$)} \\
-  \>\>\>\kw{do} \\
-  \>\>\>\pindent$current.proc$($schedpool, current$) \\
-  \>\>\>\kw{while} $current.status =$ STATUS\_CALL \\
-  \>\>\>\kw{if} $safe\_choice$ \kw{and} $current.status =$ STATUS\_BLOCKED \kw{then} \\
-  \>\>\>\pindent Crash(DEADLOCK) \\
-  \>\>\>\kw{endif} \\
-  \>\>\kw{endwhile} \\
-  \>\>\synchro{Acquire($schedpool.lock$)} \\
-  \>\>$schedpool.nb\_waiting\_slaves \leftarrow schedpool.nb\_waiting\_slaves + 1$ \\
-  \>\>\synchro{CondWait($schedpool.lock, schedpool.cond$)} \\
-  \>\>$schedpool.nb\_waiting\_slaves \leftarrow schedpool.nb\_waiting\_slaves - 1$ \\
-  \>\>\synchro{Release($schedpool.lock$)} \\
-  \>\kw{endwhile} \\
-  \kw{endprocedure}
-\end{program}
-
-\newpage
-
-\label{SchedulerMaster}
-\algosection{Runtime : master scheduler}
-\begin{program}
-  \kw{procedure} SchedulerMaster($schedpool$ : \myref{SchedPool}, $std\_gc\_fuel$ : \kw{int}, $quick\_gc\_fuel$ : \kw{int}, $active\_factor$ : \kw{int}) \\
-  \pindent\kw{var} $current$ : \myref{PiThread} \\
-  \>\kw{var} $gc\_fuel$ : \kw{int} \\
-  \>$gc\_fuel \leftarrow std\_gc\_fuel$ \\
-  \>\\
-  \> /* \kw{pre} : schedpool.running = true */ \\
-  \>\kw{while} $schedpool.running$ \\
-  \>\pindent\kw{while} ReadyQueueSize($schedpool.ready$) $\neq 0$ \\
-  \>\>\pindent$current \leftarrow$ \synchro{\myref{ReadyQueuePop}($schedpool.ready$)} \\
-  \>\>\>\kw{if} \myref{ReadyQueueSize}($schedpool.ready$) $\ge 1$ \kw{and} $schedpool.nb\_waiting\_slaves < schedpool.nb\_slaves$ \kw{then} \\
-  \>\>\>\pindent\synchro{Acquire($schedpool.lock$)} \\
-  \>\>\>\>\synchro{CondSignal($schedpool.lock, schedpool.cond$)} \\
-  \>\>\>\>\synchro{Release($schedpool.lock$)} \\
-  \>\>\>\kw{endif} \\
-  \>\>\>\kw{do} \\
-  \>\>\>\pindent$current.proc(schedpool, current)$ \\
-  \>\>\>\kw{while} $current.status =$ STATUS\_CALL \\
-  \>\>\>\kw{if} $safe\_choice$ \kw{and} $current.status =$ STATUS\_BLOCKED \kw{then} \\
-  \>\>\>\pindent Crash(DEADLOCK) \\
-  \>\>\>\kw{endif} \\
-  \>\>\>\\
-  \>\>\>$gc\_fuel \leftarrow gc\_fuel - 1$ \\
-  \>\>\>\kw{if} $gc\_fuel = 0$ \kw{then} \\
-  \>\>\>\pindent\kw{var} $maxactive$ : \kw{int} \\
-  \>\>\>\>$maxactive \leftarrow$ WaitQueueMaxActive($schedpool.wait$) \\
-  \>\>\>\>\kw{if} WaitQueueSize($schedpool.wait$) $> maxactive * active\_factor$ \kw{then} \\
-  \>\>\>\>\pindent WaitQueueMaxActiveReset($schedpool.wait$) \\
-  \>\>\>\>\>\kw{var} $gc\_ok$ : \kw{boolean} \\
-  \>\>\>\>\>$gc\_ok \leftarrow$ GC2($schedpool$) \\
-  \>\>\>\>\>\kw{if} \kw{not} $gc\_ok$ \kw{or} WaitQueueSize($schedpool.wait$) $> maxactive * active\_factor$ \kw{then} \\
-  \>\>\>\>\>\pindent$gc\_fuel \leftarrow quick\_gc\_fuel$ \\
-  \>\>\>\>\>\kw{else} \\
-  \>\>\>\>\>\pindent$gc\_fuel \leftarrow std\_gc\_fuel$ \\
-  \>\>\>\>\>\kw{endif} \\
-  \>\>\>\>\kw{endif} \\
-  \>\>\>\kw{endif} \\
-  \>\>\kw{endwhile} \\
-  \>\> \\
-  \>\>\synchro{Acquire($schedpool.lock$)} \\
-  \>\>\kw{if} $schedpool.nb\_waiting\_slaves = schedpool.nb\_slaves$ \kw{then} \\
-  \>\>\pindent $schedpool.running \leftarrow$ \kw{false} \\
-  \>\>\synchro{CondBroadcast($schedpool.lock, schedpool.cond$)} \\
-  \>\>\kw{endif} \\
-  \>\>\synchro{Release($schedpool.lock$)} \\
-  \>\kw{endwhile} \\
-  \kw{endprocedure}
-\end{program}
-
-\newpage
+\section{Garbage collector}
 
 \label{GC2}
 \algosection{Runtime : second generation garbage collector}

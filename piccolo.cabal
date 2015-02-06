@@ -1,0 +1,55 @@
+Name:                piccolo
+Version:             0.1.0.0
+License:             GPL-3
+License-file:        LICENSE
+Author:              aurelien.deharbe@lip6.fr, frederic.peschanski@lip6.fr
+Maintainer:          aurelien.deharbe@lip6.fr
+Homepage:            http://github.com/fredokun/piccolo/tree/new-piccolo
+
+Stability:           Beta
+Category:            Compilers, Language
+Synopsis:            TODO
+Description:         TODO
+
+Cabal-version:       >=1.8
+Build-type:          Custom
+
+Data-files:          runtime/channel.h
+                     runtime/commit.h
+                     runtime/errors.h
+                     runtime/pithread.h
+                     runtime/primitives.h
+                     runtime/queue.h
+                     runtime/runtime.h
+                     runtime/scheduler.h
+                     runtime/tryaction.h
+                     runtime/value.h
+
+Extra-source-files:  Makefile
+                     config.mk
+
+                     runtime/*.h
+                     runtime/*.c
+
+                     test/Makefile
+                     
+                     test/basic001/run
+                     test/basic001/*.pi
+                     test/basic001/expected
+                     
+                     test/primitives001/run
+                     test/primitives001/*.pi
+                     test/primitives001/expected
+
+Executable piccolo
+  Main-is:             Main.hs
+  Hs-source-dirs:      src
+  Build-depends:       base
+                     , array
+                     , pretty
+                     , mtl
+                     , containers
+                     , filepath
+                     , parsec
+                     , process
+  Ghc-options:         -Wall

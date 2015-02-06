@@ -1,0 +1,14 @@
+module Test/Ackermann
+
+def Ack2(n:int, c:chan<int>, c1:chan<int>) =
+  c1?(pp), Ack(n, pp, c)
+
+def Ack(n: int, p:int, c:chan<int>) =
+  [#core/arith:equals(n, 0)] c!#core/arith:add(p, 1), end +
+  [#core/arith:equals(p, 0)] tau, Ack(#core/arith:sub(n, 1), 1, c) +
+  [#core/arith:less_than(0, n)] tau, new(c1:chan<int>), spawn{Ack2(#core/arith:sub(n, 1), c, c1)},
+    Ack(n, #core/arith:sub(p, 1), c1)
+
+def Main() =
+  new(c:chan<int>), spawn{Ack(3, 6, c)}, c?(x), #core/io:print_int(x), end
+

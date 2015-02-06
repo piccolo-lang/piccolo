@@ -1,0 +1,23 @@
+module Test/T100000
+
+def Gen(n:int, right:chan<int>, g:chan<chan<int>>) =
+  [#core/arith:equals(n,0)] tau,
+    g!right,
+    end
++ [true] tau,
+    new(left:chan<int>),
+    spawn{F(left, right)},
+    Gen(#core/arith:sub(n, 1), left, g)
+
+def F(left:chan<int>, right:chan<int>) =
+  right?(x), left!x, end
+
+def Main() =
+  new(g:chan<chan<int>>),
+  new(right:chan<int>),
+  spawn{Gen(100000, right, g)},
+  g?(left),
+  right!0,
+  left?(x),
+  #core/io:print_int(x),
+  end

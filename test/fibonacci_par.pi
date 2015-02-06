@@ -1,0 +1,20 @@
+module Test/FibonacciPar
+
+def Fibo(n:int, r:chan<int>) =
+  [#core/arith:equals(n, 0)] r!0, end
++ [#core/arith:equals(n, 1)] r!1, end
++ [true] tau,
+    new(s:chan<int>),
+    spawn{Fibo(#core/arith:sub(n, 1), s)},
+    spawn{Fibo(#core/arith:sub(n, 2), s)},
+    s?(x), s?(y),
+    let (z:int = #core/arith:add(x,y)),
+    r!z,
+    end
+
+def Main() =
+  new(r:chan<int>),
+  spawn{Fibo(20, r)},
+  r?(x),
+  #core/io:print_int(x),
+  end
