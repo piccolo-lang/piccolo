@@ -4,3 +4,9 @@ runtime/libpiccolort.a
 cabal.sandbox.config
 .cabal-sandbox
 dist
+doc/**/*.aux
+doc/**/*.log
+doc/**/*.out
+doc/**/*.pdf
+doc/**/*.toc
+piccolo.log
