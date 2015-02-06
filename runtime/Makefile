@@ -1,6 +1,6 @@
 include ../config.mk
 
-OBJS = atomic.o channel.o commit.o errors.o gc2.o pithread.o \
+OBJS = atomic.o channel.o commit.o errors.o gc2.o logger.o pithread.o \
        primitives.o queue.o refcount.o runtime.o scheduler.o \
        tryaction.o value.o
 HDRS = channel.h commit.h errors.h pithread.h primitives.h   \
