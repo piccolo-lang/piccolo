@@ -81,6 +81,14 @@ void PICC_readyqueue_push_front(PICC_ReadyQueue *queue, PICC_PiThread *pt)
   pthread_mutex_unlock(queue->lock);
 }
 
+int PICC_readyqueue_size(PICC_ReadyQueue *queue)
+{
+  pthread_mutex_lock(queue->lock);
+  int r = queue->size;
+  pthread_mutex_unlock(queue->lock);
+  return r;
+}
+
 PICC_PiThread *PICC_readyqueue_pop_front(PICC_ReadyQueue *queue)
 {
   PICC_PiThread *pt = NULL;

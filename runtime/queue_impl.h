@@ -31,6 +31,7 @@ PICC_WaitQueue *PICC_waitqueue_alloc();
 void PICC_waitqueue_free(PICC_WaitQueue *);
 
 PICC_PiThread *PICC_readyqueue_pop_front(PICC_ReadyQueue *);
+int PICC_readyqueue_size(PICC_ReadyQueue *);
 
 void PICC_waitqueue_push_front(PICC_WaitQueue *, PICC_PiThread *);
 PICC_PiThread *PICC_waitqueue_remove(PICC_WaitQueue *, PICC_PiThread *);
