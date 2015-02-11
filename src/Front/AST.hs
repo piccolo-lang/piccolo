@@ -15,6 +15,8 @@ module Front.AST where
 import Data.List (intercalate)
 
 
+-- * Locations
+
 -- | The 'Location' type is a record of line and column informations
 data Location = Location
   { locOffset      :: !Int  -- ^ absolute offset of the block in the file
@@ -31,6 +33,21 @@ instance Show Location where
              show (locEndLine loc)   ++ ":" ++
              show (locEndColumn loc)
 
+-- | The 'AST' typeclass defines a localization function
+class AST a where
+  localize :: a -> Location
+
+-- | 'noLoc' is a fake location used when there is no code correspondance
+-- for an AST node (for example, an inferred type is not in the initial code).
+noLoc :: Location
+noLoc = Location (-1) (-1) (-1) (-1) (-1)
+
+-- | The 'isNoLoc' predicate tests if a given location is fake.
+isNoLoc :: Location -> Bool
+isNoLoc = (noLoc ==)
+
+
+-- * AST types
 
 -- | Piccolo-core type expressions
 data TypeExpr
@@ -64,6 +81,10 @@ instance Show TypeExpr where
   show typ@TPrim    {} = "[" ++ intercalate "," (map show (typArgs typ)) ++
                          "] -> " ++ show (typRet typ)
 
+-- | A TypeExpr is localizable
+instance AST TypeExpr where
+  localize = typLoc
+
 -- | Atomic types
 data TypeAtom
   = TBool
@@ -77,6 +98,7 @@ instance Show TypeAtom where
   show TInt    = "int"
   show TString = "string"
 
+
 -- | 'TypeExpr' expressions are compared upto location data
 instance Eq TypeExpr where
   (==) (TUnknown {})              (TUnknown {})              = True
@@ -86,6 +108,9 @@ instance Eq TypeExpr where
   (==) (TPrim { typArgs = a, typRet = r }) (TPrim { typArgs = b, typRet = s }) =
     a == b && r == s
   (==) _ _ = False
+
+
+-- * Languages expressions
 
 -- | 'Value' expressions are manipulated by piccolo threads.
 -- Each value is tagged with its type.
@@ -157,6 +182,13 @@ instance Show Expr where
   show e@EOr     {} = "(" ++ show (exprLeft e) ++ ") or (" ++
                       show (exprRight e) ++ ")"
 
+-- | An expressions is localizable
+instance AST Expr where
+  localize = exprLoc
+
+
+-- * Concurrency AST constructions
+
 -- | Process node
 data Process
   = PEnd
@@ -178,6 +210,12 @@ data Process
     , procArgs   :: [Expr]
     , procLoc    ::  Location
     } -- ^ piccolo process definition call
+
+instance Show Process where
+  show = ppProcess 0
+
+instance AST Process where
+  localize = procLoc
 
 -- | Choice branches
 data Branch
@@ -204,6 +242,12 @@ data Branch
     , brCont      :: Process
     , brLoc       :: Location
     }
+
+instance Show Branch where
+  show = ppBranch 0
+
+instance AST Branch where
+  localize = brLoc
 
 -- | 'Action' datatype represents the atomic actions of the
 -- piccolo-core language
@@ -248,6 +292,15 @@ data Action
     , actLoc    :: Location
     }
 
+instance Show Action where
+  show = ppAction 0
+
+instance AST Action where
+  localize = actLoc
+
+
+-- * Definitions and Modules
+
 -- | To spawn or (possibly recursively) call a process definition,
 -- the 'Definition' type defines
 -- a process definition attached with parameter names and types.
@@ -260,6 +313,12 @@ data Definition
     , defLoc     :: Location
     }
 
+instance Show Definition where
+  show = ppDefinition 0
+
+instance AST Definition where
+  localize = defLoc
+
 -- | 'ModuleDef' defines the main node of a piccolo AST.
 -- It contains several process definitions.
 -- If a "Main" definition is defined,
@@ -271,3 +330,75 @@ data Modul
     , modDefs :: [Definition]
     , modLoc  :: Location
     }
+
+instance Show Modul where
+  show = ppModul 0
+
+instance AST Modul where
+  localize = modLoc
+
+
+-- * Pretty printing
+
+indent :: Int -> String
+indent n = replicate (2 * n) ' '
+
+ppProcess :: Int -> Process -> String
+ppProcess n (PEnd {}) =
+  indent n ++ "end"
+ppProcess n proc@PPrefix {} =
+  ppAction n (procPref proc) ++ ",\n" ++
+  ppProcess n (procCont proc)
+ppProcess n proc@PChoice {} =
+  indent n ++ intercalate ("\n" ++ indent (n - 1) ++ "+ ")
+                          (map (ppBranch 0) (procBranches proc))
+ppProcess n proc@PCall   {} =
+  indent n ++ procModule proc ++ "/" ++ procName proc ++ "(" ++
+  intercalate ", " (map show (procArgs proc)) ++ ")"
+
+ppBranch :: Int -> Branch -> String
+ppBranch n br@BTau    {} =
+  indent n ++ "[" ++ show (brGuard br) ++ "] " ++
+  "tau,\n" ++ ppProcess (n + 1) (brCont br)
+ppBranch n br@BOutput {} =
+  indent n ++ "[" ++ show (brGuard br) ++ "] " ++
+  brChan br ++ "!" ++ show (brData br) ++ ",\n" ++
+  ppProcess (n + 1) (brCont br)
+ppBranch n br@BInput  {} =
+  indent n ++ "[" ++ show (brGuard br) ++ "] " ++
+  brChan br ++ "?(" ++ brBind br ++ "),\n" ++
+  ppProcess (n + 1) (brCont br)
+
+ppAction :: Int -> Action -> String
+ppAction n act@AOutput {} =
+  indent n ++ actChan act ++ "!" ++ show (actData act)
+ppAction n act@AInput  {} =
+  indent n ++ actChan act ++ "?(" ++ actBind act ++ ")"
+ppAction n act@ANew    {} =
+  indent n ++ "new (" ++ actBind act ++ ": " ++ show (actTyp act) ++ ")"
+ppAction n act@ALet    {} =
+  indent n ++ "let (" ++ actBind act ++ ": " ++ show (actTyp act) ++
+  " = " ++ show (actVal act) ++ ")"
+ppAction n act@ASpawn  {} =
+  indent n ++ "spawn {" ++
+  actModule act ++ "/" ++ actName act ++ "(" ++ args ++ ")}"
+  where args = intercalate ", " $ map show (actArgs act)
+ppAction n act@APrim   {} =
+  indent n ++ actModule act ++ "/" ++ actName act ++ "(" ++ args ++ ")"
+  where args = intercalate ", " $ map show (actArgs act)
+
+ppDefinition :: Int -> Definition -> String
+ppDefinition n def =
+  indent n ++
+  "def " ++ defName def ++ "(" ++ params ++ ") =\n" ++
+  ppProcess (n + 1) (defBody def) ++ "\n"
+  where params = intercalate ", " $ map showParam (defParams def)
+        showParam (name, typ, _) = name ++ ": " ++ show typ
+
+ppModul :: Int -> Modul -> String
+ppModul n modul =
+  indent n ++
+  "module " ++ modName modul ++ "\n\n" ++
+  intercalate "\n" (map (ppDefinition n) (modDefs modul)) ++
+  "\n"
+
