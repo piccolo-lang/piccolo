@@ -1,4 +1,3 @@
-{-# LANGUAGE ScopedTypeVariables #-}
 {-|
 Module         : Main
 Description    : Entry point of the piccolo compiler
@@ -15,7 +14,6 @@ module Main where
 import PiccError
 import Front.Parser
 import Front.AST
-import Front.ASTUtils
 import Middle.Typing
 import Middle.Environments
 import Middle.Compilation
@@ -73,11 +71,8 @@ getOutputFileName args defaultt =
 
 -- | Various flags for compiler options
 data Flag
-  = Help              -- ^ \--help or -h
-  | GenericBack       -- ^ \--generic or -g
-  | CBack             -- ^ \--cback or -c
-  | SAST PrintLevel   -- ^ \--sast or -s
-  | OutputFile String
+  = Help               -- ^ \--help or -h
+  | OutputFile String  -- ^ \-o
   deriving Eq
 
 -- | Flags description to parse with "System.Console.GetOpt" module
@@ -85,16 +80,6 @@ flags :: [OptDescr Flag]
 flags =
   [ Option "h" ["help"] (NoArg Help)
       "Print this help message"
-  , Option "g" ["generic"] (NoArg GenericBack)
-      "Produce generic code instead of C++ code"
-  , Option "c" ["cback"] (NoArg CBack)
-      "Produce c code instead of C++ code"
-  , Option "" ["sast0"] (NoArg (SAST SimplePrint))
-      "Print AST in s-epxressions style for debugging purposes"
-  , Option "" ["sast1"] (NoArg (SAST PrintTypes))
-      "Print AST in s-epxressions style for debugging purposes"
-  , Option "" ["sast2"] (NoArg (SAST PrintIndexes))
-      "Print AST in s-epxressions style for debugging purposes"
   , Option "o" ["out"] (ReqArg OutputFile "")
       "Specify the filename of the compiled file"
   ]

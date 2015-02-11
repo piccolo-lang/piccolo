@@ -46,7 +46,6 @@ Executable piccolo
   Hs-source-dirs:      src
   Build-depends:       base
                      , array
-                     , pretty
                      , mtl
                      , containers
                      , filepath

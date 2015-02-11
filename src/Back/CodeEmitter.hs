@@ -1,53 +1,65 @@
 {-|
-Module         : Back.codeEmitter
+Module         : Back.CodeEmitter
 Description    : Util functions to generate code into a dedicated monad
 Stability      : experimental
 
-This module defines the monad EmitterM and functions to use it, to generate code from sequential backend AST.
+This module defines the monad EmitterM and functions to use it,
+to generate code from sequential backend AST.
 -}
-module Back.CodeEmitter where
+module Back.CodeEmitter
+  ( EmitterM
+  , runEmitterM
+  , incrIndent
+  , decrIndent
+  , emitStr
+  , emitLn
+  , emitList
+  , emitIndent
+  )
+where
 
 import Control.Monad.Writer
 import Control.Monad.State
 
 
--- | The 'EmitterM' monad carries a state to record indentation level and a writter to output code
+-- | The 'EmitterM' monad carries a state to record indentation level
+-- and a writer to output code
 type EmitterM a = StateT Int (Writer String) a
 
--- | The 'runEmitterM' function runs a computation into the 'EmitterM' monad. It takes the monad and return
--- a string representing the output code.
+-- | The 'runEmitterM' function runs a computation into the 'EmitterM' monad.
+-- It returns the emitted code in a 'String'.
 runEmitterM :: EmitterM a -> String
 runEmitterM m = execWriter (evalStateT m 0)
 
--- | 'indSize' is the default number of spaces for an indentation.
+-- Default indentation size
 indSize :: Int
 indSize = 2
 
--- | 'incrIndent' increments the indentations counter
+-- | 'incrIndent' increments the indentation counter
 incrIndent :: EmitterM ()
-incrIndent = do
-  n <- get
-  put (n + indSize)
+incrIndent = modify (+ indSize)
 
--- | 'decrIndent' decrements the indentations counter
+-- | 'decrIndent' decrements the indentation counter
 decrIndent :: EmitterM ()
-decrIndent = do
-  n <- get
-  put (n - indSize)
+decrIndent = modify (subtract indSize)
 
+-- | Emits the current number of indentations
 emitIndent :: EmitterM ()
 emitIndent = do
   n <- get
   tell (replicate n ' ')
 
+-- | Emits a string
 emitStr :: String -> EmitterM ()
 emitStr = lift . tell
 
+-- | Emits a line with indentation followed by the specified string
 emitLn :: String -> EmitterM ()
 emitLn str = do
   emitIndent
   emitStr $ str ++ "\n"
 
+-- | Emits a list with the specified separator
 emitList :: (a -> EmitterM ()) -> String -> [a] -> EmitterM ()
 emitList _ _ []     = return ()
 emitList f _ [x]    = f x

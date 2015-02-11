@@ -1,4 +1,4 @@
-.PHONY: build install
+.PHONY: build install doc
 
 include config.mk
 
@@ -8,3 +8,5 @@ install:
 build: dist/setup-config
 	$(CABAL) build
 
+doc: dist/setup-config
+	$(CABAL) haddock --executables --hyperlink-source --html --hoogle --haddock-options="--title Piccolo"

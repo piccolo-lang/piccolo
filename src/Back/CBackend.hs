@@ -4,14 +4,15 @@ Description    : A C backend module
 Stability      : experimental
 
 This backend targets C code.
+__TODO__: put the real values of env size and choice size in emitCode
 -}
 module Back.CBackend (emitCode) where
 
-import           Back.CodeEmitter
-import           Back.SeqAST
+import Back.CodeEmitter
+import Back.SeqAST
 
-import           Control.Monad
-import           Data.List        (delete)
+import Control.Monad
+import Data.List (delete)
 
 emitCode :: String -> Instr -> EmitterM ()
 emitCode mainName instr = do
@@ -23,7 +24,7 @@ emitCode mainName instr = do
   emitLn ""
   emitLn "int main() {"
   incrIndent
-  emitLn $ "PICC_main(4, " ++ mainName ++ ", 2, 2, 2, 10, 10);" -- TODO : change 10 for the real envsize of entry def
+  emitLn $ "PICC_main(4, " ++ mainName ++ ", 2, 2, 2, 10, 10);"
   decrIndent
   emitLn "}"
 
@@ -478,17 +479,17 @@ emitType ChannelArrayType  = emitStr "PICC_Channel**"
 emitType TryResultEnumType = emitStr "PICC_TryResult"
 
 emitVarName :: VarName -> EmitterM ()
-emitVarName PiThread            = emitStr "pt"
-emitVarName Child               = emitStr "child"
-emitVarName Scheduler           = emitStr "scheduler"
-emitVarName (V i)               = emitStr $ "v" ++ show i
-emitVarName Chan                = emitStr "chan"
-emitVarName Chans               = emitStr "chans"
-emitVarName NbChans             = emitStr "nbChans"
-emitVarName Commit              = emitStr "commit"
-emitVarName TryResult           = emitStr "try_result"
-emitVarName Ok                  = emitStr "ok"
-emitVarName NbDisabled          = emitStr "nb_disabled"
+emitVarName PiThread   = emitStr "pt"
+emitVarName Child      = emitStr "child"
+emitVarName Scheduler  = emitStr "scheduler"
+emitVarName (V i)      = emitStr $ "v" ++ show i
+emitVarName Chan       = emitStr "chan"
+emitVarName Chans      = emitStr "chans"
+emitVarName NbChans    = emitStr "nbChans"
+emitVarName Commit     = emitStr "commit"
+emitVarName TryResult  = emitStr "try_result"
+emitVarName Ok         = emitStr "ok"
+emitVarName NbDisabled = emitStr "nb_disabled"
 
 emitEvalfuncName :: EvalfuncName -> EmitterM ()
 emitEvalfuncName (EvalfuncName i) = emitStr $ "eval" ++ show i

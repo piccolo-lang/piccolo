@@ -1,4 +1,4 @@
--- Implementation of the Eratosthene's sieve
+// Implementation of the Eratosthene's sieve
 
 module Test/Eratosthene
 

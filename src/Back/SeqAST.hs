@@ -3,16 +3,23 @@ module         : Back.SeqAST
 Description    : The sequential AST for code generation
 Stability      : experimental
 
-Longer description.
+Piccolo-core language is compiled into a sequential AST allowing sequential
+code generation. This module describes the structure of this AST.
 -}
 module Back.SeqAST where
 
 import qualified Front.AST as PilAST
 
-data DefName  = DefName  String String
+-- | Definition corresponding to a compiled process definition
+data DefName = DefName String String
+
+-- | Primitives
 data PrimName = PrimName String String
+
+-- | Evaluation function for computing output payload
 data EvalfuncName = EvalfuncName Int
 
+-- | Reserved variable names of runtime
 data VarName
   = PiThread
   | Child
@@ -26,6 +33,7 @@ data VarName
   | Ok
   | NbDisabled
 
+-- | Runtime types
 data Type
   = BoolType
   | IntType
@@ -37,6 +45,7 @@ data Type
   | ChannelArrayType
   | TryResultEnumType
 
+-- | Runtime enumerations
 data EnumName
   = StatusRun
   | StatusBlocked
@@ -46,12 +55,13 @@ data EnumName
   | TryResultDisabled
   | TryResultAbort
 
+-- | Runtime functions
 data RTFun
-  = EvalFunc EvalfuncName
-  | PrimCall PrimName           [BExpr]
-  | DefProc  DefName
+  = EvalFunc EvalfuncName      -- ^ Evaluation function for output payload
+  | PrimCall PrimName [BExpr]  -- ^ Primitive
+  | DefProc DefName            -- ^ Compiler process definition
 
-  -- pithread.h
+  -- Pithreads related functions
   | PiThreadCreate              BExpr BExpr
   | SetProc                     BExpr BExpr
   | GetPC                       BExpr
@@ -77,7 +87,7 @@ data RTFun
   | ProcessAwake                BExpr BExpr
   | ProcessEnd                  BExpr BExpr
 
-  -- value.h
+  -- Values related functions
   | InitNoValue                 BExpr
   | InitBoolTrue                BExpr
   | InitBoolFalse               BExpr
@@ -89,18 +99,18 @@ data RTFun
   | UnboxBoolValue              BExpr
   | UnlockChannel               BExpr
 
-  -- scheduler.h
+  -- Scheduler related functions
   | ReadyPushFront              BExpr BExpr
   | SchedGetReadyQueue          BExpr
 
-  -- commit.h
+  -- Commitments related functions
   | GetThread                   BExpr
   | GetRefVar                   BExpr
   | CallEvalFunc                BExpr
   | RegisterInputCommitment     BExpr BExpr BExpr BExpr
   | RegisterOutputCommitment    BExpr BExpr BExpr BExpr
 
-  -- tryaction.h
+  -- Actions related functions
   | TryInputAction              BExpr BExpr
   | TryOutputAction             BExpr BExpr
   | ChannelArrayCreate          BExpr
@@ -108,6 +118,7 @@ data RTFun
   | ChannelArrayUnlock          BExpr BExpr
 
 
+-- | Runtime expressions
 data BExpr
   = Not BExpr
   | Equal BExpr BExpr
@@ -117,11 +128,13 @@ data BExpr
   | StringExpr String
   | Var VarName
   | Enum EnumName
-  | FunCall RTFun
-  | FunVal RTFun
+  | FunCall RTFun       -- ^ Function call
+  | FunVal RTFun        -- ^ Function as a value
 
+-- | Label type for program counter
 type Lab = Int
 
+-- | Sequential instructions
 data Instr
   = Comment String
   | Debug String

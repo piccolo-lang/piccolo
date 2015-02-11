@@ -1,13 +1,14 @@
 {-|
 Module         : Back.SeqASTUtils
-Description    :
+Description    : SeqAST constructors
 Stability      : experimental
 
-This module contains the generators for constructing a 'SeqAST.Instr' in the compilation pass.
+This module contains 'Back.SeqAST' utils functions and constructors for
+compilation DSL.
 -}
 module Back.SeqASTUtils where
 
-import           Back.SeqAST
+import Back.SeqAST
 
 
 -- language constructions
@@ -15,8 +16,8 @@ import           Back.SeqAST
 var :: VarName -> Type -> Instr
 var = DeclareVar
 
-comment :: String -> Instr
-comment str = Comment ("---------- " ++ str ++ " ----------")
+comment :: Show a => a -> Instr
+comment a = Comment ("---------- " ++ show a ++ " ----------")
 
 (#) :: Instr -> Instr -> Instr
 (#) = Seq
@@ -76,6 +77,8 @@ tryResultDisabled = Enum TryResultDisabled
 tryResultAbort :: BExpr
 tryResultAbort = Enum TryResultAbort
 
+
+-- primitive call
 
 primCall :: (BExpr, PrimName, [VarName]) -> Instr
 primCall (th, pName, vs) = ProcCall (PrimCall pName (th : map Var vs))
@@ -195,13 +198,14 @@ unlockChannel :: BExpr -> Instr
 unlockChannel channel = ProcCall $ UnlockChannel channel
 
 
--- scheduling functions
+-- scheduler functions
 
 readyPushFront :: (BExpr, BExpr) -> Instr
 readyPushFront (rqueue, thread) = ProcCall $ ReadyPushFront rqueue thread
 
 schedGetReadyQueue :: BExpr -> BExpr
 schedGetReadyQueue sched = FunCall $ SchedGetReadyQueue sched
+
 
 -- commitment functions
 
@@ -215,15 +219,15 @@ callEvalFunc :: BExpr -> BExpr
 callEvalFunc commitment = FunCall $ CallEvalFunc commitment
 
 registerInputCommitment :: (BExpr, BExpr, Int, Int) -> Instr
-registerInputCommitment (thread, channel, envval, cont) =
-  ProcCall $ RegisterInputCommitment thread channel (IntExpr envval) (IntExpr cont)
+registerInputCommitment (thread, channel, envval, cont) = ProcCall $
+  RegisterInputCommitment thread channel (IntExpr envval) (IntExpr cont)
 
 registerOutputCommitment :: (BExpr, BExpr, EvalfuncName, Int) -> Instr
-registerOutputCommitment (thread, channel, f, cont) =
-  ProcCall $ RegisterOutputCommitment thread channel (FunVal (EvalFunc f)) (IntExpr cont)
+registerOutputCommitment (thread, channel, f, cont) = ProcCall $
+  RegisterOutputCommitment thread channel (FunVal (EvalFunc f)) (IntExpr cont)
 
 
--- try-action functions
+-- action functions
 
 tryInputAction :: (BExpr, BExpr) -> BExpr
 tryInputAction (channel, res) = FunCall $ TryInputAction channel res

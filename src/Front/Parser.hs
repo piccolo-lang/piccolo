@@ -1,3 +1,15 @@
+{-|
+Module        : Front.Parser
+Description   : Piccolo-core parser
+Stability     : experimental
+
+This is the parser combinators for parsing piccolo-core modules.
+
+__TODO__: feed the locations to the AST
+__TODO__: define AST construction helpers for ast nodes in ASTUtils and user
+them here
+-}
+
 module Front.Parser (parseModule)
 where
 
@@ -15,9 +27,9 @@ import Control.Arrow
 
 langDef :: Tok.LanguageDef ()
 langDef = Tok.LanguageDef
-  { Tok.commentStart    = "{-"
-  , Tok.commentEnd      = "-}"
-  , Tok.commentLine     = "--"
+  { Tok.commentStart    = "/*"
+  , Tok.commentEnd      = "*/"
+  , Tok.commentLine     = "//"
   , Tok.nestedComments  = True
   , Tok.identStart      = letter
   , Tok.identLetter     = alphaNum <|> char '_'
@@ -123,6 +135,7 @@ process = annotatedProc
           )
       <|> try call
       <|> guardedChoice
+      <?> "process"
 
 annotatedProc :: Parser Process
 annotatedProc = do
@@ -148,6 +161,7 @@ branch :: Parser Branch
 branch = try branchTau
      <|> try branchOutput
      <|> try branchInput
+     <?> "choice branch"
 
 branchTau :: Parser Branch
 branchTau = do
@@ -201,6 +215,7 @@ action = try output
            n <- identifier
            args <- parens $ commaSep expr
            return $ APrim m n args noLoc
+     <?> "action"
 
 output :: Parser Action
 output = do
@@ -217,14 +232,18 @@ input = do
   return $ AInput c x (TUnknown noLoc) (-1) (-1) noLoc
 
 typeExpr :: Parser TypeExpr
-typeExpr = (reserved "chan" >> angles typeExpr >>= \t -> return $ TChannel t noLoc)
-       <|> (parens $ sepBy1 typeExpr (char '*') >>= \ts -> return $ TTuple ts noLoc)
+typeExpr = (reserved "chan" >> angles typeExpr >>=
+            \t -> return $ TChannel t noLoc)
+       <|> (parens $ sepBy1 typeExpr (char '*') >>=
+            \ts -> return $ TTuple ts noLoc)
        <|> (typeAtom >>= \at -> return $ TAtom at noLoc)
+       <?> "type"
 
 typeAtom :: Parser TypeAtom
 typeAtom = (reserved "bool"   >> return TBool)
        <|> (reserved "int"    >> return TInt)
        <|> (reserved "string" >> return TString)
+       <?> "type atom"
 
 typedVar :: Parser (String, TypeExpr)
 typedVar = do
@@ -246,6 +265,8 @@ expr = (try $ reserved "true"  >> return (ETrue (TUnknown noLoc) noLoc))
           args <- parens $ commaSep expr
           return $ EPrim (TUnknown noLoc) noLoc m n args
        )
+   <?> "expression"
 
+-- | Module parser
 parseModule :: String -> Either PiccError Modul
 parseModule s = left (ParsingError . show) $ parse modul "Module Parser" s

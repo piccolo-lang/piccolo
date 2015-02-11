@@ -7,9 +7,12 @@ This module contains the compilation pass. It transforms a piccolo AST to a sequ
 -}
 module Middle.Compilation (compilePass) where
 
-import Back.SeqAST (BExpr (Not), DefName (..),
-                    EvalfuncName (..), Instr (DefFunction, EvalFunction, Nop, Return, ReturnRegister, Goto, Switch, Case, CaseAndLabel),
-                    PrimName (..), Type (..))
+import Back.SeqAST
+  ( BExpr (Not), DefName (..)
+  , EvalfuncName (..), Instr (DefFunction, EvalFunction, Nop
+  , Return, ReturnRegister, Goto, Switch, Case, CaseAndLabel)
+  , PrimName (..), Type (..)
+  )
 import Back.SeqASTUtils
 import Front.AST
 import Front.ASTUtils
@@ -19,12 +22,13 @@ import Control.Monad.Error
 import Control.Monad.State
 import Data.List (delete)
 
-
-data CompState = CompState { labelCount    :: Int
-                           , currentModule :: String
-                           , evalFuncCount :: Int
-                           , evalFuncs     :: [Instr]
-                           }
+data CompState
+  = CompState
+    { labelCount    :: Int
+    , currentModule :: String
+    , evalFuncCount :: Int
+    , evalFuncs     :: [Instr]
+    }
 
 type CompilingM a = ErrorT PiccError (State CompState) a
 
@@ -87,7 +91,7 @@ compileDefinition def = do
 
 compileProcess :: Process -> CompilingM Instr
 compileProcess proc@PEnd {} =
-  return $ comment (strSExpr [] proc) #
+  return $ comment proc #
            processEnd(pt, statusEnded) #
            Return
 
@@ -201,7 +205,7 @@ compileProcess proc@PCall {} = do
   CompState { currentModule = currentModName } <- get
   let (name1, name2) | null (procModule proc) = (delete '/' currentModName, procName proc)
                      | otherwise              = (delete '/' $ procModule proc, procName proc)
-  return $ comment (strSExpr [] proc) #
+  return $ comment proc #
            (begin $ forgetAllValues pt #
                     foldr (#) Nop loop1 #
                     foldr (#) Nop loop2 #
@@ -213,12 +217,12 @@ compileProcess proc@PCall {} = do
 
 compileBranchAction :: Int -> Branch -> CompilingM Instr
 compileBranchAction _ br@BTau {} =
-  return $ comment (strSExpr [] br) #
+  return $ comment br #
            tryResult <-- tryResultEnabled
 
 compileBranchAction _ br@BOutput { brChanIndex = c} = do
   expr <- compileExpr (brData br)
-  return $ comment (strSExpr [] br) #
+  return $ comment br #
            (begin $ var chan ChannelType #
                     chan <-- unboxChannelValue(getEnv(pt, c)) #
                     ifthenelse (Not (channelArrayLockAndRegister(chans, nbChans, pt, chan)))
@@ -238,7 +242,7 @@ compileBranchAction _ br@BOutput { brChanIndex = c} = do
            )
 
 compileBranchAction _ br@BInput { brChanIndex = c, brBindIndex = x } =
-  return $ comment (strSExpr [] br) #
+  return $ comment br #
            (begin $ var chan ChannelType #
                     chan <-- unboxChannelValue(getEnv(pt, c)) #
                     ifthenelse (Not (channelArrayLockAndRegister(chans, nbChans, pt, chan)))
@@ -266,7 +270,7 @@ compileAction act@AOutput { actChanIndex = c } = do
   prefixCont  <- genLabel
   exprComp    <- compileExpr (actData act)
   evalFunc    <- registerEvalFunc $ exprComp # ReturnRegister
-  return $ comment (strSExpr [] act) #
+  return $ comment act #
            Case prefixStart #
            (begin $ var chan ChannelType #
                     chan <-- unboxChannelValue(getEnv(pt, c)) #
@@ -308,7 +312,7 @@ compileAction act@AOutput { actChanIndex = c } = do
 compileAction act@AInput { actChanIndex = c, actBindIndex = x } = do
   prefixStart <- genLabel
   prefixCont  <- genLabel
-  return $ comment (strSExpr [] act) #
+  return $ comment act #
            Case prefixStart #
            (begin $ var chan ChannelType #
                     chan <-- unboxChannelValue(getEnv(pt, c)) #
@@ -351,13 +355,13 @@ compileAction act@AInput { actChanIndex = c, actBindIndex = x } = do
            CaseAndLabel prefixCont
 
 compileAction act@ANew { actBindIndex = c } =
-  return $ comment (strSExpr [] act) #
+  return $ comment act #
            initChannelValue(getEnv(pt, c)) #
            registerEnvValue(pt, c)
 
 compileAction act@ALet { actBindIndex = x } = do
   expr <- compileExpr (actVal act)
-  return $ comment (strSExpr [] act) #
+  return $ comment act #
            expr #
            setEnv(pt, x, getRegister pt)
 
@@ -375,7 +379,7 @@ compileAction act@ASpawn  {} = do
                 then registerEnvValue(child, i-1)
                 else Nop
              )
-  return $ comment (strSExpr [] act) #
+  return $ comment act #
            (begin $ var child PiThreadType #
                     child <-- piThreadCreate(10, 10) # -- TODO user the computed env sizes !
                     foldr (#) Nop loop #
@@ -395,7 +399,7 @@ compileAction act@APrim {} = do
              )
   let (vs, loop) = unzip loops
   let primName   = PrimName (actModule act) (actName act)
-  return $ comment (strSExpr [] act) #
+  return $ comment act #
            (begin $ foldr (#) Nop loop #
                     primCall(registerPointer pt, primName, vs)
            )
@@ -406,7 +410,7 @@ compileExpr EFalse    {} = return $ initBoolFalse(registerPointer pt)
 compileExpr e@EInt    {} = return $ initIntValue(registerPointer pt, exprInt e)
 compileExpr e@EString {} = return $ initStringValue(registerPointer pt, exprStr e) # registerRegisterValue pt
 compileExpr e@EVar    {} = return $ setRegister(pt, getEnv(pt, exprIndex e))
-compileExpr ETuple    {} = throwError $ TodoError "tuples not yet supported"
+compileExpr ETuple    {} = error "tuples are not yet implemented"
 
 compileExpr e@EPrim   {} = do
   loops <- forM (zip ([1..]::[Int]) (exprArgs e)) $ \(i, arg) -> do
