@@ -250,10 +250,11 @@ decrFuel thread = ProcCall $ DecrFuel thread
 forgetAllValues :: BExpr -> Instr
 forgetAllValues thread = ProcCall $ ForgetAllValues thread
 
--- | Registering a value as managed for a process
+-- | Registering a value as managed by a process
 registerEnvValue :: (BExpr, Int) -> Instr
 registerEnvValue (thread, ind) = ProcCall $ RegisterEnvValue thread (IntExpr ind)
 
+-- | Registering a value as managed by a process
 registerRegisterValue :: BExpr -> Instr
 registerRegisterValue thread = ProcCall $ RegisterRegisterValue thread
 
@@ -376,7 +377,7 @@ channelArrayUnlock (channels, nb) = ProcCall $ ChannelArrayUnlock channels nb
 -- | Variables are declared in a typeclass so that they can be used either
 -- as an expression or as a variable name for function application
 class BackendVars a where
-  pt                    :: a
+  pt                    :: a 
   child                 :: a
   scheduler             :: a
   v                     :: Int -> a
