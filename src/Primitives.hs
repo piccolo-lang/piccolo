@@ -1,5 +1,5 @@
 {-|
-Module         : Front.Primitives
+Module         : Primitives
 Description    : Primitives description
 Stability      : experimental
 
@@ -8,8 +8,7 @@ by a backend, for the typechecking to be complete.
 -}
 module Primitives (primTypes) where
 
-import Front.AST
-import Front.ASTUtils
+import Core.AST
 
 import qualified Data.Map as Map
 

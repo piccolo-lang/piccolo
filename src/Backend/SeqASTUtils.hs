@@ -1,14 +1,14 @@
 {-|
-Module         : Back.SeqASTUtils
+Module         : Backend.SeqASTUtils
 Description    : SeqAST constructors
 Stability      : experimental
 
 This module contains 'Back.SeqAST' utils functions and constructors for
 compilation DSL.
 -}
-module Back.SeqASTUtils where
+module Backend.SeqASTUtils where
 
-import Back.SeqAST
+import Backend.SeqAST
 
 
 -- language constructions

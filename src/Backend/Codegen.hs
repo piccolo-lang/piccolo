@@ -1,12 +1,12 @@
 {-|
-Module         : Back.CodeEmitter
+Module         : Backend.Codegen
 Description    : Util functions to generate code into a dedicated monad
 Stability      : experimental
 
 This module defines the monad EmitterM and functions to use it,
 to generate code from sequential backend AST.
 -}
-module Back.CodeEmitter
+module Backend.Codegen
   ( EmitterM
   , runEmitterM
   , incrIndent

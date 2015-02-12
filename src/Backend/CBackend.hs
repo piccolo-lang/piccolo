@@ -1,15 +1,15 @@
 {-|
-Module         : Back.CBackend
+Module         : Backend.CBackend
 Description    : A C backend module
 Stability      : experimental
 
 This backend targets C code.
 __TODO__: put the real values of env size and choice size in emitCode
 -}
-module Back.CBackend (emitCode) where
+module Backend.CBackend (emitCode) where
 
-import Back.CodeEmitter
-import Back.SeqAST
+import Backend.Codegen
+import Backend.SeqAST
 
 import Control.Monad
 import Data.List (delete)

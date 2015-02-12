@@ -1,14 +1,14 @@
 {-|
-Module         : PiccError
+Module         : Errors
 Description    : Errors handling module
 Stability      : experimental
 
 This module defines the various types of errors that can occur during
 the compilation of a piccolo program.
 -}
-module PiccError where
+module Errors where
 
-import Front.AST
+import Core.AST
 
 import System.Exit
 import Control.Monad.Error

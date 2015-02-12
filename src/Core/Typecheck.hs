@@ -1,5 +1,5 @@
 {-|
-Module         : Middle.Typing
+Module         : Core.Typecheck
 Description    : Typing module for the piccolo language
 Stability      : experimental
 
@@ -7,11 +7,11 @@ Since types are explicitly written in the code when introducing a new variable (
 or process definition parameters), the typing pass of the piccolo compiler only check types through
 a traversal of the AST and tag each value with its types for compilation pass.
 -}
-module Middle.Typing (typingPass) where
+module Core.Typecheck (typingPass) where
 
-import Front.AST
-import Front.ASTUtils
-import PiccError
+import Core.AST
+import Core.ASTUtils
+import Errors
 import Primitives
 
 import Control.Monad.Error
@@ -192,16 +192,16 @@ tcExpr e@EPrim   { exprModule = m, exprName = n } = do
 tcExpr e@EAnd    {} = do
   tLeft  <- tcExpr (exprLeft e)
   tRight <- tcExpr (exprRight e)
-  when (not (isBool (exprTyp tLeft))) $
+  unless (isBool (exprTyp tLeft)) $
     throwError $ SimpleError "bad type in and (left)"
-  when (not (isBool (exprTyp tRight))) $
+  unless (isBool (exprTyp tRight)) $
     throwError $ SimpleError "bad type in and (right)"
   return $ e { exprLeft = tLeft, exprRight = tRight }
 tcExpr e@EOr     {} = do
   tLeft  <- tcExpr (exprLeft e)
   tRight <- tcExpr (exprRight e)
-  when (not (isBool (exprTyp tLeft))) $
+  unless (isBool (exprTyp tLeft)) $
     throwError $ SimpleError "bad type in or(left)"
-  when (not (isBool (exprTyp tRight))) $
+  unless (isBool (exprTyp tRight)) $
     throwError $ SimpleError "bad type in or (right)"
   return $ e { exprLeft = tLeft, exprRight = tRight }

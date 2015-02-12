@@ -1,22 +1,22 @@
 {-|
-Module         : Middle.Compilation
+Module         : Core.Compilation
 Description    : Compilation module
 Stability      : experimental
 
 This module contains the compilation pass. It transforms a piccolo AST to a sequential AST.
 -}
-module Middle.Compilation (compilePass) where
+module Core.Compilation (compilePass) where
 
-import Back.SeqAST
+import Backend.SeqAST
   ( BExpr (Not), DefName (..)
   , EvalfuncName (..), Instr (DefFunction, EvalFunction, Nop
   , Return, ReturnRegister, Goto, Switch, Case, CaseAndLabel)
   , PrimName (..), Type (..)
   )
-import Back.SeqASTUtils
-import Front.AST
-import Front.ASTUtils
-import PiccError
+import Backend.SeqASTUtils
+import Core.AST
+import Core.ASTUtils
+import Errors
 
 import Control.Monad.Error
 import Control.Monad.State
@@ -174,7 +174,7 @@ compileProcess proc@PChoice {} = do
                     ifthen (nbDisabled =:== n)
                     (
                       channelArrayUnlock(chans, nbChans) #
-                      (if (procSafe proc)
+                      (if procSafe proc
                          then setSafeChoice(pt, True)
                          else Nop) #
                       processEnd(pt, statusBlocked) #
@@ -373,7 +373,7 @@ compileAction act@ASpawn  {} = do
     expr <- compileExpr arg
     return $ expr #
              var (v i) PiValueType #
-             (v i) <-- getRegister pt #
+             v i <-- getRegister pt #
              setEnv(child, i-1, v i) #
              (if isAManagedType $ exprTyp arg
                 then registerEnvValue(child, i-1)
@@ -417,7 +417,7 @@ compileExpr e@EPrim   {} = do
     expr <- compileExpr arg
     return (v i, var (v i) PiValueType #
                  expr #
-                 (v i) <-- getRegister pt
+                 v i <-- getRegister pt
            )
   let (vs, loop) = unzip loops
   let primName   = PrimName (exprModule e) (exprName e)

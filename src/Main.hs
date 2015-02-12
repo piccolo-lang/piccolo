@@ -11,14 +11,14 @@ It waits for a pi-file name and produces by default binary file a.out.
 -}
 module Main where
 
-import PiccError
-import Front.Parser
-import Front.AST
-import Middle.Typing
-import Middle.Environments
-import Middle.Compilation
-import Back.CodeEmitter
-import qualified Back.CBackend as CBackend
+import Errors
+import Core.Parser
+import Core.AST
+import Core.Typecheck
+import Core.Environments
+import Core.Compilation
+import Backend.Codegen
+import qualified Backend.CBackend as CBackend
 
 import System.Environment
 import System.Console.GetOpt

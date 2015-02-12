@@ -1,15 +1,15 @@
 {-|
-Module         : Middle.Environments
+Module         : Core.Environments
 Description    : Indexes of variables computation pass
 Stability      : experimental
 
 In runtime, process environment have a fixed size, and each variable is called using an index in this environment.
 This module computes these indexes and decorates the AST/
 -}
-module Middle.Environments (computingEnvPass, EnvSize) where
+module Core.Environments (computingEnvPass, EnvSize) where
 
-import Front.AST
-import PiccError
+import Core.AST
+import Errors
 
 import Data.List
 import qualified Data.Map as Map

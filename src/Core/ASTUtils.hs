@@ -1,5 +1,5 @@
 {-|
-Module         : Front.ASTUtils
+Module         : Core.ASTUtils
 Description    : Util functions for manipulating the AST
 Stability      : experimental
 
@@ -8,9 +8,9 @@ AST informations (such as location).
 __TODO__: move the isManagedType to a typecheck file.
 avoid Show orphan instances
 -}
-module Front.ASTUtils where
+module Core.ASTUtils where
 
-import Front.AST
+import Core.AST
 
 isAManagedType :: TypeExpr -> Bool
 isAManagedType TChannel {}               = True

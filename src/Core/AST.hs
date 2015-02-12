@@ -1,5 +1,5 @@
 {-|
-Module         : Front.AST
+Module         : Core.AST
 Description    : Piccolo AST datatypes
 Stability      : experimental
 
@@ -10,7 +10,7 @@ during the whole compilation process.
 
 __TODO__: do not mangle the ModuleName/SubModuleName in the AST.
 -}
-module Front.AST where
+module Core.AST where
 
 import Data.List (intercalate)
 

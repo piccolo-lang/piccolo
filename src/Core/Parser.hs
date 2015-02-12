@@ -1,5 +1,5 @@
 {-|
-Module        : Front.Parser
+Module        : Core.Parser
 Description   : Piccolo-core parser
 Stability     : experimental
 
@@ -10,12 +10,11 @@ __TODO__: define AST construction helpers for ast nodes in ASTUtils and user
 them here
 -}
 
-module Front.Parser (parseModule)
+module Core.Parser (parseModule)
 where
 
-import PiccError
-import Front.AST
-import Front.ASTUtils
+import Errors
+import Core.AST
 
 import Text.Parsec hiding (string)
 import Text.Parsec.String (Parser)

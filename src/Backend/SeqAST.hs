@@ -1,14 +1,14 @@
 {-|
-module         : Back.SeqAST
+module         : Backend.SeqAST
 Description    : The sequential AST for code generation
 Stability      : experimental
 
 Piccolo-core language is compiled into a sequential AST allowing sequential
 code generation. This module describes the structure of this AST.
 -}
-module Back.SeqAST where
+module Backend.SeqAST where
 
-import qualified Front.AST as PilAST
+import qualified Core.AST as PilAST
 
 -- | Definition corresponding to a compiled process definition
 data DefName = DefName String String
