@@ -3,10 +3,15 @@ Module         : Core.Environments
 Description    : Indexes of variables computation pass
 Stability      : experimental
 
-In runtime, process environment have a fixed size, and each variable is called using an index in this environment.
-This module computes these indexes and decorates the AST/
+In runtime, process environment have a fixed size,
+and each variable is called using an index in this environment.
+This module computes these indexes and decorates the core AST with them.
+__TODO__: rewrite the computingEnvPass function (it's ugly...)
 -}
-module Core.Environments (computingEnvPass, EnvSize) where
+module Core.Environments
+  ( computingEnvPass
+  )
+where
 
 import Core.AST
 import Errors
@@ -17,8 +22,7 @@ import Control.Monad.Error
 import Control.Monad.State
 
 
-type EnvSize = Int
-type DefsEnv = Map.Map String EnvSize
+type DefsEnv = Map.Map String Int
 
 data Environment = Environment { defsSizes     :: DefsEnv
                                , lexicalEnv    :: [String]
@@ -28,7 +32,7 @@ data Environment = Environment { defsSizes     :: DefsEnv
 
 type EnvM a = ErrorT PiccError (State Environment) a
 
-lookupSizeOfDef :: String -> EnvM EnvSize
+lookupSizeOfDef :: String -> EnvM Int
 lookupSizeOfDef name = do
   Environment { defsSizes = defs } <- get
   return $ defs Map.! name
@@ -61,14 +65,14 @@ beforeDefComputation args = do
   env <- get
   put env { lexicalEnv = args, maxCalledSize = 0, maxChoiceSize = 0 }
 
-afterDefComputation :: EnvM EnvSize
+afterDefComputation :: EnvM Int
 afterDefComputation = do
   env <- get
   let envSize = length $ lexicalEnv env
   let calSize = maxCalledSize env
   return $ maximum [envSize, calSize]
 
-registerDefSize :: String -> EnvSize -> EnvM ()
+registerDefSize :: String -> Int -> EnvM ()
 registerDefSize name size = do
   env <- get
   let defs = defsSizes env
@@ -78,7 +82,6 @@ registerDefSize name size = do
 -- | The 'computingEnvPass' function computes environment that are needed to
 -- address variable with a simple integer at the runtime. It also decorates
 -- the AST with those indexes.
--- TODO : rewrite this function with 'fix' ?
 computingEnvPass :: Modul -> Either PiccError Modul
 computingEnvPass m = loopUntilFix m $ Map.fromList (map extractSize (modDefs m))
   where extractSize def = let i = defEnvSize def in

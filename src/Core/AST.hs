@@ -10,7 +10,20 @@ during the whole compilation process.
 
 __TODO__: do not mangle the ModuleName/SubModuleName in the AST.
 -}
-module Core.AST where
+module Core.AST
+  ( Location (..), noLoc, isNoLoc
+  , AST (..)
+  , TypeExpr (..)
+  , TypeAtom (..)
+  , Expr (..)
+  , Process (..)
+  , Branch (..)
+  , Action (..)
+  , Definition (..)
+  , Modul (..)
+  , 
+  )
+where
 
 import Data.List (intercalate)
 
@@ -26,7 +39,6 @@ data Location = Location
   , locEndColumn   :: !Int  -- ^ column of the end of the block
   } deriving (Eq)
 
--- | A location is showable for error messages
 instance Show Location where
   show loc = show (locStartLine loc) ++ ":" ++
              show (locStartColumn loc) ++ "->" ++
@@ -72,7 +84,6 @@ data TypeExpr
     , typLoc  :: Location
     }
 
--- | TypeExpr is showable for typing error messages
 instance Show TypeExpr where
   show TUnknown     {} = "unknown"
   show typ@TAtom    {} = show $ typAtom typ
@@ -81,7 +92,6 @@ instance Show TypeExpr where
   show typ@TPrim    {} = "[" ++ intercalate "," (map show (typArgs typ)) ++
                          "] -> " ++ show (typRet typ)
 
--- | A TypeExpr is localizable
 instance AST TypeExpr where
   localize = typLoc
 
@@ -92,7 +102,6 @@ data TypeAtom
   | TString
   deriving (Eq)
 
--- | Types are showable for typing error messages
 instance Show TypeAtom where
   show TBool   = "bool"
   show TInt    = "int"
@@ -166,7 +175,6 @@ data Expr
     , exprRight :: Expr
     }
 
--- | Expressions are showable
 instance Show Expr where
   show ETrue     {} = "true"
   show EFalse    {} = "false"
@@ -182,7 +190,6 @@ instance Show Expr where
   show e@EOr     {} = "(" ++ show (exprLeft e) ++ ") or (" ++
                       show (exprRight e) ++ ")"
 
--- | An expressions is localizable
 instance AST Expr where
   localize = exprLoc
 

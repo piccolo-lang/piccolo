@@ -5,11 +5,18 @@ Stability      : experimental
 
 The piccolo can be invoked with the following options:
 
-  * --help or -h                   prints the help
+  * --version or -v                print version
+
+  * --help or -h                   print the help
+
+  * --out or -o                    specify the output executable filename
 
 It waits for a pi-file name and produces by default binary file a.out.
 -}
-module Main where
+module Main
+  (main
+  )
+where
 
 import Errors
 import Core.Parser
@@ -19,81 +26,60 @@ import Core.Environments
 import Core.Compilation
 import Backend.Codegen
 import qualified Backend.CBackend as CBackend
+import Backend.CCompiler
 
 import System.Environment
 import System.Console.GetOpt
-import System.IO
 import System.Exit
-import System.Process
 import Data.List
-import Data.Maybe
-
-import Paths_piccolo
+import Control.Monad
 
 
 -- | Main function
 main :: IO ()
 main = do
-  (args, files) <- getArgs >>= parseArgs
-  handleFiles args files
-
-handleFiles :: [Flag] -> [String] -> IO ()
-handleFiles _ [] = return ()
-handleFiles _ [f] = do
-  content  <- readFile f
+  args <- getArgs
+  let (actions, nonOpts, _) = getOpt Permute options args
+  opts <- foldl (>>=) (return defaultOptions) actions
+  let Options { optOutput = out } = opts
+  when (length nonOpts /= 1) $ void (showHelp opts)
+  let [piFile] = nonOpts
+  content  <- readFile piFile
   ast      <- reportResult $ parseModule content
-  typedAst <- reportResult $ typingPass ast
+  typedAst <- reportResult $ typeCheck ast
   withEnv  <- reportResult $ computingEnvPass typedAst
   seqAst   <- reportResult $ compilePass withEnv
-  let code   = runEmitterM $ CBackend.emitCode (mainDef withEnv) seqAst
-  dataDir  <- getDataDir
-  let ccInc  = ["-I", dataDir ++ "/runtime"]
-      ccLib  = ["-L", dataDir ++ "/runtime"]
-      ccArgs = ["-std=c11", "-xc", "-"] ++ ccInc ++ ccLib ++ ["-lpiccolort", "-lpthread"]
-  (Just ccStdin, _, _, ccProc) <- createProcess (proc "gcc" ccArgs) { std_in  = CreatePipe
-                                                                    , std_out = UseHandle stdout
-                                                                    , std_err = UseHandle stderr
-                                                                    }
-  hPutStr ccStdin code
-  hClose ccStdin
-  _ <- waitForProcess ccProc
-  return ()
-  where mainDef m = delete '/' (modName m) ++ "_Main"
-handleFiles _ _ = error "one file at once please..."
+  let code  = runEmitterM $ CBackend.emitCode (mainDef withEnv) seqAst
+  compileCCode code out
+  where
+    mainDef m = delete '/' (modName m) ++ "_Main"
 
-getOutputFileName :: [Flag] -> String -> String
-getOutputFileName args defaultt =
-  case mapMaybe f args of
-    []  -> defaultt
-    x:_ -> x
-  where f (OutputFile s) = Just s
-        f _              = Nothing
+data Options = Options
+  { optOutput :: String
+  } deriving Show
 
--- | Various flags for compiler options
-data Flag
-  = Help               -- ^ \--help or -h
-  | OutputFile String  -- ^ \-o
-  deriving Eq
+defaultOptions :: Options
+defaultOptions = Options
+  { optOutput = "./a.out"
+  }
 
--- | Flags description to parse with "System.Console.GetOpt" module
-flags :: [OptDescr Flag]
-flags =
-  [ Option "h" ["help"] (NoArg Help)
-      "Print this help message"
-  , Option "o" ["out"] (ReqArg OutputFile "")
-      "Specify the filename of the compiled file"
+options :: [OptDescr (Options -> IO Options)]
+options =
+  [ Option "v" ["version"] (NoArg showVersion)         "show version number"
+  , Option "h" ["help"]    (NoArg showHelp)            "show help"
+  , Option "o" ["out"]     (ReqArg writeOutput "FILE") "output file"
   ]
 
--- | The function 'parseArgs' use the "System.Console.GetOpt" module to parse executable options
-parseArgs :: [String] -> IO ([Flag], [String])
-parseArgs argv = case getOpt Permute flags argv of
-  (args,fs,[]) -> do
-    let files = if null fs then ["-"] else fs
-    if Help `elem` args
-      then do putStrLn $ usageInfo header flags
-              exitSuccess
-      else return (nub args, files)
-  (_,_,errs) -> do
-    putStrLn (concat errs ++ usageInfo header flags)
-    exitWith $ ExitFailure 1
-  where header = "Usage: piccolo [-hgs] [file ...]"
+showVersion :: Options -> IO Options
+showVersion _ = do
+  putStrLn "The Piccolo Compiler 0.1"
+  exitSuccess
+
+showHelp :: Options -> IO Options
+showHelp _ = do
+  putStr $ usageInfo "Usage: piccolo [options] <piccolo_file>" options
+  exitSuccess
+
+writeOutput :: String -> Options -> IO Options
+writeOutput arg opt = return $ opt { optOutput = arg }
+

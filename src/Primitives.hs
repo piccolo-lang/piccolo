@@ -6,7 +6,10 @@ Stability      : experimental
 This module gives the type of the primitives that should be supported
 by a backend, for the typechecking to be complete.
 -}
-module Primitives (primTypes) where
+module Primitives
+  ( primTypes
+  )
+where
 
 import Core.AST
 

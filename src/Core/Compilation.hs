@@ -3,9 +3,13 @@ Module         : Core.Compilation
 Description    : Compilation module
 Stability      : experimental
 
-This module contains the compilation pass. It transforms a piccolo AST to a sequential AST.
+This module contains the compilation pass.
+It transforms a piccolo core AST to a sequential AST.
 -}
-module Core.Compilation (compilePass) where
+module Core.Compilation
+  ( compilePass
+  )
+where
 
 import Backend.SeqAST
   ( BExpr (Not), DefName (..)
@@ -15,7 +19,7 @@ import Backend.SeqAST
   )
 import Backend.SeqASTUtils
 import Core.AST
-import Core.ASTUtils
+import Core.Typecheck
 import Errors
 
 import Control.Monad.Error

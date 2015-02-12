@@ -6,7 +6,11 @@ Stability      : experimental
 This module defines the various types of errors that can occur during
 the compilation of a piccolo program.
 -}
-module Errors where
+module Errors
+  ( PiccError (..)
+  , reportResult
+  )
+where
 
 import Core.AST
 
@@ -41,12 +45,10 @@ data PiccError
     }
     -- ^ error occuring during the typing pass of a piccolo AST
 
--- | PiccError is exception typeclass instance
 instance Error PiccError where
   noMsg  = strMsg ""
   strMsg = SimpleError
 
--- | PiccError are showable !
 instance Show PiccError where
   show (SimpleError str) =
     "error: " ++ str

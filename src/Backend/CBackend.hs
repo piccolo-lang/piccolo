@@ -6,7 +6,10 @@ Stability      : experimental
 This backend targets C code.
 __TODO__: put the real values of env size and choice size in emitCode
 -}
-module Backend.CBackend (emitCode) where
+module Backend.CBackend
+  ( emitCode
+  )
+where
 
 import Backend.Codegen
 import Backend.SeqAST
@@ -14,6 +17,7 @@ import Backend.SeqAST
 import Control.Monad
 import Data.List (delete)
 
+-- | Code emitter function for C backend
 emitCode :: String -> Instr -> EmitterM ()
 emitCode mainName instr = do
   emitLn "#include <runtime.h>"

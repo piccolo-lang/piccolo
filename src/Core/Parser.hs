@@ -10,7 +10,9 @@ __TODO__: define AST construction helpers for ast nodes in ASTUtils and user
 them here
 -}
 
-module Core.Parser (parseModule)
+module Core.Parser
+  ( parseModule
+  )
 where
 
 import Errors

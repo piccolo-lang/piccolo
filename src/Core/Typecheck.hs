@@ -7,10 +7,14 @@ Since types are explicitly written in the code when introducing a new variable (
 or process definition parameters), the typing pass of the piccolo compiler only check types through
 a traversal of the AST and tag each value with its types for compilation pass.
 -}
-module Core.Typecheck (typingPass) where
+module Core.Typecheck
+  ( typeCheck
+  , isAManagedType
+  , isBool
+  )
+where
 
 import Core.AST
-import Core.ASTUtils
 import Errors
 import Primitives
 
@@ -39,10 +43,10 @@ getVarType v loc = do
     Just t  -> return t
     Nothing -> throwError $ VarNotFoundError v loc
 
--- | The 'typingPass' function typechecks each definition of a module,
+-- | The 'typeCheck' function typechecks each definition of a module,
 -- and return either a 'PiccError' or the type annotated version of this module.
-typingPass :: Modul -> Either PiccError Modul
-typingPass m = evalState (runErrorT tChecked) initEnv
+typeCheck :: Modul -> Either PiccError Modul
+typeCheck m = evalState (runErrorT tChecked) initEnv
   where initEnv  = (modDefs m, Map.empty)
         tChecked = tcModul m
 
@@ -205,3 +209,18 @@ tcExpr e@EOr     {} = do
   unless (isBool (exprTyp tRight)) $
     throwError $ SimpleError "bad type in or (right)"
   return $ e { exprLeft = tLeft, exprRight = tRight }
+
+
+-- | Function that determines if a type should be managed by
+-- the runtime reference counter garbage collector
+isAManagedType :: TypeExpr -> Bool
+isAManagedType TChannel {}               = True
+isAManagedType TAtom {typAtom = TString} = True
+isAManagedType TTuple {}                 = True
+isAManagedType _                         = False
+
+-- | Trivial recognizer of boolean type in 'Core.AST'
+isBool :: TypeExpr -> Bool
+isBool TAtom {typAtom = TBool} = True
+isBool _                       = False
+
