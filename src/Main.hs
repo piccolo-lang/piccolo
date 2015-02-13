@@ -32,6 +32,7 @@ import System.Environment
 import System.Console.GetOpt
 import System.Exit
 import Data.List
+import Data.Maybe
 import Control.Monad
 
 
@@ -41,7 +42,9 @@ main = do
   args <- getArgs
   let (actions, nonOpts, _) = getOpt Permute options args
   opts <- foldl (>>=) (return defaultOptions) actions
-  let Options { optOutput = out } = opts
+  let Options { optOutput = output
+              , optDumpC  = dumpC
+              } = opts
   when (length nonOpts /= 1) $ void (showHelp opts)
   let [piFile] = nonOpts
   content  <- readFile piFile
@@ -50,17 +53,20 @@ main = do
   withEnv  <- reportResult $ computingEnvPass typedAst
   seqAst   <- reportResult $ compilePass withEnv
   let code  = runEmitterM $ CBackend.emitCode (mainDef withEnv) seqAst
-  compileCCode code out
+  when (isJust dumpC) $ writeFile (fromJust dumpC) code
+  compileCCode code output
   where
     mainDef m = delete '/' (modName m) ++ "_Main"
 
 data Options = Options
   { optOutput :: String
+  , optDumpC  :: Maybe String
   } deriving Show
 
 defaultOptions :: Options
 defaultOptions = Options
   { optOutput = "./a.out"
+  , optDumpC  = Nothing
   }
 
 options :: [OptDescr (Options -> IO Options)]
@@ -68,6 +74,7 @@ options =
   [ Option "v" ["version"] (NoArg showVersion)         "show version number"
   , Option "h" ["help"]    (NoArg showHelp)            "show help"
   , Option "o" ["out"]     (ReqArg writeOutput "FILE") "output file"
+  , Option ""  ["dump-c"]  (ReqArg writeDumpC "FILE")  "dump c code"
   ]
 
 showVersion :: Options -> IO Options
@@ -83,3 +90,5 @@ showHelp _ = do
 writeOutput :: String -> Options -> IO Options
 writeOutput arg opt = return $ opt { optOutput = arg }
 
+writeDumpC :: String -> Options -> IO Options
+writeDumpC arg opt = return $ opt { optDumpC = Just arg }
