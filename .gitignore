@@ -10,3 +10,4 @@ doc/**/*.out
 doc/**/*.pdf
 doc/**/*.toc
 piccolo.log
+runtime/doc

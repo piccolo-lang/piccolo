@@ -10,3 +10,4 @@ build: dist/setup-config
 
 doc: dist/setup-config
 	$(CABAL) haddock --executables --hyperlink-source --html --hoogle --haddock-options="--title Piccolo --hide Paths_piccolo"
+	cd runtime ; doxygen piccolort.doxygen
