@@ -1,4 +1,4 @@
-.PHONY: build install doc
+.PHONY: build install doc linecount
 
 include config.mk
 
@@ -10,4 +10,12 @@ build: dist/setup-config
 
 doc: dist/setup-config
 	$(CABAL) haddock --executables --hyperlink-source --html --hoogle --haddock-options="--title Piccolo --hide Paths_piccolo"
-	cd runtime ; doxygen piccolort.doxygen
+
+rtdoc:
+	make -C runtime doc
+
+linecount:
+	wc -l src/*.hs src/Core/*.hs src/Backend/*.hs
+
+rtlinecount:
+	make -C runtime linecount

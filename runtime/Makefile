@@ -22,4 +22,10 @@ install:
 clean:
 	rm -f $(OBJS) $(LIBTARGET)
 
-.PHONY: build install clean
+doc: piccolort.doxygen doc
+	doxygen piccolort.doxygen
+
+linecount:
+	wc -l *.c *.h
+
+.PHONY: build install clean doc linecount
