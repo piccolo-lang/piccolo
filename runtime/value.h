@@ -4,38 +4,18 @@
 #include <pthread.h>
 #include "channel.h"
 
-typedef struct _PICC_ValueHandle PICC_ValueHandle;
-typedef void (*PICC_Reclaimer)(PICC_ValueHandle *);
-
-struct _PICC_ValueHandle {
-  int global_rc;
-  pthread_mutex_t *lock;
-  PICC_Reclaimer reclaim;
-  void *data;
-};
-
 typedef struct {
   unsigned int header;
-  union {
-    int as_int;
-    int as_bool;
-    PICC_ValueHandle *as_handle;
-  } data;
+  void *data;
 } PICC_Value;
 
 
 void PICC_novalue_init(PICC_Value *);
 void PICC_boolvalue_init(PICC_Value *, int);
 void PICC_intvalue_init(PICC_Value *, int);
+void PICC_floatvalue_init(PICC_Value *, double);
 
 int PICC_boolvalue_unbox(PICC_Value *);
-
-typedef struct {
-  int global_rc;
-  pthread_mutex_t *lock;
-  PICC_Reclaimer reclaim;
-  char *data;
-} PICC_StringHandle;
 
 void PICC_stringvalue_init(PICC_Value *, char *);
 

@@ -59,7 +59,7 @@ void PICC_managedvalset_register(PICC_ManagedValSet *set, PICC_Value *value)
   for (int i = 0 ; i < set->size ; i++) {
     elem = &(set->content[i]);
 
-    if (elem->handle == value->data.as_handle) {
+    if (elem->value->data == value->data) {
       assert(elem->state != PICC_UNKNOWN);
       if (elem->state == PICC_FORGET)
         elem->state = PICC_KNOWN;
@@ -82,8 +82,8 @@ void PICC_managedvalset_register(PICC_ManagedValSet *set, PICC_Value *value)
   }
 
   new->state  = PICC_KNOWN;
-  new->handle = value->data.as_handle;
-  PICC_managedvalue_inc_refcount(value->data.as_handle);
+  new->value  = value;
+  PICC_managedvalue_inc_refcount(value->data);
 }
 
 void PICC_managedvalset_forget_all(PICC_ManagedValSet *set)
@@ -103,8 +103,8 @@ void PICC_managedvalset_clean(PICC_ManagedValSet *set)
     elem = &(set->content[i]);
     if (elem->state == PICC_FORGET) {
       elem->state = PICC_UNKNOWN;
-      PICC_managedvalue_dec_refcount(elem->handle);
-      elem->handle = NULL;
+      PICC_managedvalue_dec_refcount(elem->value->data);
+      elem->value = NULL;
     }
   }
 }
@@ -116,8 +116,8 @@ void PICC_managedvalset_clean_all(PICC_ManagedValSet *set)
     elem = &(set->content[i]);
     if (elem->state == PICC_KNOWN || elem->state == PICC_FORGET) {
       elem->state = PICC_UNKNOWN;
-      PICC_managedvalue_dec_refcount(elem->handle);
-      elem->handle = NULL;
+      PICC_managedvalue_dec_refcount(elem->value->data);
+      elem->value = NULL;
     }
   }
 }

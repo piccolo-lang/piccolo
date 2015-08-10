@@ -13,26 +13,44 @@
 
 void PICC_novalue_init(PICC_Value *val)
 {
-  val->header      = MAKE_HEADER(TAG_NOVALUE, 0);
-  val->data.as_int = 0;
+  PICC_NoValue *v = (PICC_NoValue *)val;
+  v->header = MAKE_HEADER(TAG_NOVALUE, 0);
+  v->data   = NULL;
 }
 
 void PICC_boolvalue_init(PICC_Value *val, int b)
 {
-  val->header       = MAKE_HEADER(TAG_BOOLEAN, 0);
-  val->data.as_bool = b ? 1 : 0;
+  PICC_BoolValue *v = (PICC_BoolValue *)val;
+  if (b)
+    v->header = MAKE_HEADER(TAG_BOOLEAN, 1);
+  else
+    v->header = MAKE_HEADER(TAG_BOOLEAN, 0);
+  v->data = NULL;
 }
 
 int PICC_boolvalue_unbox(PICC_Value *val)
 {
   assert(IS_BOOLEAN(val));
-  return val->data.as_bool;
+  return GET_VALUE_CTRL(((PICC_BoolValue *)val)->header);
 }
 
 void PICC_intvalue_init(PICC_Value *val, int i)
 {
-  val->header      = MAKE_HEADER(TAG_INTEGER, 0);
-  val->data.as_int = i;
+  PICC_IntValue *v = (PICC_IntValue *)val;
+  v->header = MAKE_HEADER(TAG_INTEGER, 0);
+  v->data   = i;
+}
+
+
+/*****************************************************************************
+ * Float values                                                             *
+ *****************************************************************************/
+
+void PICC_floatvalue_init(PICC_Value *val, double fl)
+{
+  PICC_FloatValue *v = (PICC_FloatValue *)val;
+  v->header = MAKE_HEADER(TAG_FLOAT, 0);
+  v->data   = fl;
 }
 
 
@@ -42,8 +60,9 @@ void PICC_intvalue_init(PICC_Value *val, int i)
 
 void PICC_stringvalue_init(PICC_Value *val, char *str)
 {
-  val->header         = MAKE_HEADER(TAG_STRING, strlen(str)+1);
-  val->data.as_handle = (PICC_ValueHandle *)(PICC_stringhandle_alloc(str));
+  PICC_StringValue *v = (PICC_StringValue *)val;
+  v->header = MAKE_HEADER(TAG_STRING, strlen(str) + 1);
+  v->data   = PICC_stringhandle_alloc(str);
 }
 
 PICC_StringHandle *PICC_stringhandle_alloc(char *s)
@@ -81,12 +100,13 @@ void PICC_stringhandle_free(PICC_ValueHandle *handle)
 
 void PICC_channelvalue_init(PICC_Value *val)
 {
-  val->header         = MAKE_HEADER(TAG_CHANNEL, 0);
-  val->data.as_handle = (PICC_ValueHandle *)(PICC_channel_alloc());
+  PICC_ChannelValue *v = (PICC_ChannelValue *)val;
+  v->header = MAKE_HEADER(TAG_CHANNEL, 0);
+  v->data   = PICC_channel_alloc();
 }
 
 PICC_Channel *PICC_channelvalue_unbox(PICC_Value *val)
 {
-  return (PICC_Channel *)val->data.as_handle;
+  return ((PICC_ChannelValue *)val)->data;
 }
 

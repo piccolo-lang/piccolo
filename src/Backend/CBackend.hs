@@ -299,10 +299,6 @@ emitRTFun (RegisterEnvValue pt i) = do
   emitStr ", "
   emitBExpr i
   emitStr ")"
-emitRTFun (RegisterRegisterValue pt) = do
-  emitStr "PICC_register_register_value("
-  emitBExpr pt
-  emitStr ")"
 emitRTFun (ProcessLock pt) = do
   emitStr "PICC_process_lock("
   emitBExpr pt

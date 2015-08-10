@@ -1,0 +1,6 @@
+refcount tests:
+
+String allocation in a call
+String allocation in a spawn
+String allocation in a let
+String allocation in an output payload

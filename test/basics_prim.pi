@@ -1,3 +1,0 @@
-module Basics/Prim
-
-def Main() = #core/io:print_str("hello\n"), end

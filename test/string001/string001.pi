@@ -1,7 +1,7 @@
-module Test/Hello
+// Testing the string allocation
+module String/Hello
 
 def Hello(msg:string) = 
-  __picc_snapshot,
   #core/io:print_str(msg), end
 
 def Main() = Hello("Hello world\n")

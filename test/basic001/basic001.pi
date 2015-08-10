@@ -1,0 +1,4 @@
+// testing a simple primitive
+module Basic/Prim
+
+def Main() = #core/io:print_int(5), end

@@ -41,7 +41,6 @@ void PICC_decr_fuel(PICC_PiThread *);
 
 void PICC_forget_all_values(PICC_PiThread *);
 void PICC_register_env_value(PICC_PiThread *, int);
-void PICC_register_register_value(PICC_PiThread *);
 
 void PICC_process_end(PICC_PiThread *, PICC_Status);
 void PICC_process_yield(PICC_PiThread *, PICC_SchedPool *);

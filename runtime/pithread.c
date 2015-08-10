@@ -147,11 +147,6 @@ void PICC_register_env_value(PICC_PiThread *pt, int i)
   PICC_managedvalset_register(pt->managed_values, &pt->env[i]);
 }
 
-void PICC_register_register_value(PICC_PiThread *pt)
-{
-  PICC_managedvalset_register(pt->managed_values, &pt->val);
-}
-
 void PICC_process_end(PICC_PiThread *pt, PICC_Status status)
 {
   PICC_managedvalset_clean_all(pt->managed_values);

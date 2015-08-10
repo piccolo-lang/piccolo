@@ -12,7 +12,7 @@ typedef enum {
 
 typedef struct {
   PICC_ManagedValState state;
-  PICC_ValueHandle *handle;
+  PICC_Value *value;
 } PICC_ManagedValElement;
 
 typedef struct _PICC_ManagedValSet {

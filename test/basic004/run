@@ -1,0 +1,13 @@
+#!/bin/bash
+piccolo basic004.pi -o basic004
+if [ "$#" -eq 1 ] && [ "$1" = "--with-valgrind" ]
+then
+  valgrind --leak-check=full --error-exitcode=2 --suppressions=../valgrind.supp ./basic004 > /dev/null 2> /dev/null
+  if [ "$?" -ne 0 ]
+  then
+    exit 2
+  fi
+else
+./basic004
+fi
+rm basic004

@@ -1,4 +1,5 @@
-module Basics/Call
+// testing the definition call
+module Basic/Call
 
 def Printer(x:int) = #core/io:print_int(x), end
 

@@ -1,4 +1,4 @@
-.PHONY: build install doc linecount
+.PHONY: build install doc rtdoc linecount rtlinecount test
 
 include config.mk
 
@@ -12,10 +12,16 @@ doc: dist/setup-config
 	$(CABAL) haddock --executables --hyperlink-source --html --hoogle --haddock-options="--title Piccolo --hide Paths_piccolo"
 
 rtdoc:
-	make -C runtime doc
+	$(MAKE) -C runtime doc
 
 linecount:
 	wc -l src/*.hs src/Core/*.hs src/Backend/*.hs
 
 rtlinecount:
-	make -C runtime linecount
+	$(MAKE) -C runtime linecount
+
+clean:
+	$(CABAL) clean
+
+test:
+	$(MAKE) -C test

@@ -52,7 +52,6 @@ module Backend.SeqASTUtils
     -- * Values functions
   , forgetAllValues
   , registerEnvValue
-  , registerRegisterValue
   , processLock
   , processLockChannel
   , processYield
@@ -253,10 +252,6 @@ forgetAllValues thread = ProcCall $ ForgetAllValues thread
 -- | Registering a value as managed by a process
 registerEnvValue :: (BExpr, Int) -> Instr
 registerEnvValue (thread, ind) = ProcCall $ RegisterEnvValue thread (IntExpr ind)
-
--- | Registering a value as managed by a process
-registerRegisterValue :: BExpr -> Instr
-registerRegisterValue thread = ProcCall $ RegisterRegisterValue thread
 
 -- | Getting the lock on a process
 processLock :: BExpr -> Instr

@@ -2,7 +2,6 @@
 #define __VALUE_IMPL_H
 
 #include "value.h"
-#include "refcount_impl.h"
 #include "channel.h"
 
 typedef enum {
@@ -38,7 +37,61 @@ typedef enum {
 #define IS_USER_DEFINED_MANAGED(value)   (GET_VALUE_TAG(value->header) == TAG_USER_DEFINED_MANAGED)
 
 
+typedef struct _PICC_ValueHandle PICC_ValueHandle;
+typedef void (*PICC_Reclaimer)(PICC_ValueHandle *);
+
+struct _PICC_ValueHandle {
+  int global_rc;
+  pthread_mutex_t *lock;
+  PICC_Reclaimer reclaim;
+  void *data;
+};
+
+
+// Immediate value
+typedef struct {
+  unsigned int header;
+  void *data;
+} PICC_NoValue;
+
+// Boolean value
+typedef struct {
+  unsigned int header;
+  void* data;
+} PICC_BoolValue;
+
+// Integer value
+typedef struct  {
+  unsigned int header;
+  long data;
+} PICC_IntValue;
+
+// Float value
+typedef struct {
+  unsigned int header;
+  double data;
+} PICC_FloatValue;
+
+// String value
+typedef struct {
+  int global_rc;
+  pthread_mutex_t *lock;
+  PICC_Reclaimer reclaim;
+  char *data;
+} PICC_StringHandle;
+
+typedef struct {
+  unsigned int header;
+  PICC_StringHandle *data;
+} PICC_StringValue;
+
 PICC_StringHandle *PICC_stringhandle_alloc(char *);
 void PICC_stringhandle_free(PICC_ValueHandle *);
+
+// Channel value
+typedef struct {
+  unsigned int header;
+  PICC_Channel *data;
+} PICC_ChannelValue;
 
 #endif /* !__VALUE_IMPL_H */

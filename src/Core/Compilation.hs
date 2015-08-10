@@ -412,7 +412,7 @@ compileExpr:: Expr -> CompilingM Instr
 compileExpr ETrue     {} = return $ initBoolTrue(registerPointer pt)
 compileExpr EFalse    {} = return $ initBoolFalse(registerPointer pt)
 compileExpr e@EInt    {} = return $ initIntValue(registerPointer pt, exprInt e)
-compileExpr e@EString {} = return $ initStringValue(registerPointer pt, exprStr e) # registerRegisterValue pt
+compileExpr e@EString {} = return $ initStringValue(registerPointer pt, exprStr e)
 compileExpr e@EVar    {} = return $ setRegister(pt, getEnv(pt, exprIndex e))
 compileExpr ETuple    {} = error "tuples are not yet implemented"
 

@@ -91,7 +91,6 @@ data RTFun
   | DecrFuel                    BExpr
   | ForgetAllValues             BExpr
   | RegisterEnvValue            BExpr BExpr
-  | RegisterRegisterValue       BExpr
   | ProcessLock                 BExpr
   | ProcessLockChannel          BExpr BExpr
   | ProcessYield                BExpr BExpr
