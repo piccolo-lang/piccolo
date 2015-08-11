@@ -1,4 +1,4 @@
-module Test/RecCounter
+module Examples/RecCounter
 
 def Count(n:int) =
   [#core/arith:less_than(0,n)] tau,

@@ -1,0 +1,8 @@
+// Testing false guard in choice
+module Test/TrueFalse
+
+def TrueFalse() =
+  [false] tau, let (s: string = "False\n"), #core/io:print_str(s), TrueFalse()
++ [true]  tau, let (s: string = "True\n"),  #core/io:print_str(s), end
+
+def Main() = TrueFalse()

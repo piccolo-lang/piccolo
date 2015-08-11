@@ -1,4 +1,4 @@
-module Test/CSTest
+module Examples/CriticalSections
 
 def CriticalSection(n:int, lock:chan<chan<int>>) =
   lock?(door), door?(n),

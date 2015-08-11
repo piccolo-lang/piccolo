@@ -1,7 +1,0 @@
-module Test/TrueFalse
-
-def TrueFalse() =
-  [false] tau, #core/io:print_str("False\n"), TrueFalse() +
-  [true] tau, #core/io:print_str("True\n"), end
-
-def Main() = TrueFalse()
