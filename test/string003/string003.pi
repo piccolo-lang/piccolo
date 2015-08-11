@@ -1,0 +1,11 @@
+// Testing string allocation in an output payload
+module String/Hello
+
+def Printer(c: chan<string>) =
+  c?(msg), #core/io:print_str(msg), end
+
+def Main() =
+  new (c: chan<string>),
+  spawn { Printer(c) },
+  c!"Hello world\n",
+  end

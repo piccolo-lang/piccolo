@@ -1,0 +1,13 @@
+#!/bin/bash
+piccolo string003.pi -o string003
+if [ "$#" -eq 1 ] && [ "$1" = "--with-valgrind" ]
+then
+  valgrind --leak-check=full --error-exitcode=2 --suppressions=../valgrind.supp ./string003 > /dev/null 2> /dev/null
+  if [ "$?" -ne 0 ]
+  then
+    exit 2
+  fi
+else
+./string003
+fi
+rm string003
