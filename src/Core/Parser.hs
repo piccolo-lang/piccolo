@@ -254,19 +254,38 @@ typedVar = do
   return (v, t)
 
 expr :: Parser Expr -- TODO: 'and' and 'or' parsers
-expr = (try $ reserved "true"  >> return (ETrue (TUnknown noLoc) noLoc))
-   <|> (try $ reserved "false" >> return (EFalse (TUnknown noLoc) noLoc))
-   <|> (integer >>= \i -> return $ EInt (TUnknown noLoc) noLoc (fromIntegral i))
+expr = (try trueExpr)
+   <|> (try falseExpr)
+   <|> intExpr
    <|> (stringLiteral >>= \s -> return $ EString (TUnknown noLoc) noLoc s)
    <|> (parens $ commaSep1 expr >>= \es -> return $ ETuple (TUnknown noLoc) noLoc es)
-   <|> (identifier >>= \v -> return $ EVar (TUnknown noLoc) noLoc v (-1))
+   <|> varExpr
    <|> (do
           m <- modulQual
           n <- identifier
-          args <- parens $ commaSep expr
+          args <- parens $ commaSep staticExpr
           return $ EPrim (TUnknown noLoc) noLoc m n args
        )
    <?> "expression"
+
+staticExpr :: Parser Expr
+staticExpr = (try trueExpr)
+         <|> (try falseExpr)
+         <|> intExpr
+         <|> varExpr
+
+trueExpr :: Parser Expr
+trueExpr = reserved "true" >> return (ETrue (TUnknown noLoc) noLoc)
+
+falseExpr :: Parser Expr
+falseExpr = reserved "false" >> return (EFalse (TUnknown noLoc) noLoc)
+
+intExpr :: Parser Expr
+intExpr = integer >>= \i -> return $ EInt (TUnknown noLoc) noLoc (fromIntegral i)
+
+varExpr :: Parser Expr
+varExpr = identifier >>= \v -> return $ EVar (TUnknown noLoc) noLoc v (-1)
+
 
 -- | Module parser
 parseModule :: String -> Either PiccError Modul
