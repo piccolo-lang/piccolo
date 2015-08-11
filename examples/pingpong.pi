@@ -1,4 +1,4 @@
-module Test/PingPong
+module Examples/PingPong
 
 def PingPong(i:chan<string>,o:chan<string>,msg:string) =
   i?(m),
