@@ -273,6 +273,7 @@ staticExpr = (try trueExpr)
          <|> (try falseExpr)
          <|> intExpr
          <|> varExpr
+         <?> "static expression"
 
 trueExpr :: Parser Expr
 trueExpr = reserved "true" >> return (ETrue (TUnknown noLoc) noLoc)
