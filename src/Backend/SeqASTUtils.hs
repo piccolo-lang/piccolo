@@ -102,10 +102,8 @@ comment :: Show a => a -> Instr
 comment a = Comment ("---------- " ++ show a ++ " ----------")
 
 -- | Debug event insertion
-debugEvent :: AST a => a -> Instr
-debugEvent a = Seq (Comment ("---------- " ++ show a ++ " ----------"))
-                   (PreprocDebugMode $
-                      ProcCall (DebugEvent (StringExpr (show a))))
+debugEvent :: Int -> Instr
+debugEvent evtId = PreprocDebugMode $ ProcCall (DebugEvent $ IntExpr evtId)
 
 -- | Instructions sequence
 (#) :: Instr -> Instr -> Instr

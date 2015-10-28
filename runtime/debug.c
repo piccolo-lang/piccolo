@@ -8,9 +8,9 @@ void PICC_debug_open()
   debug_log_fd = fopen(DEBUGFILE, "w+");
 }
 
-void PICC_debug_event(const char* event)
+void PICC_debug_event(int event_id)
 {
-  fprintf(debug_log_fd, "{ \"action\": \"%s\" }\n", event);
+  fprintf(debug_log_fd, "%d\n", event_id);
 }
 
 void PICC_debug_close()

@@ -19,6 +19,7 @@ import Backend.SeqAST
   )
 import Backend.SeqASTUtils
 import Core.AST
+import Core.DebugSymbols
 import Core.Typecheck
 import Errors
 
@@ -32,6 +33,8 @@ data CompState
     , currentModule :: String
     , evalFuncCount :: Int
     , evalFuncs     :: [Instr]
+    , debugEventId  :: Int
+    , debugEvents   :: [DebugEvent]
     }
 
 type CompilingM a = ErrorT PiccError (State CompState) a
@@ -61,12 +64,22 @@ registerEvalFunc expr = do
   put st { evalFuncCount = n + 1, evalFuncs = fs ++ [f] }
   return fName
 
+genDebugEvent :: Process -> CompilingM Int
+genDebugEvent proc = do
+  st <- get
+  let evtId = debugEventId st
+  put st { debugEventId = evtId + 1
+         , debugEvents  = debugEvents st ++ [proc]
+         }
+  return evtId
 
 -- | The 'compilePass' monad run the piccolo AST compilation to sequential AST
-compilePass :: Modul -> Either PiccError Instr
-compilePass m = evalState (runErrorT instr) initEnv
+compilePass :: Modul -> Either PiccError (Instr, [DebugEvent])
+compilePass m =
+  let (Right comp, st) = runState (runErrorT instr) initEnv in
+  Right (comp, debugEvents st)
   where instr    = compileModul m
-        initEnv  = CompState (dEntry + 1) "" 1 []
+        initEnv  = CompState (dEntry + 1) "" 1 [] 0 []
 
 
 compileModul :: Modul -> CompilingM Instr
@@ -94,24 +107,31 @@ compileDefinition def = do
            )
 
 compileProcess :: Process -> CompilingM Instr
-compileProcess proc@PEnd {} =
-  return $ debugEvent proc #
+compileProcess proc@PEnd {} = do
+  evtId <- genDebugEvent proc
+  return $ comment proc #
+           debugEvent evtId #
            processEnd(pt, statusEnded) #
            Return
 
 compileProcess proc@PPrefix {} = do
+  evtId <- genDebugEvent proc
   pref <- compileAction $ procPref proc
   cont <- compileProcess $ procCont proc
-  return $ pref # cont
+  return $ debugEvent evtId #
+           pref #
+           cont
 
 compileProcess proc@PChoice {} = do
+  evtId <- genDebugEvent proc
   let n = length (procBranches proc)
   startChoice <- genLabel
   choiceConts <- replicateM n genLabel
   loop1 <- forM (zip ([0..]::[Int]) (procBranches proc)) $ \(i, br) -> do
     expr <- compileExpr (brGuard br)
     act  <- compileBranchAction i br
-    return $ expr #
+    return $ debugEvent evtId #
+             expr #
              setEnabled' (pt, i, unboxBoolValue (registerPointer pt)) #
              ifthenelse (getEnabled(pt, i))
              (
@@ -193,6 +213,7 @@ compileProcess proc@PChoice {} = do
            )
 
 compileProcess proc@PCall {} = do
+  evtId <- genDebugEvent proc
   loop1 <- forM (zip ([1..]::[Int]) (procArgs proc)) $ \(i, arg) -> do
     let vi = v i
     expr <- compileExpr arg
@@ -209,7 +230,8 @@ compileProcess proc@PCall {} = do
   CompState { currentModule = currentModName } <- get
   let (name1, name2) | null (procModule proc) = (delete '/' currentModName, procName proc)
                      | otherwise              = (delete '/' $ procModule proc, procName proc)
-  return $ debugEvent proc #
+  return $ comment proc #
+           debugEvent evtId #
            (begin $ forgetAllValues pt #
                     foldr (#) Nop loop1 #
                     foldr (#) Nop loop2 #
@@ -221,12 +243,12 @@ compileProcess proc@PCall {} = do
 
 compileBranchAction :: Int -> Branch -> CompilingM Instr
 compileBranchAction _ br@BTau {} =
-  return $ debugEvent br #
+  return $ comment br #
            tryResult <-- tryResultEnabled
 
 compileBranchAction _ br@BOutput { brChanIndex = c} = do
   expr <- compileExpr (brData br)
-  return $ debugEvent br #
+  return $ comment br #
            (begin $ var chan ChannelType #
                     chan <-- unboxChannelValue(getEnv(pt, c)) #
                     ifthenelse (Not (channelArrayLockAndRegister(chans, nbChans, pt, chan)))
@@ -246,7 +268,7 @@ compileBranchAction _ br@BOutput { brChanIndex = c} = do
            )
 
 compileBranchAction _ br@BInput { brChanIndex = c, brBindIndex = x } =
-  return $ debugEvent br #
+  return $ comment br #
            (begin $ var chan ChannelType #
                     chan <-- unboxChannelValue(getEnv(pt, c)) #
                     ifthenelse (Not (channelArrayLockAndRegister(chans, nbChans, pt, chan)))
@@ -274,7 +296,7 @@ compileAction act@AOutput { actChanIndex = c } = do
   prefixCont  <- genLabel
   exprComp    <- compileExpr (actData act)
   evalFunc    <- registerEvalFunc $ exprComp # ReturnRegister
-  return $ debugEvent act #
+  return $ comment act #
            Case prefixStart #
            (begin $ var chan ChannelType #
                     chan <-- unboxChannelValue(getEnv(pt, c)) #
@@ -316,7 +338,7 @@ compileAction act@AOutput { actChanIndex = c } = do
 compileAction act@AInput { actChanIndex = c, actBindIndex = x } = do
   prefixStart <- genLabel
   prefixCont  <- genLabel
-  return $ debugEvent act #
+  return $ comment act #
            Case prefixStart #
            (begin $ var chan ChannelType #
                     chan <-- unboxChannelValue(getEnv(pt, c)) #
@@ -359,13 +381,13 @@ compileAction act@AInput { actChanIndex = c, actBindIndex = x } = do
            CaseAndLabel prefixCont
 
 compileAction act@ANew { actBindIndex = c } =
-  return $ debugEvent act #
+  return $ comment act #
            initChannelValue(getEnv(pt, c)) #
            registerEnvValue(pt, c)
 
 compileAction act@ALet { actBindIndex = x } = do
   expr <- compileExpr (actVal act)
-  return $ debugEvent act #
+  return $ comment act #
            expr #
            setEnv(pt, x, getRegister pt)
 
@@ -383,7 +405,7 @@ compileAction act@ASpawn  {} = do
                 then registerEnvValue(child, i-1)
                 else Nop
              )
-  return $ debugEvent act #
+  return $ comment act #
            (begin $ var child PiThreadType #
                     child <-- piThreadCreate(10, 10) # -- TODO user the computed env sizes !
                     foldr (#) Nop loop #
@@ -403,7 +425,7 @@ compileAction act@APrim {} = do
              )
   let (vs, loop) = unzip loops
   let primName   = PrimName (actModule act) (actName act)
-  return $ debugEvent act #
+  return $ comment act #
            (begin $ foldr (#) Nop loop #
                     primCall(registerPointer pt, primName, vs)
            )

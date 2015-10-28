@@ -24,6 +24,7 @@ import Core.AST
 import Core.Typecheck
 import Core.Environments
 import Core.Compilation
+import Core.DebugSymbols
 import Backend.Codegen
 import qualified Backend.CBackend as CBackend
 import Backend.CCompiler
@@ -50,11 +51,12 @@ main = do
               } = opts
   when (length nonOpts /= 1) $ void (showHelp opts)
   let [piFile] = nonOpts
-  content  <- readFile piFile
-  ast      <- reportResult $ parseModule content
-  typedAst <- reportResult $ typeCheck ast
-  withEnv  <- reportResult $ computingEnvPass typedAst
-  seqAst   <- reportResult $ compilePass withEnv
+  content              <- readFile piFile
+  ast                  <- reportResult $ parseModule content
+  typedAst             <- reportResult $ typeCheck ast
+  withEnv              <- reportResult $ computingEnvPass typedAst
+  ( seqAst, dbgEvents) <- reportResult $ compilePass withEnv
+  when debug $ emitDebugSymbols dbgEvents
   let code  = runEmitterM $ CBackend.emitCode (mainDef withEnv) seqAst
   when (isJust dumpC) $ writeFile (fromJust dumpC) code
   compileCCode code output debug
