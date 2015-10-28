@@ -5,14 +5,18 @@
 #include "runtime.h"
 #include "pithread_impl.h"
 #include "scheduler_impl.h"
-#include "logger_impl.h"
+#include "debug_impl.h"
 #include "errors.h"
 
 void PICC_main(int nb_core_threads, PICC_PiThreadProc *entrypoint,
                int std_gc_fuel, int quick_gc_fuel, int active_factor,
                int entry_env_length, int entry_enabled_length)
 {
-  PICC_logger_open();
+#ifdef PICC_DEBUG_MODE
+  // if debug_mode is enabled, force monothreading:
+  nb_core_threads = 0;
+  PICC_debug_open();
+#endif
 
   PICC_SchedPool *sp = PICC_schedpool_alloc();
 
@@ -48,5 +52,7 @@ void PICC_main(int nb_core_threads, PICC_PiThreadProc *entrypoint,
   free(threads);
   PICC_schedpool_free(sp);
 
-  PICC_logger_close();
+#ifdef PICC_DEBUG_MODE
+  PICC_debug_close();
+#endif
 }

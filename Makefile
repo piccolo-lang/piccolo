@@ -1,6 +1,7 @@
 .PHONY: build install doc rtdoc linecount rtlinecount test
 
-include config.mk
+CABAL = cabal
+MAKE  = make
 
 install:
 	$(CABAL) install

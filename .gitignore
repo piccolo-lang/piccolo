@@ -1,6 +1,7 @@
 a.out
 runtime/*.o
 runtime/libpiccolort.a
+runtime/libpiccolortdbg.a
 cabal.sandbox.config
 .cabal-sandbox
 dist
