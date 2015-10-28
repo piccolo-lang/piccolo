@@ -13,6 +13,7 @@ module Backend.Codegen
   , decrIndent
   , emitStr
   , emitLn
+  , emitLn0
   , emitList
   , emitIndent
   )
@@ -58,6 +59,10 @@ emitLn :: String -> EmitterM ()
 emitLn str = do
   emitIndent
   emitStr $ str ++ "\n"
+
+-- | Emits a line with *no* indentation
+emitLn0 :: String -> EmitterM ()
+emitLn0 str = emitStr $ str ++ "\n"
 
 -- | Emits a list with the specified separator
 emitList :: (a -> EmitterM ()) -> String -> [a] -> EmitterM ()

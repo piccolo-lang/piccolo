@@ -95,7 +95,7 @@ compileDefinition def = do
 
 compileProcess :: Process -> CompilingM Instr
 compileProcess proc@PEnd {} =
-  return $ comment proc #
+  return $ debugEvent proc #
            processEnd(pt, statusEnded) #
            Return
 
@@ -209,7 +209,7 @@ compileProcess proc@PCall {} = do
   CompState { currentModule = currentModName } <- get
   let (name1, name2) | null (procModule proc) = (delete '/' currentModName, procName proc)
                      | otherwise              = (delete '/' $ procModule proc, procName proc)
-  return $ comment proc #
+  return $ debugEvent proc #
            (begin $ forgetAllValues pt #
                     foldr (#) Nop loop1 #
                     foldr (#) Nop loop2 #
@@ -221,12 +221,12 @@ compileProcess proc@PCall {} = do
 
 compileBranchAction :: Int -> Branch -> CompilingM Instr
 compileBranchAction _ br@BTau {} =
-  return $ comment br #
+  return $ debugEvent br #
            tryResult <-- tryResultEnabled
 
 compileBranchAction _ br@BOutput { brChanIndex = c} = do
   expr <- compileExpr (brData br)
-  return $ comment br #
+  return $ debugEvent br #
            (begin $ var chan ChannelType #
                     chan <-- unboxChannelValue(getEnv(pt, c)) #
                     ifthenelse (Not (channelArrayLockAndRegister(chans, nbChans, pt, chan)))
@@ -246,7 +246,7 @@ compileBranchAction _ br@BOutput { brChanIndex = c} = do
            )
 
 compileBranchAction _ br@BInput { brChanIndex = c, brBindIndex = x } =
-  return $ comment br #
+  return $ debugEvent br #
            (begin $ var chan ChannelType #
                     chan <-- unboxChannelValue(getEnv(pt, c)) #
                     ifthenelse (Not (channelArrayLockAndRegister(chans, nbChans, pt, chan)))
@@ -274,7 +274,7 @@ compileAction act@AOutput { actChanIndex = c } = do
   prefixCont  <- genLabel
   exprComp    <- compileExpr (actData act)
   evalFunc    <- registerEvalFunc $ exprComp # ReturnRegister
-  return $ comment act #
+  return $ debugEvent act #
            Case prefixStart #
            (begin $ var chan ChannelType #
                     chan <-- unboxChannelValue(getEnv(pt, c)) #
@@ -316,7 +316,7 @@ compileAction act@AOutput { actChanIndex = c } = do
 compileAction act@AInput { actChanIndex = c, actBindIndex = x } = do
   prefixStart <- genLabel
   prefixCont  <- genLabel
-  return $ comment act #
+  return $ debugEvent act #
            Case prefixStart #
            (begin $ var chan ChannelType #
                     chan <-- unboxChannelValue(getEnv(pt, c)) #
@@ -359,13 +359,13 @@ compileAction act@AInput { actChanIndex = c, actBindIndex = x } = do
            CaseAndLabel prefixCont
 
 compileAction act@ANew { actBindIndex = c } =
-  return $ comment act #
+  return $ debugEvent act #
            initChannelValue(getEnv(pt, c)) #
            registerEnvValue(pt, c)
 
 compileAction act@ALet { actBindIndex = x } = do
   expr <- compileExpr (actVal act)
-  return $ comment act #
+  return $ debugEvent act #
            expr #
            setEnv(pt, x, getRegister pt)
 
@@ -383,7 +383,7 @@ compileAction act@ASpawn  {} = do
                 then registerEnvValue(child, i-1)
                 else Nop
              )
-  return $ comment act #
+  return $ debugEvent act #
            (begin $ var child PiThreadType #
                     child <-- piThreadCreate(10, 10) # -- TODO user the computed env sizes !
                     foldr (#) Nop loop #
@@ -403,7 +403,7 @@ compileAction act@APrim {} = do
              )
   let (vs, loop) = unzip loops
   let primName   = PrimName (actModule act) (actName act)
-  return $ comment act #
+  return $ debugEvent act #
            (begin $ foldr (#) Nop loop #
                     primCall(registerPointer pt, primName, vs)
            )

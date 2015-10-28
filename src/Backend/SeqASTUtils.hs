@@ -11,6 +11,7 @@ module Backend.SeqASTUtils
     var
   , (#)
   , comment
+  , debugEvent
   , begin
   , (<--)
   , (<---)
@@ -88,6 +89,7 @@ module Backend.SeqASTUtils
   )
 where
 
+import Core.AST
 import Backend.SeqAST
 
 
@@ -98,6 +100,12 @@ var = DeclareVar
 -- | Comment insertion
 comment :: Show a => a -> Instr
 comment a = Comment ("---------- " ++ show a ++ " ----------")
+
+-- | Debug event insertion
+debugEvent :: AST a => a -> Instr
+debugEvent a = Seq (Comment ("---------- " ++ show a ++ " ----------"))
+                   (PreprocDebugMode $
+                      ProcCall (DebugEvent (StringExpr (show a))))
 
 -- | Instructions sequence
 (#) :: Instr -> Instr -> Instr

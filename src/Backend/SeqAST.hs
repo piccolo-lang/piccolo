@@ -128,6 +128,9 @@ data RTFun
   | ChannelArrayLockAndRegister BExpr BExpr BExpr BExpr
   | ChannelArrayUnlock          BExpr BExpr
 
+  -- Debug related functions
+  | DebugEvent                  BExpr
+
 
 -- | Runtime expressions
 data BExpr
@@ -167,3 +170,4 @@ data Instr
   | Case Int
   | CaseAndLabel Int
   | ProcCall RTFun
+  | PreprocDebugMode Instr

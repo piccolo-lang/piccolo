@@ -170,6 +170,10 @@ emitInstr (ProcCall fun)     = do
   emitIndent
   emitRTFun fun
   emitStr ";\n"
+emitInstr (PreprocDebugMode body) = do
+  emitLn0 "#ifdef PICC_DEBUG_MODE"
+  emitInstr body
+  emitLn0 "#endif"
 
 emitBExpr :: BExpr -> EmitterM ()
 emitBExpr (Not expr)        = do
@@ -455,6 +459,10 @@ emitRTFun (ChannelArrayUnlock chans n) = do
   emitBExpr chans
   emitStr ", "
   emitBExpr n
+  emitStr ")"
+emitRTFun (DebugEvent astnode) = do
+  emitStr "PICC_debug_event("
+  emitBExpr astnode
   emitStr ")"
 
 

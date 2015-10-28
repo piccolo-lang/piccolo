@@ -46,7 +46,7 @@ instance Show Location where
              show (locEndColumn loc)
 
 -- | The 'AST' typeclass defines a localization function
-class AST a where
+class Show a => AST a where
   localize :: a -> Location
 
 -- | 'noLoc' is a fake location used when there is no code correspondance
