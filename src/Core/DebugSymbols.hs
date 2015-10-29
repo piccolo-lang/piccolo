@@ -8,7 +8,7 @@ and also functions to output them to a special file.
 -}
 module Core.DebugSymbols
   ( DebugEvent
-  , emitDebugSymbols
+  , appendDebugSymbols
   )
 where
 
@@ -16,13 +16,14 @@ import Core.AST
 
 import Data.List (intercalate)
 import System.IO
+import System.Process
 
 -- An AST node with a unique ID
 type DebugEvent = Process
 
-emitDebugSymbols :: [DebugEvent] -> IO ()
-emitDebugSymbols events = do
-  handle <- openFile "debugsymbols" WriteMode
+genDebugSymbols :: [DebugEvent] -> IO ()
+genDebugSymbols events = do
+  handle <- openFile "/tmp/piccdebug" WriteMode
   emitDebugSymbols' events 0 handle
   hClose handle
   where
@@ -39,3 +40,15 @@ emitDebugSymbols events = do
     showProc proc@PPrefix {} = show $ procPref proc
     showProc proc@PChoice {} = "<choice>"
     showProc proc            = show proc
+
+appendDebugSymbols :: [DebugEvent] -> FilePath -> IO ()
+appendDebugSymbols evts fname = do
+  genDebugSymbols evts
+  (_, _, _, ocProc) <- createProcess (proc "objcopy"
+    ["--add-section", "piccdebug=/tmp/piccdebug", fname, fname])
+    { std_in  = UseHandle stdout
+    , std_out = UseHandle stdout
+    , std_err = UseHandle stderr
+    }
+  _ <- waitForProcess ocProc
+  return ()

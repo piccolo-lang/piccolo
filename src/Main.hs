@@ -51,15 +51,15 @@ main = do
               } = opts
   when (length nonOpts /= 1) $ void (showHelp opts)
   let [piFile] = nonOpts
-  content              <- readFile piFile
-  ast                  <- reportResult $ parseModule content
-  typedAst             <- reportResult $ typeCheck ast
-  withEnv              <- reportResult $ computingEnvPass typedAst
-  ( seqAst, dbgEvents) <- reportResult $ compilePass withEnv
-  when debug $ emitDebugSymbols dbgEvents
+  content             <- readFile piFile
+  ast                 <- reportResult $ parseModule content
+  typedAst            <- reportResult $ typeCheck ast
+  withEnv             <- reportResult $ computingEnvPass typedAst
+  (seqAst, dbgEvents) <- reportResult $ compilePass withEnv
   let code  = runEmitterM $ CBackend.emitCode (mainDef withEnv) seqAst
   when (isJust dumpC) $ writeFile (fromJust dumpC) code
   compileCCode code output debug
+  when debug $ appendDebugSymbols dbgEvents output
   where
     mainDef m = delete '/' (modName m) ++ "_Main"
 
