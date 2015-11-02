@@ -3,9 +3,7 @@
 
 #include "debug.h"
 
-#define DEBUGFILE "picc_debug.log"
-
-void PICC_debug_open();
-void PICC_debug_close();
+void PICC_debug_begin();
+void PICC_debug_end();
 
 #endif /* !__DEBUG_IMPL_H */

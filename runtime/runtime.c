@@ -15,7 +15,7 @@ void PICC_main(int nb_core_threads, PICC_PiThreadProc *entrypoint,
 #ifdef PICC_DEBUG_MODE
   // if debug_mode is enabled, force monothreading:
   nb_core_threads = 0;
-  PICC_debug_open();
+  PICC_debug_begin();
 #endif
 
   PICC_SchedPool *sp = PICC_schedpool_alloc();
@@ -53,6 +53,6 @@ void PICC_main(int nb_core_threads, PICC_PiThreadProc *entrypoint,
   PICC_schedpool_free(sp);
 
 #ifdef PICC_DEBUG_MODE
-  PICC_debug_close();
+  PICC_debug_end();
 #endif
 }
