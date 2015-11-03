@@ -50,6 +50,17 @@ print("[debugger connected]")
 r = sock.recv(1)
 currentPC = evtToLine(int(r[0]))
 
+def printListing():
+    for i in range(len(src)):
+        if running and currentPC == i+1:
+            print("=>", end="")
+        else:
+            print("  ", end="")
+        if i+1 in breakpoints:
+            print("* %3d %s" % ((i+1), src[i]))
+        else:
+            print("  %3d %s" % ((i+1), src[i]))
+
 
 def runToBreakpoint():
     global sock, currentPC
@@ -72,16 +83,7 @@ while True:
 
     ##################### list
     elif cmd == "list":
-        for i in range(len(src)):
-            if running and currentPC == i+1:
-                print("=>", end="")
-            else:
-                print("  ", end="")
-            if i+1 in breakpoints:
-                print("* %3d %s" % ((i+1), src[i]))
-            else:
-                print("  %3d %s" % ((i+1), src[i]))
-
+        printListing()
     
     ##################### breakpoints list
     elif cmd == "b":

@@ -129,7 +129,7 @@ data RTFun
   | ChannelArrayUnlock          BExpr BExpr
 
   -- Debug related functions
-  | DebugEvent                  BExpr
+  | DebugEvent                  BExpr BExpr BExpr
 
 
 -- | Runtime expressions

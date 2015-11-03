@@ -15,8 +15,8 @@ build: $(LIBTARGET)
 %_dbg.o: %.c
 	$(CC) -c $(CFLAGSDBG) $^ -o $@
 
-%.o: %.c
-	$(CC) -c $(CFLAGS) $^ -o $@
+%.o: %.c %.h %_impl.h
+	$(CC) -c $(CFLAGS) $< -o $@
 
 libpiccolort.a: $(OBJS)
 	ar r $@ $(OBJS)

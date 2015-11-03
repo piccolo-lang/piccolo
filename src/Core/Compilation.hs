@@ -110,7 +110,7 @@ compileProcess :: Process -> CompilingM Instr
 compileProcess proc@PEnd {} = do
   evtId <- genDebugEvent proc
   return $ comment proc #
-           debugEvent evtId #
+           debugEvent(evtId, pt, scheduler) #
            processEnd(pt, statusEnded) #
            Return
 
@@ -118,7 +118,7 @@ compileProcess proc@PPrefix {} = do
   evtId <- genDebugEvent proc
   pref <- compileAction $ procPref proc
   cont <- compileProcess $ procCont proc
-  return $ debugEvent evtId #
+  return $ debugEvent(evtId, pt, scheduler) #
            pref #
            cont
 
@@ -130,7 +130,7 @@ compileProcess proc@PChoice {} = do
   loop1 <- forM (zip ([0..]::[Int]) (procBranches proc)) $ \(i, br) -> do
     expr <- compileExpr (brGuard br)
     act  <- compileBranchAction i br
-    return $ debugEvent evtId #
+    return $ debugEvent(evtId, pt, scheduler) #
              expr #
              setEnabled' (pt, i, unboxBoolValue (registerPointer pt)) #
              ifthenelse (getEnabled(pt, i))
@@ -231,7 +231,7 @@ compileProcess proc@PCall {} = do
   let (name1, name2) | null (procModule proc) = (delete '/' currentModName, procName proc)
                      | otherwise              = (delete '/' $ procModule proc, procName proc)
   return $ comment proc #
-           debugEvent evtId #
+           debugEvent(evtId, pt, scheduler) #
            (begin $ forgetAllValues pt #
                     foldr (#) Nop loop1 #
                     foldr (#) Nop loop2 #

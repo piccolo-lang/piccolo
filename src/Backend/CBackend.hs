@@ -460,9 +460,13 @@ emitRTFun (ChannelArrayUnlock chans n) = do
   emitStr ", "
   emitBExpr n
   emitStr ")"
-emitRTFun (DebugEvent eventId) = do
+emitRTFun (DebugEvent eventId pt sched) = do
   emitStr "PICC_debug_event("
   emitBExpr eventId
+  emitStr ", "
+  emitBExpr pt
+  emitStr ", "
+  emitBExpr sched
   emitStr ")"
 
 
