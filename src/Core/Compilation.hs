@@ -406,7 +406,11 @@ compileAction act@ALet { actBindIndex = x } = do
   expr <- compileExpr (actVal act)
   return $ comment act #
            expr #
-           setEnv(pt, x, getRegister pt)
+           setEnv(pt, x, getRegister pt) #
+           (if isAManagedType $ actTyp act
+              then registerEnvValue(pt, x)
+              else Nop
+           )
 
 compileAction act@ASpawn  {} = do
   CompState { currentModule = currentModName } <- get
