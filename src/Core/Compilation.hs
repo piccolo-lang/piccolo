@@ -255,8 +255,8 @@ compileBranchAction _ br@BTau {} =
   return $ comment br #
            tryResult <-- tryResultEnabled
 
-compileBranchAction _ br@BOutput { brChanIndex = c} = do
-  expr <- compileExpr (brData br)
+compileBranchAction _ br@BOutput { brChanIndex = c, brData = d } = do
+  expr <- compileExpr d
   return $ comment br #
            (begin $ var chan ChannelType #
                     chan <-- unboxChannelValue(getEnv(pt, c)) #
@@ -271,6 +271,10 @@ compileBranchAction _ br@BOutput { brChanIndex = c} = do
                       (
                         expr #
                         setEnv'(getThread commit, getRefVar commit, getRegister pt) #
+                        (if isAManagedType $ exprTyp d
+                           then registerEnvValue'(getThread commit, getRefVar commit)
+                           else Nop
+                        ) #
                         processAwake(commit, scheduler)
                       )
                     )
@@ -300,10 +304,10 @@ compileBranchAction _ br@BInput { brChanIndex = c, brBindIndex = x } =
            )
 
 compileAction :: Action -> CompilingM Instr
-compileAction act@AOutput { actChanIndex = c } = do
+compileAction act@AOutput { actChanIndex = c, actData = d } = do
   prefixStart <- genLabel
   prefixCont  <- genLabel
-  exprComp    <- compileExpr (actData act)
+  exprComp    <- compileExpr d
   evalFunc    <- registerEvalFunc $ exprComp # ReturnRegister
   return $ comment act #
            Case prefixStart #
@@ -325,6 +329,10 @@ compileAction act@AOutput { actChanIndex = c } = do
                       unlockChannel chan #
                       exprComp #
                       setEnv'(getThread commit, getRefVar commit, getRegister pt) #
+                      (if isAManagedType $ exprTyp d
+                         then registerEnvValue'(getThread commit, getRefVar commit)
+                         else Nop
+                      ) #
                       processAwake(commit, scheduler) #
                       Goto prefixCont
                     )

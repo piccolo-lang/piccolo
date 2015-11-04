@@ -410,6 +410,11 @@ Expression & ::= & Constant \\
   \>\pindent \synchro{ReleaseChannel($outchan$)} \\
   \>\>\compiletime{\myref{CompileExpr}($e$)} \\
   \>\>$commit.thread.env[commit.refval] \leftarrow pt.val$ \\
+  \>\>\compiletime{\kw{cif} ischannel(T) \kw{then}} \\
+  \>\>\pindent\kw{if} \myref{KnowsRegister}($commit.thread.knows, commit.thread.env[commit.refval]$) \kw{then} \\
+  \>\>\>\pindent \myref{ChannelRef}($commit.thread.env[commit.refval]$) \\
+  \>\>\>\kw{endif} \\
+  \>\>\compiletime{\kw{cendif}} \\
   \>\>\myref{Awake}($scheduler$, $commit.thread$, $commit$) \\
   \>\>\kw{goto} @prefix\_cont \\
  \> \kw{elseif} $tryResult$ = DISABLED \kw{then} \\
@@ -772,6 +777,11 @@ Expression & ::= & Constant \\
   \>\>\kw{if} $tryResult$ = ENABLED \kw{then} \\
   \>\>\pindent\compiletime{\myref{CompileExpr}($v$)} \\
   \>\>\>$commit.thread.env[commit.refval] \leftarrow pt.val$ \\
+  \>\>\>\compiletime{\kw{cif} ischannel(T) \kw{then}} \\
+  \>\>\>\pindent\kw{if} \myref{KnowsRegister}($commit.thread.knows, commit.thread.env[commit.refval]$) \kw{then} \\
+  \>\>\>\>\pindent \myref{ChannelRef}($commit.thread.env[commit.refval]$) \\
+  \>\>\>\>\kw{endif} \\
+  \>\>\>\compiletime{\kw{cendif}} \\
   \>\>\>\myref{Awake}($scheduler$, $commit.thread$, $commit$) \\
   \>\> \kw{endif}\\
   \>\kw{endif} \\
