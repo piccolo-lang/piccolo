@@ -54,7 +54,8 @@ if __name__ == '__main__':
     if with_valgrind:
         sys.stdout.write("\twith valgrind...\t")
         sys.stdout.flush()
-        if testing(testdir, with_valgrind=True):
+        (act, exp) = testing(testdir, with_valgrind=True)
+        if act == exp:
             sys.stdout.write(bcolors.OK + "OK" + bcolors.ENDC)
         else:
             sys.stdout.write(bcolors.FAIL + "FAILED" + bcolors.ENDC)
