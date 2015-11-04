@@ -1,0 +1,19 @@
+// testing higher order channel
+module HigherOrdChan/Simple
+
+def P(c: chan<chan<int>>) =
+  new (ci: chan<int>),
+  c!ci,
+  ci!42,
+  end
+
+def Q(c: chan<chan<int>>) =
+  c?(ci),
+  ci?(x),
+  #core/io:print_int(x),
+  end
+
+def Main() =
+  new (c: chan<chan<int>>),
+  spawn { P(c) },
+  Q(c)
