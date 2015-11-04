@@ -105,7 +105,7 @@ envDefinition def = do
   proc <- envProcess $ defBody def
   size <- afterDefComputation
   registerDefSize (defName def) size
-  return $ def { defBody = proc }
+  return $ def { defBody = proc, defEnvSize = size }
 
 envProcess :: Process -> EnvM Process
 envProcess proc@PEnd    {} = return proc

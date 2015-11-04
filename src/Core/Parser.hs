@@ -5,7 +5,6 @@ Stability     : experimental
 
 This is the parser combinators for parsing piccolo-core modules.
 
-__TODO__: feed the locations to the AST
 __TODO__: define AST construction helpers for ast nodes in ASTUtils and user
 them here
 -}

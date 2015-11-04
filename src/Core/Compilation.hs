@@ -25,7 +25,7 @@ import Errors
 
 import Control.Monad.Error
 import Control.Monad.State
-import Data.List (delete)
+import Data.List (delete, find)
 
 data CompState
   = CompState
@@ -35,6 +35,7 @@ data CompState
     , evalFuncs     :: [Instr]
     , debugEventId  :: Int
     , debugEvents   :: [DebugEvent]
+    , modul         :: Modul
     }
 
 type CompilingM a = ErrorT PiccError (State CompState) a
@@ -73,13 +74,21 @@ genDebugEvent proc = do
          }
   return evtId
 
+getEnvSize :: String -> String -> CompilingM Int
+getEnvSize _ name = do
+  st <- get
+  let defs = modDefs (modul st)
+  case find (\d -> defName d == name) defs of
+    Just d  -> return $ defEnvSize d
+    Nothing -> error "getEnvSize. please report"
+
 -- | The 'compilePass' monad run the piccolo AST compilation to sequential AST
 compilePass :: Modul -> Either PiccError (Instr, [DebugEvent])
 compilePass m =
   let (Right comp, st) = runState (runErrorT instr) initEnv in
   Right (comp, debugEvents st)
   where instr    = compileModul m
-        initEnv  = CompState (dEntry + 1) "" 1 [] 0 []
+        initEnv  = CompState (dEntry + 1) "" 1 [] 0 [] m
 
 
 compileModul :: Modul -> CompilingM Instr
@@ -189,7 +198,7 @@ compileProcess proc@PChoice {} = do
   return $ Case startChoice #
            (begin $ var tryResult TryResultEnumType #
                     var chans ChannelArrayType #
-                    chans <-- channelArrayCreate 20 # -- TODO : change 20 for the real number branches
+                    chans <-- channelArrayCreate (length $ procBranches proc) #
                     var nbDisabled IntType #
                     nbDisabled <---- 0 #
                     var nbChans IntType #
@@ -405,9 +414,10 @@ compileAction act@ASpawn  {} = do
                 then registerEnvValue(child, i-1)
                 else Nop
              )
+  envSize <- getEnvSize name1 name2
   return $ comment act #
            (begin $ var child PiThreadType #
-                    child <-- piThreadCreate(10, 10) # -- TODO user the computed env sizes !
+                    child <-- piThreadCreate(envSize, 10) # -- TODO: use the computed enabled size
                     foldr (#) Nop loop #
                     setProc(child, name1, name2) #
                     setPC(child, dEntry) #
