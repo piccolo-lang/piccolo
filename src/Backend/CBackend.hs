@@ -18,8 +18,8 @@ import Control.Monad
 import Data.List (delete)
 
 -- | Code emitter function for C backend
-emitCode :: String -> Instr -> EmitterM ()
-emitCode mainName instr = do
+emitCode :: String -> Int -> Instr -> EmitterM ()
+emitCode mainName envSize instr = do
   emitLn "#include <runtime.h>"
   emitLn ""
   emitDecls instr
@@ -28,7 +28,7 @@ emitCode mainName instr = do
   emitLn ""
   emitLn "int main() {"
   incrIndent
-  emitLn $ "PICC_main(4, " ++ mainName ++ ", 2, 2, 2, 10, 10);"
+  emitLn $ "PICC_main(4, " ++ mainName ++ ", 2, 2, 2, " ++ show envSize ++ ", 10);"
   decrIndent
   emitLn "}"
 

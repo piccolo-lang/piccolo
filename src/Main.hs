@@ -56,12 +56,16 @@ main = do
   typedAst            <- reportResult $ typeCheck ast
   withEnv             <- reportResult $ computingEnvPass typedAst
   (seqAst, dbgEvents) <- reportResult $ compilePass withEnv
-  let code  = runEmitterM $ CBackend.emitCode (mainDef withEnv) seqAst
+  let code  = runEmitterM $ CBackend.emitCode (mainDef withEnv)
+                                              (mainEnvSize withEnv) seqAst
   when (isJust dumpC) $ writeFile (fromJust dumpC) code
   compileCCode code output debug
   when debug $ appendDebugSymbols dbgEvents output
   where
-    mainDef m = delete '/' (modName m) ++ "_Main"
+    mainDef m     = delete '/' (modName m) ++ "_Main"
+    mainEnvSize m = case find (\d -> defName d == "Main") (modDefs m) of
+                      Just d  -> defEnvSize d
+                      Nothing -> error "no Main def"
 
 data Options = Options
   { optDebug  :: Bool
