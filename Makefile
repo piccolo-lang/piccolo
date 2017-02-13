@@ -8,6 +8,9 @@ install:
 
 reinstall: clean install
 
+dist/setup-config:
+	$(CABAL) configure
+
 build: dist/setup-config
 	$(CABAL) build
 

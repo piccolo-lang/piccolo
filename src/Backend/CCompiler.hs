@@ -19,12 +19,12 @@ import System.IO
 -- | C code compilation with gcc in IO
 compileCCode :: String -> FilePath -> IO ()
 compileCCode ccode fname = do
-  dataDir <- getDataDir
+  libDir <- getLibDir
   let ccStd  = ["-std=c11"]
       ccInp  = ["-xc", "-"]
       ccOut  = ["-o", fname]
-      ccInc  = ["-I", dataDir ++ "/runtime"]
-      ccLib  = ["-L", dataDir ++ "/runtime"]
+      ccInc  = ["-I", libDir]
+      ccLib  = ["-L", libDir]
       ccLnk  = ["-lpiccolort", "-lpthread"]
       ccArgs = ccStd ++ ccInp ++ ccOut ++ ccInc ++ ccLib ++ ccLnk
   (Just ccStdin, _, _, ccProc) <- createProcess (proc "gcc" ccArgs)

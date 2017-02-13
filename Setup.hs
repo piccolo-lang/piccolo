@@ -20,10 +20,6 @@ make :: Verbosity -> [String] -> IO ()
 make verbosity =
   P.runProgramInvocation verbosity . P.simpleProgramInvocation "make"
 
-
--- ----------------------------------------------------------------------------
--- Main
-
 main :: IO ()
 main = defaultMainWithHooks $ simpleUserHooks
   { postClean = piccoloClean
@@ -37,9 +33,6 @@ main = defaultMainWithHooks $ simpleUserHooks
   }
 
 
--- ----------------------------------------------------------------------------
--- Clean
-
 piccoloClean :: Args
              -> S.CleanFlags
              -> PackageDescription
@@ -49,9 +42,6 @@ piccoloClean _ flags _ _ = do
   let verbosity = S.fromFlag $ S.cleanVerbosity flags
   make verbosity [ "-C", "runtime", "clean" ]
 
-
--- ----------------------------------------------------------------------------
--- Build
 
 piccoloBuild :: Args
              -> S.BuildFlags
@@ -63,17 +53,13 @@ piccoloBuild _ flags _ local  = do
   make verbosity [ "-C", "runtime", "build" ]
 
 
--- ----------------------------------------------------------------------------
--- Copy/Install
-
 piccoloInstall :: Verbosity
                -> CopyDest
                -> PackageDescription
                -> LocalBuildInfo
                -> IO ()
 piccoloInstall verbosity copy pkg local = do
-  let target  = datadir $ L.absoluteInstallDirs pkg local copy
-      target' = target </> "runtime"
-  putStrLn $ "Installing runtime in " ++ target'
-  make verbosity [ "-C", "runtime", "install", "TARGET=" ++ target' ]
+  let target = libdir $ L.absoluteInstallDirs pkg local copy
+  putStrLn $ "Installing runtime in " ++ target
+  make verbosity [ "-C", "runtime", "install", "TARGET=" ++ target ]
 
