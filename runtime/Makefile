@@ -25,7 +25,7 @@ install:
 clean:
 	rm -f $(OBJS) $(LIBTARGET)
 
-doc: piccolort.doxygen doc
+doc: piccolort.doxygen
 	doxygen piccolort.doxygen
 
 linecount:
