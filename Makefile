@@ -14,8 +14,16 @@ dist/setup-config:
 build: dist/setup-config
 	$(CABAL) build
 
+ifdef DEV_DOC
+  HADDOCK_OPTS=--title Piccolo --hide Paths_piccolo --ignore-all-exports
+else
+  HADDOCK_OPTS=--title Piccolo --hide Paths_piccolo
+endif
+
 doc: dist/setup-config
-	$(CABAL) haddock --executables --hyperlink-source --html --hoogle --haddock-options="--title Piccolo --hide Paths_piccolo"
+
+	$(CABAL) haddock --executables --hyperlink-source --html --hoogle \
+		--haddock-options="$(HADDOCK_OPTS)"
 
 rtdoc:
 	$(MAKE) -C runtime doc
