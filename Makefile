@@ -6,6 +6,8 @@ MAKE  = make
 install:
 	$(CABAL) install
 
+reinstall: clean install
+
 build: dist/setup-config
 	$(CABAL) build
 

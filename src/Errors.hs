@@ -15,12 +15,11 @@ where
 import Core.AST
 
 import System.Exit
-import Control.Monad.Error
 
 
 -- | The 'PiccError' type separate compilation errors into several categories.
 data PiccError
-  = SimpleError String
+  = OtherError String
     -- ^ error that does not fit into other categories
   | VarNotFoundError String Location
     -- ^ looking for a variable and not finding it
@@ -45,12 +44,8 @@ data PiccError
     }
     -- ^ error occuring during the typing pass of a piccolo AST
 
-instance Error PiccError where
-  noMsg  = strMsg ""
-  strMsg = SimpleError
-
 instance Show PiccError where
-  show (SimpleError str) =
+  show (OtherError str) =
     "error: " ++ str
 
   show (VarNotFoundError var loc) =

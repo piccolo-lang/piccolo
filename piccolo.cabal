@@ -2,9 +2,9 @@ Name:                piccolo
 Version:             0.1.0.0
 License:             GPL-3
 License-file:        LICENSE
-Author:              aurelien.deharbe@lip6.fr, frederic.peschanski@lip6.fr
-Maintainer:          aurelien.deharbe@lip6.fr
-Homepage:            http://github.com/fredokun/piccolo/tree/new-piccolo
+Author:              me@adeharbe.org, frederic.peschanski@lip6.fr
+Maintainer:          me@adeharbe.org
+Homepage:            http://github.com/piccolo-lang/piccolo/
 
 Stability:           Beta
 Category:            Compilers, Language

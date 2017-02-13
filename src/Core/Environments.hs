@@ -18,7 +18,7 @@ import Errors
 
 import Data.List
 import qualified Data.Map as Map
-import Control.Monad.Error
+import Control.Monad.Except
 import Control.Monad.State
 
 
@@ -30,7 +30,7 @@ data Environment = Environment { defsSizes     :: DefsEnv
                                , maxChoiceSize :: Int
                                }
 
-type EnvM a = ErrorT PiccError (State Environment) a
+type EnvM a = ExceptT PiccError (State Environment) a
 
 lookupSizeOfDef :: String -> EnvM Int
 lookupSizeOfDef name = do
@@ -87,7 +87,7 @@ computingEnvPass m = loopUntilFix m $ Map.fromList (map extractSize (modDefs m))
   where extractSize def = let i = defEnvSize def in
                           let n = defName def in
                           if i < 0 then (n, 0) else (n, i)
-        loopUntilFix modul defSizes = let (result, env) = runState (runErrorT (envModule modul)) (Environment defSizes [] 0 0) in
+        loopUntilFix modul defSizes = let (result, env) = runState (runExceptT (envModule modul)) (Environment defSizes [] 0 0) in
                                     case result of
                                       Left err     -> Left err
                                       Right modul' -> if defSizes == defsSizes env
@@ -134,12 +134,12 @@ envBranch br@BOutput {} = do
       dat  <- envExpr $ brData br
       cont <- envProcess $ brCont br
       return br { brGuard = gard, brChanIndex = i, brData = dat, brCont = cont }
-    Nothing -> throwError $ SimpleError "var not in scope"
+    Nothing -> throwError $ OtherError "var not in scope"
 envBranch br@BInput  {} = do
   gard    <- envExpr $ brGuard br
   chanInd <- lookupVar $ brChan br
   case chanInd of
-    Nothing -> throwError $ SimpleError "var not in scope"
+    Nothing -> throwError $ OtherError "var not in scope"
     Just i  -> do
       j <- addVar $ brBind br
       cont <- envProcess $ brCont br
@@ -152,11 +152,11 @@ envAction act@AOutput {} = do
     Just i  -> do
       dat <- envExpr $ actData act
       return act { actData = dat, actChanIndex = i }
-    Nothing -> throwError $ SimpleError "var not in scope"
+    Nothing -> throwError $ OtherError "var not in scope"
 envAction act@AInput  {} = do
   chanInd <- lookupVar $ actChan act
   case chanInd of
-    Nothing -> throwError $ SimpleError "var not in scope"
+    Nothing -> throwError $ OtherError "var not in scope"
     Just i  -> do
       j <- addVar $ actBind act
       return act { actChanIndex = i, actBindIndex = j }
@@ -182,7 +182,7 @@ envExpr e@EVar   {} = do
   ind <- lookupVar $ exprVar e
   case ind of
     Just index -> return $ e { exprIndex = index }
-    Nothing    -> throwError $ SimpleError "var not in scope"
+    Nothing    -> throwError $ OtherError "var not in scope"
 envExpr e@EPrim  {} = do
   args <- mapM envExpr $ exprArgs e
   return $ e { exprArgs = args }

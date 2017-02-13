@@ -24,7 +24,6 @@ import Core.AST
 import Core.Typecheck
 import Core.Environments
 import Core.Compilation
-import Core.DebugSymbols
 import Backend.Codegen
 import qualified Backend.CBackend as CBackend
 import Backend.CCompiler
@@ -45,8 +44,7 @@ main = do
   forM_ errors putStrLn
   opts <- foldl (>>=) (return defaultOptions) actions
   when (not (null errors)) $ void (showHelp opts)
-  let Options { optDebug  = debug
-              , optOutput = output
+  let Options { optOutput = output
               , optDumpC  = dumpC
               } = opts
   when (length nonOpts /= 1) $ void (showHelp opts)
@@ -55,12 +53,11 @@ main = do
   ast                 <- reportResult $ parseModule content
   typedAst            <- reportResult $ typeCheck ast
   withEnv             <- reportResult $ computingEnvPass typedAst
-  (seqAst, dbgEvents) <- reportResult $ compilePass withEnv
+  seqAst              <- reportResult $ compilePass withEnv
   let code  = runEmitterM $ CBackend.emitCode (mainDef withEnv)
                                               (mainEnvSize withEnv) seqAst
   when (isJust dumpC) $ writeFile (fromJust dumpC) code
-  compileCCode code output debug
-  when debug $ appendDebugSymbols dbgEvents output
+  compileCCode code output
   where
     mainDef m     = delete '/' (modName m) ++ "_Main"
     mainEnvSize m = case find (\d -> defName d == "Main") (modDefs m) of
@@ -68,15 +65,13 @@ main = do
                       Nothing -> error "no Main def"
 
 data Options = Options
-  { optDebug  :: Bool
-  , optOutput :: String
+  { optOutput :: String
   , optDumpC  :: Maybe String
   } deriving Show
 
 defaultOptions :: Options
 defaultOptions = Options
-  { optDebug  = False
-  , optOutput = "./a.out"
+  { optOutput = "./a.out"
   , optDumpC  = Nothing
   }
 
@@ -84,7 +79,6 @@ options :: [OptDescr (Options -> IO Options)]
 options =
   [ Option "v" ["version"] (NoArg showVersion)         "show version number"
   , Option "h" ["help"]    (NoArg showHelp)            "show help"
-  , Option "g" ["debug"]   (NoArg writeDebug)          "debug mode"
   , Option "o" ["out"]     (ReqArg writeOutput "FILE") "output file"
   , Option ""  ["dump-c"]  (ReqArg writeDumpC "FILE")  "dump c code"
   ]
@@ -98,9 +92,6 @@ showHelp :: Options -> IO Options
 showHelp _ = do
   putStr $ usageInfo "Usage: piccolo [options] <piccolo_file>" options
   exitSuccess
-
-writeDebug :: Options -> IO Options
-writeDebug opt = return $ opt { optDebug = True }
 
 writeOutput :: String -> Options -> IO Options
 writeOutput arg opt = return $ opt { optOutput = arg }

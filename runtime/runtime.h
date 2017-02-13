@@ -8,7 +8,6 @@
 #include "queue.h"
 #include "tryaction.h"
 #include "channel.h"
-#include "debug.h"
 
 void PICC_main(int nb_core_threads, PICC_PiThreadProc *entrypoint,
                int std_gc_fuel, int quick_gc_fuel, int active_factor,

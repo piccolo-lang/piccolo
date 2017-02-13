@@ -19,11 +19,10 @@ import Backend.SeqAST
   )
 import Backend.SeqASTUtils
 import Core.AST
-import Core.DebugSymbols
 import Core.Typecheck
 import Errors
 
-import Control.Monad.Error
+import Control.Monad.Except
 import Control.Monad.State
 import Data.List (delete, find)
 
@@ -33,12 +32,10 @@ data CompState
     , currentModule :: String
     , evalFuncCount :: Int
     , evalFuncs     :: [Instr]
-    , debugEventId  :: Int
-    , debugEvents   :: [DebugEvent]
     , modul         :: Modul
     }
 
-type CompilingM a = ErrorT PiccError (State CompState) a
+type CompilingM a = ExceptT PiccError (State CompState) a
 
 dEntry :: Int
 dEntry = 0
@@ -65,15 +62,6 @@ registerEvalFunc expr = do
   put st { evalFuncCount = n + 1, evalFuncs = fs ++ [f] }
   return fName
 
-genDebugEvent :: Process -> CompilingM Int
-genDebugEvent proc = do
-  st <- get
-  let evtId = debugEventId st
-  put st { debugEventId = evtId + 1
-         , debugEvents  = debugEvents st ++ [proc]
-         }
-  return evtId
-
 getEnvSize :: String -> String -> CompilingM Int
 getEnvSize _ name = do
   st <- get
@@ -83,12 +71,12 @@ getEnvSize _ name = do
     Nothing -> error "getEnvSize. please report"
 
 -- | The 'compilePass' monad run the piccolo AST compilation to sequential AST
-compilePass :: Modul -> Either PiccError (Instr, [DebugEvent])
+compilePass :: Modul -> Either PiccError Instr
 compilePass m =
-  let (Right comp, st) = runState (runErrorT instr) initEnv in
-  Right (comp, debugEvents st)
+  let (comp, _) = runState (runExceptT instr) initEnv in
+  comp
   where instr    = compileModul m
-        initEnv  = CompState (dEntry + 1) "" 1 [] 0 [] m
+        initEnv  = CompState (dEntry + 1) "" 1 [] m
 
 
 compileModul :: Modul -> CompilingM Instr
@@ -117,30 +105,24 @@ compileDefinition def = do
 
 compileProcess :: Process -> CompilingM Instr
 compileProcess proc@PEnd {} = do
-  evtId <- genDebugEvent proc
   return $ comment proc #
-           debugEvent(evtId, pt, scheduler) #
            processEnd(pt, statusEnded) #
            Return
 
 compileProcess proc@PPrefix {} = do
-  evtId <- genDebugEvent proc
   pref <- compileAction $ procPref proc
   cont <- compileProcess $ procCont proc
-  return $ debugEvent(evtId, pt, scheduler) #
-           pref #
+  return $ pref #
            cont
 
 compileProcess proc@PChoice {} = do
-  evtId <- genDebugEvent proc
   let n = length (procBranches proc)
   startChoice <- genLabel
   choiceConts <- replicateM n genLabel
   loop1 <- forM (zip ([0..]::[Int]) (procBranches proc)) $ \(i, br) -> do
     expr <- compileExpr (brGuard br)
     act  <- compileBranchAction i br
-    return $ debugEvent(evtId, pt, scheduler) #
-             expr #
+    return $ expr #
              setEnabled' (pt, i, unboxBoolValue (registerPointer pt)) #
              ifthenelse (getEnabled(pt, i))
              (
@@ -222,7 +204,6 @@ compileProcess proc@PChoice {} = do
            )
 
 compileProcess proc@PCall {} = do
-  evtId <- genDebugEvent proc
   loop1 <- forM (zip ([1..]::[Int]) (procArgs proc)) $ \(i, arg) -> do
     let vi = v i
     expr <- compileExpr arg
@@ -240,7 +221,6 @@ compileProcess proc@PCall {} = do
   let (name1, name2) | null (procModule proc) = (delete '/' currentModName, procName proc)
                      | otherwise              = (delete '/' $ procModule proc, procName proc)
   return $ comment proc #
-           debugEvent(evtId, pt, scheduler) #
            (begin $ forgetAllValues pt #
                     foldr (#) Nop loop1 #
                     foldr (#) Nop loop2 #

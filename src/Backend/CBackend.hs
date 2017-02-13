@@ -170,10 +170,6 @@ emitInstr (ProcCall fun)     = do
   emitIndent
   emitRTFun fun
   emitStr ";\n"
-emitInstr (PreprocDebugMode body) = do
-  emitLn0 "#ifdef PICC_DEBUG_MODE"
-  emitInstr body
-  emitLn0 "#endif"
 
 emitBExpr :: BExpr -> EmitterM ()
 emitBExpr (Not expr)        = do
@@ -460,15 +456,6 @@ emitRTFun (ChannelArrayUnlock chans n) = do
   emitStr ", "
   emitBExpr n
   emitStr ")"
-emitRTFun (DebugEvent eventId pt sched) = do
-  emitStr "PICC_debug_event("
-  emitBExpr eventId
-  emitStr ", "
-  emitBExpr pt
-  emitStr ", "
-  emitBExpr sched
-  emitStr ")"
-
 
 emitEnumName :: EnumName -> EmitterM ()
 emitEnumName StatusRun         = emitStr "PICC_STATUS_RUN"

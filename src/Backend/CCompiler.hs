@@ -17,17 +17,16 @@ import System.Process
 import System.IO
 
 -- | C code compilation with gcc in IO
-compileCCode :: String -> FilePath -> Bool -> IO ()
-compileCCode ccode fname debug = do
+compileCCode :: String -> FilePath -> IO ()
+compileCCode ccode fname = do
   dataDir <- getDataDir
-  let ccInc  = ["-I", dataDir ++ "/runtime"]
-      ccLib  = ["-L", dataDir ++ "/runtime"]
+  let ccStd  = ["-std=c11"]
+      ccInp  = ["-xc", "-"]
       ccOut  = ["-o", fname]
-      ccDbg  = if debug 
-                 then ["-DPICC_DEBUG_MODE", "-lpiccolortdbg"]
-                 else ["-lpiccolort"]
-      ccArgs = ["-std=c11", "-xc", "-"] ++ ccOut ++ ccInc ++ ccLib ++ ccDbg ++
-               ["-lpthread"]
+      ccInc  = ["-I", dataDir ++ "/runtime"]
+      ccLib  = ["-L", dataDir ++ "/runtime"]
+      ccLnk  = ["-lpiccolort", "-lpthread"]
+      ccArgs = ccStd ++ ccInp ++ ccOut ++ ccInc ++ ccLib ++ ccLnk
   (Just ccStdin, _, _, ccProc) <- createProcess (proc "gcc" ccArgs)
                                   { std_in  = CreatePipe
                                   , std_out = UseHandle stdout
