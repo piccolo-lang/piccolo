@@ -91,17 +91,23 @@ mkLoc posStart posEnd = Location { locOffset      = -1
                                  , locEndColumn   = sourceColumn posStart
                                  }
 
+applyLocation :: Parser (Location -> a) -> Parser a
+applyLocation parser = do
+  pos <- getPosition
+  x <- parser
+  pos' <- getPosition
+  return $ x (mkLoc pos pos')
 
 modul :: Parser Modul
 modul = do
   whiteSpace
-  pos <- getPosition
-  reserved "module"
-  modID <- modulId
-  defs  <- many definition
-  pos' <- getPosition
+  m <- applyLocation $ do
+    reserved "module"
+    modID <- modulId
+    defs <- many definition
+    return $ Modul modID defs
   eof
-  return $ Modul modID defs (mkLoc pos pos')
+  return m
 
 modulId :: Parser String
 modulId = do
@@ -118,40 +124,30 @@ modulQual = do
   return m
 
 definition :: Parser Definition
-definition = do
-  pos    <- getPosition
+definition = applyLocation $ do
   reserved "def"
   name   <- identifier
   params <- parens $ commaSep param
   reserved "="
   body   <- process
-  pos'   <- getPosition
-  return $ Definition name params body (-1) (mkLoc pos pos')
+  return $ Definition name params body (-1)
 
 param :: Parser (String, TypeExpr, Location)
-param = do
-  pos <- getPosition
+param = applyLocation $ do
   x <- identifier
   reservedOp ":"
   t <- typeExpr
-  pos' <- getPosition
-  return (x, t, mkLoc pos pos')
+  return $ \p -> (x, t, p)
 
 process :: Parser Process
 process = annotatedProc
-      <|> try (do
-             pos <- getPosition
-             reserved "end"
-             pos' <- getPosition
-             return (PEnd (mkLoc pos pos')))
+      <|> try (applyLocation $ reserved "end" >> return PEnd)
       <|> braces process
-      <|> try (do
-             pos <- getPosition
+      <|> try (applyLocation $ do
              a <- action
              reservedOp ","
              p <- process
-             pos' <- getPosition
-             return $ PPrefix a p (mkLoc pos pos')
+             return $ PPrefix a p
           )
       <|> try call
       <|> guardedChoice
@@ -162,24 +158,20 @@ annotatedProc = do
   reserved "%safe"
   p <- braces process
   case p of
-    c@(PChoice {}) -> return c { procSafe = True }
-    _              -> unexpected "%safe should be applied on choice"
+    c@PChoice {} -> return c { procSafe = True }
+    _            -> unexpected "%safe should be applied on choice"
   
 call :: Parser Process
-call = do
-  pos <- getPosition
+call = applyLocation $ do
   m <- option "" modulQual -- TODO: optionMaybe
   p <- identifier
   args <- parens $ commaSep expr
-  pos' <- getPosition
-  return $ PCall m p args (mkLoc pos pos')
+  return $ PCall m p args
 
 guardedChoice :: Parser Process
-guardedChoice = do
-  pos <- getPosition
+guardedChoice = applyLocation $ do
   bs <- sepBy1 branch $ between whiteSpace whiteSpace (char '+')
-  pos' <- getPosition
-  return $ PChoice bs False (mkLoc pos pos')
+  return $ PChoice bs False
 
 branch :: Parser Branch
 branch = try branchTau
@@ -188,50 +180,42 @@ branch = try branchTau
      <?> "choice branch"
 
 branchTau :: Parser Branch
-branchTau = do
-  pos <- getPosition
+branchTau = applyLocation $ do
   g <- brackets expr
   reserved "tau"
   reservedOp ","
   p <- process
-  pos' <- getPosition
-  return $ BTau g p (mkLoc pos pos')
+  return $ BTau g p
 
 branchOutput :: Parser Branch
-branchOutput = do
-  pos <- getPosition
+branchOutput = applyLocation $ do
   g <- brackets expr
   c <- identifier
   reservedOp "!"
   e <- expr
   reservedOp ","
   p <- process
-  pos' <- getPosition
-  return $ BOutput g c e (-1) p (mkLoc pos pos')
+  return $ BOutput g c e (-1) p
 
 branchInput :: Parser Branch
-branchInput = do
-  pos <- getPosition
+branchInput = applyLocation $ do
   g <- brackets expr
   c <- identifier
   reservedOp "?"
   x <- parens identifier
   reservedOp ","
   p <- process
-  pos' <- getPosition
-  return $ BInput g c x (TUnknown noLoc) (-1) (-1) p (mkLoc pos pos')
+  return $ BInput g c x (TUnknown noLoc) (-1) (-1) p
 
 action :: Parser Action
 action = try output
      <|> try input
-     <|> (do
-            pos <- getPosition
+     <|> (applyLocation $ do
             reserved "new"
             (v, t) <- parens typedVar
-            pos' <- getPosition
-            return (ANew v (-1) t (mkLoc pos pos')))
-     <|> do
-           pos <- getPosition
+            return $ ANew v (-1) t
+         )
+     <|> (applyLocation $ do
            reserved "let"
            (v, t, e) <- parens $ do
              v <- identifier
@@ -240,58 +224,43 @@ action = try output
              reservedOp "="
              e <- expr
              return (v, t, e)
-           pos' <- getPosition
-           return $ ALet v (-1) t e (mkLoc pos pos')
-     <|> do
-           pos <- getPosition
+           return $ ALet v (-1) t e
+         )
+     <|> (applyLocation $ do
            reserved "spawn"
            PCall m k vs _ <- braces call
-           pos' <- getPosition
-           return $ ASpawn m k vs (mkLoc pos pos')
-     <|> do
-           pos <- getPosition
+           return $ ASpawn m k vs
+         )
+     <|> (applyLocation $ do
            m <- modulQual
            n <- identifier
            args <- parens $ commaSep expr
-           pos' <- getPosition
-           return $ APrim m n args (mkLoc pos pos')
+           return $ APrim m n args
+         )
      <?> "action"
 
 output :: Parser Action
-output = do
-  pos <- getPosition
+output = applyLocation $ do
   c <- identifier
   reservedOp "!"
   e <- expr
-  pos' <- getPosition
-  return $ AOutput c e (-1) (mkLoc pos pos')
+  return $ AOutput c e (-1)
 
 input :: Parser Action
-input = do
-  pos <- getPosition
+input = applyLocation $ do
   c <- identifier
   reservedOp "?"
   x <- parens identifier
-  pos' <- getPosition
-  return $ AInput c x (TUnknown noLoc) (-1) (-1) (mkLoc pos pos')
+  return $ AInput c x (TUnknown noLoc) (-1) (-1)
 
 typeExpr :: Parser TypeExpr
-typeExpr = (do
-              pos <- getPosition
+typeExpr = (applyLocation $ do
               reserved "chan"
               t <- angles typeExpr
-              pos' <- getPosition
-              return $ TChannel t (mkLoc pos pos'))
-       <|> (do
-              pos <- getPosition
-              ts <- parens $ sepBy1 typeExpr (char '*')
-              pos' <- getPosition
-              return $ TTuple ts (mkLoc pos pos'))
-       <|> (do
-              pos <- getPosition
-              at <- typeAtom
-              pos' <- getPosition
-              return $ TAtom at (mkLoc pos pos'))
+              return $ TChannel t
+           )
+       <|> (applyLocation $ parens $ sepBy1 typeExpr (char '*') >>= return . TTuple)
+       <|> (applyLocation $ typeAtom >>= return . TAtom)
        <?> "type"
 
 typeAtom :: Parser TypeAtom
@@ -308,64 +277,48 @@ typedVar = do
   return (v, t)
 
 expr :: Parser Expr -- TODO: 'and' and 'or' parsers
-expr = (try trueExpr)
-   <|> (try falseExpr)
+expr = try trueExpr
+   <|> try falseExpr
    <|> intExpr
-   <|> (do
-          pos <- getPosition
+   <|> (applyLocation $ do
           s <- stringLiteral
-          pos' <- getPosition
-          return $ EString (TUnknown noLoc) (mkLoc pos pos') s)
-   <|> (do
-          pos <- getPosition
+          return $ \p -> EString (TUnknown noLoc) p s
+       )
+   <|> (applyLocation $ do
           es <- parens $ commaSep1 expr
-          pos' <- getPosition
-          return $ ETuple (TUnknown noLoc) (mkLoc pos pos') es)
+          return $ \p -> ETuple (TUnknown noLoc) p es
+       )
    <|> varExpr
-   <|> (do
-          pos <- getPosition
+   <|> (applyLocation $ do
           m <- modulQual
           n <- identifier
           args <- parens $ commaSep staticExpr
-          pos' <- getPosition
-          return $ EPrim (TUnknown noLoc) (mkLoc pos pos') m n args
+          return $ \p -> EPrim (TUnknown noLoc) p m n args
        )
    <?> "expression"
 
 staticExpr :: Parser Expr
-staticExpr = (try trueExpr)
-         <|> (try falseExpr)
+staticExpr = try trueExpr
+         <|> try falseExpr
          <|> intExpr
          <|> varExpr
          <?> "static expression"
 
 trueExpr :: Parser Expr
-trueExpr = do
-  pos <- getPosition
-  reserved "true"
-  pos' <- getPosition
-  return (ETrue (TUnknown noLoc) (mkLoc pos pos'))
+trueExpr = applyLocation $ reserved "true" >> return (ETrue (TUnknown noLoc))
 
 falseExpr :: Parser Expr
-falseExpr = do
-  pos <- getPosition
-  reserved "false"
-  pos' <- getPosition
-  return (EFalse (TUnknown noLoc) (mkLoc pos pos'))
+falseExpr = applyLocation $ reserved "false" >> return (EFalse (TUnknown noLoc))
 
 intExpr :: Parser Expr
-intExpr = do
-  pos <- getPosition
-  i <- integer
-  pos' <- getPosition
-  return $ EInt (TUnknown noLoc) (mkLoc pos pos') (fromIntegral i)
+intExpr = applyLocation $ do
+  i <- fmap fromIntegral integer
+  return $ \p -> EInt (TUnknown noLoc) p i
 
 varExpr :: Parser Expr
-varExpr = do
-  pos <- getPosition
+varExpr = applyLocation $ do
   v <- identifier
-  pos' <- getPosition
-  return $ EVar (TUnknown noLoc) (mkLoc pos pos') v (-1)
+  return $ \p -> EVar (TUnknown noLoc) p v (-1)
 
 
 -- | Module parser
