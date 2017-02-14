@@ -20,5 +20,5 @@ printEnvSizes modul = do
   putStrLn $ "Env sizes for module " ++ modName modul ++ ":"
   forM_ (modDefs modul) $ \def -> do
     putStr $ "Process '" ++ defName def ++ "' has env size of "
-    putStrLn . show $ defEnvSize def
+    print $ defEnvSize def
 

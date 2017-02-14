@@ -104,7 +104,7 @@ compileDefinition def = do
            )
 
 compileProcess :: Process -> CompilingM Instr
-compileProcess proc@PEnd {} = do
+compileProcess proc@PEnd {} =
   return $ comment proc #
            processEnd(pt, statusEnded) #
            Return
@@ -178,30 +178,30 @@ compileProcess proc@PChoice {} = do
     return $ CaseAndLabel (choiceConts !! i) #
              cont
   return $ Case startChoice #
-           (begin $ var tryResult TryResultEnumType #
-                    var chans ChannelArrayType #
-                    chans <-- channelArrayCreate (length $ procBranches proc) #
-                    var nbDisabled IntType #
-                    nbDisabled <---- 0 #
-                    var nbChans IntType #
-                    nbChans <---- 0 #
-                    foldr (#) Nop loop1 #
-                    ifthen (nbDisabled =:== n)
-                    (
-                      channelArrayUnlock(chans, nbChans) #
-                      (if procSafe proc
-                         then setSafeChoice(pt, True)
-                         else Nop) #
-                      processEnd(pt, statusBlocked) #
-                      Return
-                    ) #
-                    foldr (#) Nop loop2 #
-                    processLock pt #
-                    channelArrayUnlock(chans, nbChans) #
-                    processWait(pt, scheduler) #
-                    Return #
-                    foldr (#) Nop loop3
-           )
+           begin ( var tryResult TryResultEnumType #
+                   var chans ChannelArrayType #
+                   chans <-- channelArrayCreate (length $ procBranches proc) #
+                   var nbDisabled IntType #
+                   nbDisabled <---- 0 #
+                   var nbChans IntType #
+                   nbChans <---- 0 #
+                   foldr (#) Nop loop1 #
+                   ifthen (nbDisabled =:== n)
+                   (
+                     channelArrayUnlock(chans, nbChans) #
+                     (if procSafe proc
+                        then setSafeChoice(pt, True)
+                        else Nop) #
+                     processEnd(pt, statusBlocked) #
+                     Return
+                   ) #
+                   foldr (#) Nop loop2 #
+                   processLock pt #
+                   channelArrayUnlock(chans, nbChans) #
+                   processWait(pt, scheduler) #
+                   Return #
+                   foldr (#) Nop loop3
+                 )
 
 compileProcess proc@PCall {} = do
   loop1 <- forM (zip ([1..]::[Int]) (procArgs proc)) $ \(i, arg) -> do
@@ -221,14 +221,14 @@ compileProcess proc@PCall {} = do
   let (name1, name2) | null (procModule proc) = (delete '/' currentModName, procName proc)
                      | otherwise              = (delete '/' $ procModule proc, procName proc)
   return $ comment proc #
-           (begin $ forgetAllValues pt #
-                    foldr (#) Nop loop1 #
-                    foldr (#) Nop loop2 #
-                    setProc(pt, name1, name2) #
-                    setPC(pt, dEntry) #
-                    setStatus(pt, statusCall) #
-                    Return
-           )
+           begin ( forgetAllValues pt #
+                   foldr (#) Nop loop1 #
+                   foldr (#) Nop loop2 #
+                   setProc(pt, name1, name2) #
+                   setPC(pt, dEntry) #
+                   setStatus(pt, statusCall) #
+                   Return
+                 )
 
 compileBranchAction :: Int -> Branch -> CompilingM Instr
 compileBranchAction _ br@BTau {} =
@@ -238,50 +238,50 @@ compileBranchAction _ br@BTau {} =
 compileBranchAction _ br@BOutput { brChanIndex = c, brData = d } = do
   expr <- compileExpr d
   return $ comment br #
-           (begin $ var chan ChannelType #
-                    chan <-- unboxChannelValue(getEnv(pt, c)) #
-                    ifthenelse (Not (channelArrayLockAndRegister(chans, nbChans, pt, chan)))
-                    (
-                      tryResult <-- tryResultAbort
-                    )
-                    (
-                      var commit CommitType #
-                      commit <-- tryOutputAction(chan, tryResult) #
-                      ifthen (tryResult =:= tryResultEnabled)
-                      (
-                        expr #
-                        setEnv'(getThread commit, getRefVar commit, getRegister pt) #
-                        (if isAManagedType $ exprTyp d
-                           then registerEnvValue'(getThread commit, getRefVar commit)
-                           else Nop
-                        ) #
-                        processAwake(commit, scheduler)
-                      )
-                    )
-           )
+           begin ( var chan ChannelType #
+                   chan <-- unboxChannelValue(getEnv(pt, c)) #
+                   ifthenelse (Not (channelArrayLockAndRegister(chans, nbChans, pt, chan)))
+                   (
+                     tryResult <-- tryResultAbort
+                   )
+                   (
+                     var commit CommitType #
+                     commit <-- tryOutputAction(chan, tryResult) #
+                     ifthen (tryResult =:= tryResultEnabled)
+                     (
+                       expr #
+                       setEnv'(getThread commit, getRefVar commit, getRegister pt) #
+                       (if isAManagedType $ exprTyp d
+                          then registerEnvValue'(getThread commit, getRefVar commit)
+                          else Nop
+                       ) #
+                       processAwake(commit, scheduler)
+                     )
+                   )
+                 )
 
 compileBranchAction _ br@BInput { brChanIndex = c, brBindIndex = x } =
   return $ comment br #
-           (begin $ var chan ChannelType #
-                    chan <-- unboxChannelValue(getEnv(pt, c)) #
-                    ifthenelse (Not (channelArrayLockAndRegister(chans, nbChans, pt, chan)))
-                    (
-                      tryResult <-- tryResultAbort
-                    )
-                    (
-                      var commit CommitType #
-                      commit <-- tryInputAction(chan, tryResult) #
-                      ifthen (tryResult =:= tryResultEnabled)
-                      (
-                        setEnv(pt, x, callEvalFunc commit) #
-                        (if isAManagedType $ brBindTyp br
-                           then registerEnvValue(pt, x)
-                           else Nop
-                        ) #
-                        processAwake(commit, scheduler)
-                      )
-                    )
-           )
+           begin ( var chan ChannelType #
+                   chan <-- unboxChannelValue(getEnv(pt, c)) #
+                   ifthenelse (Not (channelArrayLockAndRegister(chans, nbChans, pt, chan)))
+                   (
+                     tryResult <-- tryResultAbort
+                   )
+                   (
+                     var commit CommitType #
+                     commit <-- tryInputAction(chan, tryResult) #
+                     ifthen (tryResult =:= tryResultEnabled)
+                     (
+                       setEnv(pt, x, callEvalFunc commit) #
+                       (if isAManagedType $ brBindTyp br
+                          then registerEnvValue(pt, x)
+                          else Nop
+                       ) #
+                       processAwake(commit, scheduler)
+                     )
+                   )
+                 )
 
 compileAction :: Action -> CompilingM Instr
 compileAction act@AOutput { actChanIndex = c, actData = d } = do
@@ -291,45 +291,45 @@ compileAction act@AOutput { actChanIndex = c, actData = d } = do
   evalFunc    <- registerEvalFunc $ exprComp # ReturnRegister
   return $ comment act #
            Case prefixStart #
-           (begin $ var chan ChannelType #
-                    chan <-- unboxChannelValue(getEnv(pt, c)) #
-                    var ok BoolType #
-                    ok <-- processLockChannel(pt, chan) #
-                    ifthen (Not ok)
-                    (
-                      setPC(pt, prefixStart) #
-                      processYield(pt, scheduler) #
-                      Return
-                    ) #
-                    var commit CommitType #
-                    var tryResult TryResultEnumType #
-                    commit <-- tryOutputAction(chan, tryResult) #
-                    ifthenelse (tryResult =:= tryResultEnabled)
-                    (
-                      unlockChannel chan #
-                      exprComp #
-                      setEnv'(getThread commit, getRefVar commit, getRegister pt) #
-                      (if isAManagedType $ exprTyp d
-                         then registerEnvValue'(getThread commit, getRefVar commit)
-                         else Nop
-                      ) #
-                      processAwake(commit, scheduler) #
-                      Goto prefixCont
-                    )
-                    (
-                      ifthen (tryResult =:= tryResultDisabled)
-                      (
-                        unlockChannel chan #
-                        processEnd(pt, statusBlocked) #
-                        Return
-                      )
-                    ) #
-                    registerOutputCommitment (pt, chan, evalFunc, prefixCont) #
-                    processLock pt #
-                    unlockChannel chan #
-                    processWait(pt, scheduler) #
-                    Return
-           ) #
+           begin ( var chan ChannelType #
+                   chan <-- unboxChannelValue(getEnv(pt, c)) #
+                   var ok BoolType #
+                   ok <-- processLockChannel(pt, chan) #
+                   ifthen (Not ok)
+                   (
+                     setPC(pt, prefixStart) #
+                     processYield(pt, scheduler) #
+                     Return
+                   ) #
+                   var commit CommitType #
+                   var tryResult TryResultEnumType #
+                   commit <-- tryOutputAction(chan, tryResult) #
+                   ifthenelse (tryResult =:= tryResultEnabled)
+                   (
+                     unlockChannel chan #
+                     exprComp #
+                     setEnv'(getThread commit, getRefVar commit, getRegister pt) #
+                     (if isAManagedType $ exprTyp d
+                        then registerEnvValue'(getThread commit, getRefVar commit)
+                        else Nop
+                     ) #
+                     processAwake(commit, scheduler) #
+                     Goto prefixCont
+                   )
+                   (
+                     ifthen (tryResult =:= tryResultDisabled)
+                     (
+                       unlockChannel chan #
+                       processEnd(pt, statusBlocked) #
+                       Return
+                     )
+                   ) #
+                   registerOutputCommitment (pt, chan, evalFunc, prefixCont) #
+                   processLock pt #
+                   unlockChannel chan #
+                   processWait(pt, scheduler) #
+                   Return
+                 ) #
            CaseAndLabel prefixCont
 
 compileAction act@AInput { actChanIndex = c, actBindIndex = x } = do
@@ -337,44 +337,44 @@ compileAction act@AInput { actChanIndex = c, actBindIndex = x } = do
   prefixCont  <- genLabel
   return $ comment act #
            Case prefixStart #
-           (begin $ var chan ChannelType #
-                    chan <-- unboxChannelValue(getEnv(pt, c)) #
-                    var ok BoolType #
-                    ok <-- processLockChannel(pt, chan) #
-                    ifthen (Not ok)
-                    (
-                      setPC(pt, prefixStart) #
-                      processYield(pt, scheduler) #
-                      Return
-                    ) #
-                    var commit CommitType #
-                    var tryResult TryResultEnumType #
-                    commit <-- tryInputAction(chan, tryResult) #
-                    ifthenelse (tryResult =:= tryResultEnabled)
-                    (
-                      unlockChannel chan #
-                      setEnv(pt, x, callEvalFunc commit) #
-                      (if isAManagedType $ actBindTyp act
-                         then registerEnvValue(pt, x)
-                         else Nop
-                      ) #
-                      processAwake(commit, scheduler) #
-                      Goto prefixCont
-                    )
-                    (
-                      ifthen (tryResult =:= tryResultDisabled)
-                      (
-                        unlockChannel chan #
-                        processEnd(pt, statusBlocked) #
-                        Return
-                      )
-                    ) #
-                    registerInputCommitment(pt, chan, x, prefixCont) #
-                    processLock pt #
-                    unlockChannel chan #
-                    processWait(pt, scheduler) #
-                    Return
-           ) #
+           begin ( var chan ChannelType #
+                   chan <-- unboxChannelValue(getEnv(pt, c)) #
+                   var ok BoolType #
+                   ok <-- processLockChannel(pt, chan) #
+                   ifthen (Not ok)
+                   (
+                     setPC(pt, prefixStart) #
+                     processYield(pt, scheduler) #
+                     Return
+                   ) #
+                   var commit CommitType #
+                   var tryResult TryResultEnumType #
+                   commit <-- tryInputAction(chan, tryResult) #
+                   ifthenelse (tryResult =:= tryResultEnabled)
+                   (
+                     unlockChannel chan #
+                     setEnv(pt, x, callEvalFunc commit) #
+                     (if isAManagedType $ actBindTyp act
+                        then registerEnvValue(pt, x)
+                        else Nop
+                     ) #
+                     processAwake(commit, scheduler) #
+                     Goto prefixCont
+                   )
+                   (
+                     ifthen (tryResult =:= tryResultDisabled)
+                     (
+                       unlockChannel chan #
+                       processEnd(pt, statusBlocked) #
+                       Return
+                     )
+                   ) #
+                   registerInputCommitment(pt, chan, x, prefixCont) #
+                   processLock pt #
+                   unlockChannel chan #
+                   processWait(pt, scheduler) #
+                   Return
+                 ) #
            CaseAndLabel prefixCont
 
 compileAction act@ANew { actBindIndex = c } =
@@ -408,29 +408,29 @@ compileAction act@ASpawn  {} = do
              )
   envSize <- getEnvSize name1 name2
   return $ comment act #
-           (begin $ var child PiThreadType #
-                    child <-- piThreadCreate(envSize, 10) # -- TODO: use the computed enabled size
-                    foldr (#) Nop loop #
-                    setProc(child, name1, name2) #
-                    setPC(child, dEntry) #
-                    setStatus(child, statusRun) #
-                    readyPushFront(schedGetReadyQueue scheduler, child)
-           )
+           begin ( var child PiThreadType #
+                   child <-- piThreadCreate(envSize, 10) # -- TODO: use the computed enabled size
+                   foldr (#) Nop loop #
+                   setProc(child, name1, name2) #
+                   setPC(child, dEntry) #
+                   setStatus(child, statusRun) #
+                   readyPushFront(schedGetReadyQueue scheduler, child)
+                 )
 
 compileAction act@APrim {} = do
   loops <- forM (zip ([1..]::[Int]) (actArgs act)) $ \(i, arg) -> do
     expr <- compileExpr arg
     let vi = v i
-    return $ (vi, var vi PiValueType #
-                  expr #
-                  vi <-- getRegister pt
-             )
+    return (vi, var vi PiValueType #
+                expr #
+                vi <-- getRegister pt
+           )
   let (vs, loop) = unzip loops
   let primName   = PrimName (actModule act) (actName act)
   return $ comment act #
-           (begin $ foldr (#) Nop loop #
-                    primCall(registerPointer pt, primName, vs)
-           )
+           begin ( foldr (#) Nop loop #
+                   primCall(registerPointer pt, primName, vs)
+                 )
 
 compileExpr:: Expr -> CompilingM Instr
 compileExpr ETrue     {} = return $ initBoolTrue(registerPointer pt)

@@ -29,7 +29,7 @@ data DefName = DefName String String
 data PrimName = PrimName String String
 
 -- | Evaluation function for computing output payload
-data EvalfuncName = EvalfuncName Int
+newtype EvalfuncName = EvalfuncName Int
 
 -- | Reserved variable names of runtime
 data VarName
@@ -154,7 +154,7 @@ data Instr
   | ComBloc PiAST.Location Instr
   | Nop
   | DefFunction DefName ((VarName, Type), (VarName, Type)) Instr
-  | EvalFunction EvalfuncName ((VarName, Type)) Instr
+  | EvalFunction EvalfuncName (VarName, Type) Instr
   | DeclareVar VarName Type
   | Assign VarName BExpr
   | Return

@@ -110,11 +110,11 @@ instance Show TypeAtom where
 
 -- | 'TypeExpr' expressions are compared upto location data
 instance Eq TypeExpr where
-  (==) (TUnknown {})              (TUnknown {})              = True
-  (==) (TAtom { typAtom = a })    (TAtom { typAtom = b })    = a == b
-  (==) (TChannel { typExpr = a }) (TChannel { typExpr = b }) = a == b
-  (==) (TTuple { typExprs = a })  (TTuple { typExprs = b })  = a == b
-  (==) (TPrim { typArgs = a, typRet = r }) (TPrim { typArgs = b, typRet = s }) =
+  (==) TUnknown {}              TUnknown {}              = True
+  (==) TAtom { typAtom = a }    TAtom { typAtom = b }    = a == b
+  (==) TChannel { typExpr = a } TChannel { typExpr = b } = a == b
+  (==) TTuple { typExprs = a }  TTuple { typExprs = b }  = a == b
+  (==) TPrim { typArgs = a, typRet = r } TPrim { typArgs = b, typRet = s } =
     a == b && r == s
   (==) _ _ = False
 
@@ -351,7 +351,7 @@ indent :: Int -> String
 indent n = replicate (2 * n) ' '
 
 ppProcess :: Int -> Process -> String
-ppProcess n (PEnd {}) =
+ppProcess n PEnd{} =
   indent n ++ "end"
 ppProcess n proc@PPrefix {} =
   ppAction n (procPref proc) ++ ",\n" ++

@@ -44,7 +44,7 @@ main = do
   let (actions, nonOpts, errors) = getOpt Permute options args
   forM_ errors putStrLn
   opts <- foldl (>>=) (return defaultOptions) actions
-  when (not (null errors)) $ void (showHelp opts)
+  unless (null errors) $ void (showHelp opts)
   when (length nonOpts /= 1) $ void (showHelp opts)
   let [piFile] = nonOpts
   content             <- readFile piFile
