@@ -21,6 +21,7 @@ where
 import Piccolo.Errors
 import Piccolo.Parser
 import Piccolo.AST
+import Piccolo.Output
 import Piccolo.Typecheck
 import Piccolo.Environments
 import Piccolo.Compilation
@@ -44,20 +45,18 @@ main = do
   forM_ errors putStrLn
   opts <- foldl (>>=) (return defaultOptions) actions
   when (not (null errors)) $ void (showHelp opts)
-  let Options { optOutput = output
-              , optDumpC  = dumpC
-              } = opts
   when (length nonOpts /= 1) $ void (showHelp opts)
   let [piFile] = nonOpts
   content             <- readFile piFile
   ast                 <- reportResult $ parseModule content
   typedAst            <- reportResult $ typeCheck ast
   withEnv             <- reportResult $ computingEnvPass typedAst
+  when (optShowEnvs opts) $ printEnvSizes withEnv
   seqAst              <- reportResult $ compilePass withEnv
   let code  = runEmitterM $ CBackend.emitCode (mainDef withEnv)
                                               (mainEnvSize withEnv) seqAst
-  when (isJust dumpC) $ writeFile (fromJust dumpC) code
-  compileCCode code output
+  when (isJust (optDumpC opts)) $ writeFile (fromJust (optDumpC opts)) code
+  compileCCode code $ optOutput opts
   where
     mainDef m     = delete '/' (modName m) ++ "_Main"
     mainEnvSize m = case find (\d -> defName d == "Main") (modDefs m) of
@@ -65,22 +64,25 @@ main = do
                       Nothing -> error "no Main def"
 
 data Options = Options
-  { optOutput :: String
-  , optDumpC  :: Maybe String
+  { optOutput   :: String
+  , optDumpC    :: Maybe String
+  , optShowEnvs :: Bool
   } deriving Show
 
 defaultOptions :: Options
 defaultOptions = Options
-  { optOutput = "./a.out"
-  , optDumpC  = Nothing
+  { optOutput   = "a.out"
+  , optDumpC    = Nothing
+  , optShowEnvs = False
   }
 
 options :: [OptDescr (Options -> IO Options)]
 options =
-  [ Option "v" ["version"] (NoArg showVersion)         "show version number"
-  , Option "h" ["help"]    (NoArg showHelp)            "show help"
-  , Option "o" ["out"]     (ReqArg writeOutput "FILE") "output file"
-  , Option ""  ["dump-c"]  (ReqArg writeDumpC "FILE")  "dump c code"
+  [ Option "v" ["version"]   (NoArg showVersion)         "show version number"
+  , Option "h" ["help"]      (NoArg showHelp)            "show help"
+  , Option "o" ["out"]       (ReqArg writeOutput "FILE") "output file"
+  , Option ""  ["dump-c"]    (ReqArg writeDumpC "FILE")  "dump c code"
+  , Option ""  ["show-envs"] (NoArg showEnvs)            "show environments sizes"
   ]
 
 showVersion :: Options -> IO Options
@@ -98,3 +100,6 @@ writeOutput arg opt = return $ opt { optOutput = arg }
 
 writeDumpC :: String -> Options -> IO Options
 writeDumpC arg opt = return $ opt { optDumpC = Just arg }
+
+showEnvs :: Options -> IO Options
+showEnvs opt = return $ opt { optShowEnvs = True }
