@@ -26,13 +26,13 @@ doc: dist/setup-config
 		--haddock-options="$(HADDOCK_OPTS)"
 
 rtdoc:
-	$(MAKE) -C runtime doc
+	$(MAKE) -C rts doc
 
 linecount:
-	wc -l src/*.hs src/Core/*.hs src/Backend/*.hs
+	wc -l src/*.hs src/**/*.hs
 
 rtlinecount:
-	$(MAKE) -C runtime linecount
+	$(MAKE) -C rts linecount
 
 clean:
 	$(CABAL) clean

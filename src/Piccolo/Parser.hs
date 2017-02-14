@@ -9,13 +9,13 @@ __TODO__: define AST construction helpers for ast nodes in ASTUtils and user
 them here
 -}
 
-module Core.Parser
+module Piccolo.Parser
   ( parseModule
   )
 where
 
-import Errors
-import Core.AST
+import Piccolo.Errors
+import Piccolo.AST
 
 import Text.Parsec hiding (string)
 import Text.Parsec.String (Parser)

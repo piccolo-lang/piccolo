@@ -6,7 +6,7 @@ Stability      : experimental
 This module defines the monad EmitterM and functions to use it,
 to generate code from sequential backend AST.
 -}
-module Backend.Codegen
+module Piccolo.Codegen
   ( EmitterM
   , runEmitterM
   , incrIndent

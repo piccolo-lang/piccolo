@@ -15,8 +15,8 @@ Cabal-version:       >=1.8
 Build-type:          Custom
 
 Extra-source-files:  Makefile
-                     runtime/*.h
-                     runtime/*.c
+                     rts/*.h
+                     rts/*.c
 
 Executable piccolo
   Main-is:             Main.hs

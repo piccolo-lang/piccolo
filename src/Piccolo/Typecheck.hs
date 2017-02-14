@@ -7,16 +7,16 @@ Since types are explicitly written in the code when introducing a new variable (
 or process definition parameters), the typing pass of the piccolo compiler only check types through
 a traversal of the AST and tag each value with its types for compilation pass.
 -}
-module Core.Typecheck
+module Piccolo.Typecheck
   ( typeCheck
   , isAManagedType
   , isBool
   )
 where
 
-import Core.AST
-import Errors
-import Primitives
+import Piccolo.AST
+import Piccolo.Errors
+import Piccolo.Primitives
 
 import Control.Monad.Except
 import Control.Monad.State

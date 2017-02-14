@@ -6,7 +6,7 @@ Stability      : experimental
 Piccolo-core language is compiled into a sequential AST allowing sequential
 code generation. This module describes the structure of this AST.
 -}
-module Backend.SeqAST
+module Piccolo.SeqAST
   ( DefName (..)
   , PrimName (..)
   , EvalfuncName (..)
@@ -20,7 +20,7 @@ module Backend.SeqAST
   )
 where
 
-import qualified Core.AST as PilAST
+import qualified Piccolo.AST as PiAST
 
 -- | Definition corresponding to a compiled process definition
 data DefName = DefName String String
@@ -151,7 +151,7 @@ data Instr
   | Debug String
   | Seq Instr Instr
   | LexBloc Instr
-  | ComBloc PilAST.Location Instr
+  | ComBloc PiAST.Location Instr
   | Nop
   | DefFunction DefName ((VarName, Type), (VarName, Type)) Instr
   | EvalFunction EvalfuncName ((VarName, Type)) Instr

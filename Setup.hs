@@ -40,7 +40,7 @@ piccoloClean :: Args
              -> IO ()
 piccoloClean _ flags _ _ = do
   let verbosity = S.fromFlag $ S.cleanVerbosity flags
-  make verbosity [ "-C", "runtime", "clean" ]
+  make verbosity [ "-C", "rts", "clean" ]
 
 
 piccoloBuild :: Args
@@ -50,7 +50,7 @@ piccoloBuild :: Args
              -> IO ()
 piccoloBuild _ flags _ local  = do
   let verbosity = S.fromFlag $ S.buildVerbosity flags
-  make verbosity [ "-C", "runtime", "build" ]
+  make verbosity [ "-C", "rts", "build" ]
 
 
 piccoloInstall :: Verbosity
@@ -61,5 +61,5 @@ piccoloInstall :: Verbosity
 piccoloInstall verbosity copy pkg local = do
   let target = libdir $ L.absoluteInstallDirs pkg local copy
   putStrLn $ "Installing runtime in " ++ target
-  make verbosity [ "-C", "runtime", "install", "TARGET=" ++ target ]
+  make verbosity [ "-C", "rts", "install", "TARGET=" ++ target ]
 

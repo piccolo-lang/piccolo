@@ -6,13 +6,13 @@ Stability      : experimental
 This backend targets C code.
 __TODO__: put the real values of env size and choice size in emitCode
 -}
-module Backend.CBackend
+module Piccolo.CBackend
   ( emitCode
   )
 where
 
-import Backend.Codegen
-import Backend.SeqAST
+import Piccolo.Codegen
+import Piccolo.SeqAST
 
 import Control.Monad
 import Data.List (delete)

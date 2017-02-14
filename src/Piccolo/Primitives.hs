@@ -6,12 +6,12 @@ Stability      : experimental
 This module gives the type of the primitives that should be supported
 by a backend, for the typechecking to be complete.
 -}
-module Primitives
+module Piccolo.Primitives
   ( primTypes
   )
 where
 
-import Core.AST
+import Piccolo.AST
 
 import qualified Data.Map as Map
 

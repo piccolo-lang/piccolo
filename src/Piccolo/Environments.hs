@@ -8,13 +8,13 @@ and each variable is called using an index in this environment.
 This module computes these indexes and decorates the core AST with them.
 __TODO__: rewrite the computingEnvPass function (it's ugly...)
 -}
-module Core.Environments
+module Piccolo.Environments
   ( computingEnvPass
   )
 where
 
-import Core.AST
-import Errors
+import Piccolo.AST
+import Piccolo.Errors
 
 import Data.List
 import qualified Data.Map as Map

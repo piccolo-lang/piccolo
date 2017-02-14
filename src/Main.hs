@@ -18,15 +18,15 @@ module Main
   )
 where
 
-import Errors
-import Core.Parser
-import Core.AST
-import Core.Typecheck
-import Core.Environments
-import Core.Compilation
-import Backend.Codegen
-import qualified Backend.CBackend as CBackend
-import Backend.CCompiler
+import Piccolo.Errors
+import Piccolo.Parser
+import Piccolo.AST
+import Piccolo.Typecheck
+import Piccolo.Environments
+import Piccolo.Compilation
+import Piccolo.Codegen
+import qualified Piccolo.CBackend as CBackend
+import Piccolo.CCompiler
 
 import System.Environment
 import System.Console.GetOpt

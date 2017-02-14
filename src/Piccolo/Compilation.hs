@@ -6,21 +6,21 @@ Stability      : experimental
 This module contains the compilation pass.
 It transforms a piccolo core AST to a sequential AST.
 -}
-module Core.Compilation
+module Piccolo.Compilation
   ( compilePass
   )
 where
 
-import Backend.SeqAST
+import Piccolo.SeqAST
   ( BExpr (Not), DefName (..)
   , EvalfuncName (..), Instr (DefFunction, EvalFunction, Nop
   , Return, ReturnRegister, Goto, Switch, Case, CaseAndLabel)
   , PrimName (..), Type (..)
   )
-import Backend.SeqASTUtils
-import Core.AST
-import Core.Typecheck
-import Errors
+import Piccolo.SeqASTUtils
+import Piccolo.AST
+import Piccolo.Typecheck
+import Piccolo.Errors 
 
 import Control.Monad.Except
 import Control.Monad.State

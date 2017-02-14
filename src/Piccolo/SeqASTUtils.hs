@@ -6,7 +6,7 @@ Stability      : experimental
 This module contains 'Back.SeqAST' utils functions and constructors for
 compilation DSL.
 -}
-module Backend.SeqASTUtils
+module Piccolo.SeqASTUtils
   ( -- * Sequential language constructions
     var
   , (#)
@@ -89,7 +89,7 @@ module Backend.SeqASTUtils
   )
 where
 
-import Backend.SeqAST
+import Piccolo.SeqAST
 
 
 -- | Variable declaration

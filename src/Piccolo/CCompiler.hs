@@ -6,7 +6,7 @@ Stability       : experimental
 The piccolo compiler first produces C code. This modules gives access and
 options to the available C compiler to finally produce an executable.
 -}
-module Backend.CCompiler
+module Piccolo.CCompiler
   (compileCCode
   )
 where

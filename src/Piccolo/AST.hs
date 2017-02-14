@@ -10,7 +10,7 @@ during the whole compilation process.
 
 __TODO__: do not mangle the ModuleName/SubModuleName in the AST.
 -}
-module Core.AST
+module Piccolo.AST
   ( Location (..), noLoc, isNoLoc
   , AST (..)
   , TypeExpr (..)

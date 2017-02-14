@@ -6,13 +6,13 @@ Stability      : experimental
 This module defines the various types of errors that can occur during
 the compilation of a piccolo program.
 -}
-module Errors
+module Piccolo.Errors
   ( PiccError (..)
   , reportResult
   )
 where
 
-import Core.AST
+import Piccolo.AST
 
 import System.Exit
 
