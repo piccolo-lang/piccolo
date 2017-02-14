@@ -51,7 +51,7 @@ main = do
   ast                 <- reportResult $ parseModule content
   typedAst            <- reportResult $ typeCheck ast
   withEnv             <- reportResult $ computingEnvPass typedAst
-  when (optShowEnvs opts) $ printEnvSizes withEnv
+  when (optShowEnvSizes opts) $ printEnvSizes withEnv
   seqAst              <- reportResult $ compilePass withEnv
   let code  = runEmitterM $ CBackend.emitCode (mainDef withEnv)
                                               (mainEnvSize withEnv) seqAst
@@ -60,20 +60,20 @@ main = do
   where
     mainDef m     = delete '/' (modName m) ++ "_Main"
     mainEnvSize m = case find (\d -> defName d == "Main") (modDefs m) of
-                      Just d  -> defEnvSize d
+                      Just d  -> defLexicalEnvSize d
                       Nothing -> error "no Main def"
 
 data Options = Options
-  { optOutput   :: String
-  , optDumpC    :: Maybe String
-  , optShowEnvs :: Bool
+  { optOutput       :: String
+  , optDumpC        :: Maybe String
+  , optShowEnvSizes :: Bool
   } deriving Show
 
 defaultOptions :: Options
 defaultOptions = Options
-  { optOutput   = "a.out"
-  , optDumpC    = Nothing
-  , optShowEnvs = False
+  { optOutput       = "a.out"
+  , optDumpC        = Nothing
+  , optShowEnvSizes = False
   }
 
 options :: [OptDescr (Options -> IO Options)]
@@ -82,7 +82,7 @@ options =
   , Option "h" ["help"]      (NoArg showHelp)            "show help"
   , Option "o" ["out"]       (ReqArg writeOutput "FILE") "output file"
   , Option ""  ["dump-c"]    (ReqArg writeDumpC "FILE")  "dump c code"
-  , Option ""  ["show-envs"] (NoArg showEnvs)            "show environments sizes"
+  , Option ""  ["show-env-sizes"] (NoArg showEnvSizes)   "show environments sizes"
   ]
 
 showVersion :: Options -> IO Options
@@ -101,5 +101,5 @@ writeOutput arg opt = return $ opt { optOutput = arg }
 writeDumpC :: String -> Options -> IO Options
 writeDumpC arg opt = return $ opt { optDumpC = Just arg }
 
-showEnvs :: Options -> IO Options
-showEnvs opt = return $ opt { optShowEnvs = True }
+showEnvSizes :: Options -> IO Options
+showEnvSizes opt = return $ opt { optShowEnvSizes = True }

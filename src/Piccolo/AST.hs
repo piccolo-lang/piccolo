@@ -313,11 +313,12 @@ instance AST Action where
 -- a process definition attached with parameter names and types.
 data Definition
   = Definition
-    { defName    :: String
-    , defParams  :: [(String, TypeExpr, Location)]
-    , defBody    :: Process
-    , defEnvSize :: Int
-    , defLoc     :: Location
+    { defName           :: String
+    , defParams         :: [(String, TypeExpr, Location)]
+    , defBody           :: Process
+    , defLexicalEnvSize :: Int
+    , defChoiceMaxSize  :: Int
+    , defLoc            :: Location
     }
 
 instance Show Definition where

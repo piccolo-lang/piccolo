@@ -130,7 +130,7 @@ definition = applyLocation $ do
   params <- parens $ commaSep param
   reserved "="
   body   <- process
-  return $ Definition name params body (-1)
+  return $ Definition name params body (-1) (-1)
 
 param :: Parser (String, TypeExpr, Location)
 param = applyLocation $ do

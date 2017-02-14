@@ -22,12 +22,22 @@ import Control.Monad.Except
 import Control.Monad.State
 
 
+-- goal: compute lexicalEnvMaxSize and choiceMaxSize for each process definition
+-- notes:
+-- converge :: [a] -> a
+-- converge (x:ys@(y:_))
+--   | x == y    = x
+--   | otherwise = converge ys
+-- (converge . iterate f) has type a -> a and return a fixpoint by iteration application of f
+
+
+
 type DefsEnv = Map.Map String Int
 
-data Environment = Environment { defsSizes     :: DefsEnv
-                               , lexicalEnv    :: [String]
-                               , maxCalledSize :: Int
-                               , maxChoiceSize :: Int
+data Environment = Environment { defsSizes     :: DefsEnv  -- var env size per proc def
+                               , lexicalEnv    :: [String] -- lexical env for current def computation
+                               , maxCalledSize :: Int -- maxCalledSize for current def computation
+                               , maxChoiceSize :: Int -- maxChoiceSize for current def computation
                                }
 
 type EnvM a = ExceptT PiccError (State Environment) a
@@ -60,6 +70,7 @@ addVar v = do
       put env { lexicalEnv = lexEnv ++ [v] }
       return $ length lexEnv
 
+-- (re)init def local state before computation
 beforeDefComputation :: [String] -> EnvM ()
 beforeDefComputation args = do
   env <- get
@@ -84,7 +95,7 @@ registerDefSize name size = do
 -- the AST with those indexes.
 computingEnvPass :: Modul -> Either PiccError Modul
 computingEnvPass m = loopUntilFix m $ Map.fromList (map extractSize (modDefs m))
-  where extractSize def = let i = defEnvSize def in
+  where extractSize def = let i = defLexicalEnvSize def in
                           let n = defName def in
                           if i < 0 then (n, 0) else (n, i)
         loopUntilFix modul defSizes = let (result, env) = runState (runExceptT (envModule modul)) (Environment defSizes [] 0 0) in
@@ -105,7 +116,7 @@ envDefinition def = do
   proc <- envProcess $ defBody def
   size <- afterDefComputation
   registerDefSize (defName def) size
-  return $ def { defBody = proc, defEnvSize = size }
+  return $ def { defBody = proc, defLexicalEnvSize = size }
 
 envProcess :: Process -> EnvM Process
 envProcess proc@PEnd    {} = return proc

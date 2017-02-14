@@ -19,6 +19,8 @@ printEnvSizes :: Modul -> IO ()
 printEnvSizes modul = do
   putStrLn $ "Env sizes for module " ++ modName modul ++ ":"
   forM_ (modDefs modul) $ \def -> do
-    putStr $ "Process '" ++ defName def ++ "' has env size of "
-    print $ defEnvSize def
-
+    putStr $ "  " ++ defName def
+    putStr $ replicate (20 - length (defName def)) ' ' ++ " { "
+    putStr $ "lexical_env_size: " ++ show (defLexicalEnvSize def) ++ ", "
+    putStr $ "choice_max_size: " ++ show (defChoiceMaxSize def)
+    putStrLn " }"
