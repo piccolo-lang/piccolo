@@ -3,10 +3,13 @@ Module         : Core.Environments
 Description    : Indexes of variables computation pass
 Stability      : experimental
 
-In runtime, process environment have a fixed size,
-and each variable is called using an index in this environment.
-This module computes these indexes and decorates the core AST with them.
-__TODO__: rewrite the computingEnvPass function (it's ugly...)
+The Piccolo runtime is stackless, and values environments have fixed size.
+The goal of this pass is to compute the size of such environments and to
+attribute an index to each variable in the AST.
+Moreover, the max number of branches in a process definition is needed at
+runtime and is computed at the same time.
+Due to nested process calls, those two computations are done by iteratively
+computing the max size and looking for a fixpoint of this function.
 -}
 module Piccolo.Environments
   ( computingEnvPass
@@ -17,93 +20,97 @@ import Piccolo.AST
 import Piccolo.Errors
 
 import Data.List
-import qualified Data.Map as Map
+import Data.Maybe
 import Control.Monad.Except
 import Control.Monad.State
 
 
--- goal: compute lexicalEnvMaxSize and choiceMaxSize for each process definition
--- notes:
--- converge :: [a] -> a
--- converge (x:ys@(y:_))
---   | x == y    = x
---   | otherwise = converge ys
--- (converge . iterate f) has type a -> a and return a fixpoint by iteration application of f
-
-
-
-type DefsEnv = Map.Map String Int
-
-data Environment = Environment { defsSizes     :: DefsEnv  -- var env size per proc def
-                               , lexicalEnv    :: [String] -- lexical env for current def computation
-                               , maxCalledSize :: Int -- maxCalledSize for current def computation
-                               , maxChoiceSize :: Int -- maxChoiceSize for current def computation
+data Environment = Environment { lexicalSizes :: [(String, Int)]
+                                   -- current lexical env size per def
+                               , choicesSizes :: [(String, Int)]
+                                   -- current choice env max size per def
+                               , maxLexicalSize :: Int
+                                   -- max lexical size of called defs
+                               , maxChoicesSize :: Int
+                                   -- max choice max size of called defs
+                               , currentLexicalEnv :: [String]
+                                   -- list of variables in scope
                                }
+
+-- | Environment initializer. Should be called once per module iteration.
+initModEnv :: Modul -> Environment
+initModEnv m = Environment lexSizes chcSizes 0 0 []
+  where lexSizes = error "lexSizes TODO"
+        chcSizes = error "chcSizes TODO"
 
 type EnvM a = ExceptT PiccError (State Environment) a
 
-lookupSizeOfDef :: String -> EnvM Int
-lookupSizeOfDef name = do
-  Environment { defsSizes = defs } <- get
-  return $ defs Map.! name
+-- | Environment initialize. Should be called once per definition iteration.
+initDefEnv :: [String] -> EnvM ()
+initDefEnv args = do
+  env <- get
+  put env { maxLexicalSize = 0
+          , maxChoicesSize = 0
+          , currentLexicalEnv = args
+          }
 
-registerACall :: String -> EnvM ()
-registerACall name = do
-  size <- lookupSizeOfDef name
-  env  <- get
-  let maxCalled = maxCalledSize env
-  when (maxCalled < size) $ put env { maxCalledSize = size }
+finalEnvSizes :: EnvM (Int, Int)
+finalEnvSizes = do
+  env <- get
+  let x = length $ currentLexicalEnv env
+  let y = maxLexicalSize env
+  let z = maxChoicesSize env
+  return (maximum [x, y], z)
 
-lookupVar :: String -> EnvM (Maybe Int)
-lookupVar v = do
-  Environment { lexicalEnv = env } <- get
-  return $ elemIndex v env
+lookupLexVar :: String -> EnvM (Maybe Int)
+lookupLexVar v = do
+  env <- get
+  return $ elemIndex v (currentLexicalEnv env)
 
-addVar :: String -> EnvM Int
-addVar v = do
-  ind <- lookupVar v
+addLexVar :: String -> EnvM Int
+addLexVar v = do
+  ind <- lookupLexVar v
   case ind of
     Just i  -> return i
     Nothing -> do
       env <- get
-      let lexEnv = lexicalEnv env
-      put env { lexicalEnv = lexEnv ++ [v] }
+      let lexEnv = currentLexicalEnv env
+      put env { currentLexicalEnv = lexEnv ++ [v] }
       return $ length lexEnv
 
--- (re)init def local state before computation
-beforeDefComputation :: [String] -> EnvM ()
-beforeDefComputation args = do
+updateLexSize :: String -> EnvM ()
+updateLexSize name = do
   env <- get
-  put env { lexicalEnv = args, maxCalledSize = 0, maxChoiceSize = 0 }
+  let x = maxLexicalSize env
+  let y = fromJust $ lookup name (lexicalSizes env)
+  when (y > x) $ put env { maxLexicalSize = y }
 
-afterDefComputation :: EnvM Int
-afterDefComputation = do
+registerChcSize :: Int -> EnvM ()
+registerChcSize y = do
   env <- get
-  let envSize = length $ lexicalEnv env
-  let calSize = maxCalledSize env
-  return $ maximum [envSize, calSize]
-
-registerDefSize :: String -> Int -> EnvM ()
-registerDefSize name size = do
-  env <- get
-  let defs = defsSizes env
-  put env { defsSizes = Map.insert name size defs }
+  let x = maxChoicesSize env
+  when (y > x) $ put env { maxChoicesSize = y }
 
 
--- | The 'computingEnvPass' function computes environment that are needed to
--- address variable with a simple integer at the runtime. It also decorates
--- the AST with those indexes.
+-- | 'convergeEnvs' takes a stream of results of successive envs computation,
+-- and returns a Modul when a fixpoint is achieved (with respect to
+-- potential errors
+convergeEnvs :: [Either PiccError Modul] -> Either PiccError Modul
+convergeEnvs (x@(Left _) : _)     = x
+convergeEnvs (_ : y@(Left _) : _) = y
+convergeEnvs (Right x : ys @ (Right y : _)) =
+  if xLexEnvSizes == yLexEnvSizes && xChcMaxSizes == yChcMaxSizes then
+    Right x
+  else
+    convergeEnvs ys
+  where xLexEnvSizes = map defLexicalEnvSize $ modDefs x
+        yLexEnvSizes = map defLexicalEnvSize $ modDefs y
+        xChcMaxSizes = map defChoiceMaxSize  $ modDefs x
+        yChcMaxSizes = map defChoiceMaxSize  $ modDefs y
+
 computingEnvPass :: Modul -> Either PiccError Modul
-computingEnvPass m = loopUntilFix m $ Map.fromList (map extractSize (modDefs m))
-  where extractSize def = let i = defLexicalEnvSize def in
-                          let n = defName def in
-                          if i < 0 then (n, 0) else (n, i)
-        loopUntilFix modul defSizes = let (result, env) = runState (runExceptT (envModule modul)) (Environment defSizes [] 0 0) in
-                                    case result of
-                                      Left err     -> Left err
-                                      Right modul' -> if defSizes == defsSizes env
-                                                      then Right modul'
-                                                      else loopUntilFix modul' (defsSizes env)
+computingEnvPass = convergeEnvs . iterate f . Right
+  where f em = em >>= \m -> evalState (runExceptT (envModule m)) (initModEnv m)
 
 envModule :: Modul -> EnvM Modul
 envModule m = do
@@ -112,11 +119,13 @@ envModule m = do
 
 envDefinition :: Definition -> EnvM Definition
 envDefinition def = do
-  beforeDefComputation $ map (\(x,_,_) -> x) (defParams def)
+  initDefEnv $ map (\(x,_,_) -> x) (defParams def)
   proc <- envProcess $ defBody def
-  size <- afterDefComputation
-  registerDefSize (defName def) size
-  return $ def { defBody = proc, defLexicalEnvSize = size }
+  (lexSize, chcSize) <- finalEnvSizes
+  return def { defBody = proc
+             , defLexicalEnvSize = lexSize
+             , defChoiceMaxSize  = chcSize
+             }
 
 envProcess :: Process -> EnvM Process
 envProcess proc@PEnd    {} = return proc
@@ -124,11 +133,12 @@ envProcess proc@PPrefix {} = do
   pref <- envAction $ procPref proc
   cont <- envProcess $ procCont proc
   return proc { procPref = pref, procCont = cont }
-envProcess proc@PChoice {} = do
-  branches <- mapM envBranch $ procBranches proc
+envProcess proc@PChoice { procBranches = brs } = do
+  registerChcSize $ length brs
+  branches <- mapM envBranch brs
   return proc { procBranches = branches }
 envProcess proc@PCall { procName = name } = do
-  registerACall name
+  updateLexSize name
   args <- mapM envExpr $ procArgs proc
   return proc { procArgs = args }
 
@@ -139,71 +149,69 @@ envBranch br@BTau    {} = do
   return br { brGuard = gard, brCont = cont }
 envBranch br@BOutput {} = do
   gard    <- envExpr $ brGuard br
-  chanInd <- lookupVar $ brChan br
+  chanInd <- lookupLexVar $ brChan br
   case chanInd of
-    Just i  -> do
+    Just i -> do
       dat  <- envExpr $ brData br
       cont <- envProcess $ brCont br
-      return br { brGuard = gard, brChanIndex = i, brData = dat, brCont = cont }
+      return br { brGuard = gard, brChanIndex = i, brData = dat, brCont = cont}
     Nothing -> throwError $ OtherError "var not in scope"
-envBranch br@BInput  {} = do
+envBranch br@BInput {} = do
   gard    <- envExpr $ brGuard br
-  chanInd <- lookupVar $ brChan br
+  chanInd <- lookupLexVar $ brChan br
   case chanInd of
-    Nothing -> throwError $ OtherError "var not in scope"
     Just i  -> do
-      j <- addVar $ brBind br
+      j    <- addLexVar $ brBind br
       cont <- envProcess $ brCont br
       return br { brGuard = gard, brChanIndex = i, brBindIndex = j, brCont = cont }
+    Nothing -> throwError $ OtherError "var not in scope"
 
 envAction :: Action -> EnvM Action
 envAction act@AOutput {} = do
-  ind <- lookupVar $ actChan act
+  ind <- lookupLexVar $ actChan act
   case ind of
     Just i  -> do
       dat <- envExpr $ actData act
       return act { actData = dat, actChanIndex = i }
     Nothing -> throwError $ OtherError "var not in scope"
 envAction act@AInput  {} = do
-  chanInd <- lookupVar $ actChan act
+  chanInd <- lookupLexVar $ actChan act
   case chanInd of
-    Nothing -> throwError $ OtherError "var not in scope"
-    Just i  -> do
-      j <- addVar $ actBind act
+    Just i -> do
+      j <- addLexVar $ actBind act
       return act { actChanIndex = i, actBindIndex = j }
+    Nothing -> throwError $ OtherError "var not in scope"
 envAction act@ANew    {} = do
-  i <- addVar $ actBind act
+  i <- addLexVar $ actBind act
   return act { actBindIndex = i }
 envAction act@ALet    {} = do
-  i <- addVar $ actBind act
-  val <- envExpr $ actVal act
-  return act { actBindIndex = i, actVal = val }
+  i <- addLexVar $ actBind act
+  return act { actBindIndex = i }
 envAction act@ASpawn  {} = do
   args <- mapM envExpr $ actArgs act
   return act { actArgs = args }
 envAction act@APrim   {} = do
   args <- mapM envExpr $ actArgs act
-  return $ act { actArgs = args }
+  return act { actArgs = args }
 
-envExpr:: Expr -> EnvM Expr
+envExpr :: Expr -> EnvM Expr
 envExpr e@ETuple {} = do
   envVals <- mapM envExpr $ exprVals e
   return $ e { exprVals = envVals }
 envExpr e@EVar   {} = do
-  ind <- lookupVar $ exprVar e
+  ind <- lookupLexVar $ exprVar e
   case ind of
-    Just index -> return $ e { exprIndex = index }
+    Just index -> return e { exprIndex = index }
     Nothing    -> throwError $ OtherError "var not in scope"
 envExpr e@EPrim  {} = do
   args <- mapM envExpr $ exprArgs e
-  return $ e { exprArgs = args }
+  return e { exprArgs = args }
 envExpr e@EAnd   {} = do
-  left  <- envExpr (exprLeft e)
-  right <- envExpr (exprRight e)
-  return $ e { exprLeft = left, exprRight = right }
+  left  <- envExpr $ exprLeft e
+  right <- envExpr $ exprRight e
+  return e { exprLeft = left, exprRight = right }
 envExpr e@EOr    {} = do
-  left  <- envExpr (exprLeft e)
-  right <- envExpr (exprRight e)
-  return $ e { exprLeft = left, exprRight = right }
+  left  <- envExpr $ exprLeft e
+  right <- envExpr $ exprRight e
+  return e { exprLeft = left, exprRight = right }
 envExpr e = return e
-
