@@ -62,13 +62,13 @@ registerEvalFunc expr = do
   put st { evalFuncCount = n + 1, evalFuncs = fs ++ [f] }
   return fName
 
-getLexicalEnvSize :: String -> String -> CompilingM Int
-getLexicalEnvSize _ name = do
+getEnvSizes :: String -> String -> CompilingM (Int, Int)
+getEnvSizes _ name = do
   st <- get
   let defs = modDefs (modul st)
   case find (\d -> defName d == name) defs of
-    Just d  -> return $ defLexicalEnvSize d
-    Nothing -> error "getLexicalEnvSize. please report"
+    Just d  -> return (defLexicalEnvSize d, defChoiceMaxSize d)
+    Nothing -> error "getEnvSizes. please report"
 
 -- | The 'compilePass' monad run the piccolo AST compilation to sequential AST
 compilePass :: Modul -> Either PiccError Instr
@@ -406,10 +406,10 @@ compileAction act@ASpawn  {} = do
                 then registerEnvValue(child, i-1)
                 else Nop
              )
-  lexEnvSize <- getLexicalEnvSize name1 name2
+  (lexEnvSize, chcEnvSize) <- getEnvSizes name1 name2
   return $ comment act #
            begin ( var child PiThreadType #
-                   child <-- piThreadCreate(lexEnvSize, 10) # -- TODO: use the computed enabled size
+                   child <-- piThreadCreate(lexEnvSize, chcEnvSize) #
                    foldr (#) Nop loop #
                    setProc(child, name1, name2) #
                    setPC(child, dEntry) #

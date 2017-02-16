@@ -23,6 +23,7 @@ import Data.List
 import Data.Maybe
 import Control.Monad.Except
 import Control.Monad.State
+import Control.Arrow ((&&&))
 
 
 data Environment = Environment { lexicalSizes :: [(String, Int)]
@@ -40,8 +41,8 @@ data Environment = Environment { lexicalSizes :: [(String, Int)]
 -- | Environment initializer. Should be called once per module iteration.
 initModEnv :: Modul -> Environment
 initModEnv m = Environment lexSizes chcSizes 0 0 []
-  where lexSizes = error "lexSizes TODO"
-        chcSizes = error "chcSizes TODO"
+  where lexSizes = map (defName &&& defLexicalEnvSize) $ modDefs m
+        chcSizes = map (defName &&& defChoiceMaxSize)  $ modDefs m
 
 type EnvM a = ExceptT PiccError (State Environment) a
 
@@ -85,6 +86,13 @@ updateLexSize name = do
   let y = fromJust $ lookup name (lexicalSizes env)
   when (y > x) $ put env { maxLexicalSize = y }
 
+updateChcSize :: String -> EnvM ()
+updateChcSize name = do
+  env <- get
+  let x = maxChoicesSize env
+  let y = fromJust $ lookup name (choicesSizes env)
+  when (y > x) $ put env { maxChoicesSize = y }
+
 registerChcSize :: Int -> EnvM ()
 registerChcSize y = do
   env <- get
@@ -107,6 +115,7 @@ convergeEnvs (Right x : ys @ (Right y : _)) =
         yLexEnvSizes = map defLexicalEnvSize $ modDefs y
         xChcMaxSizes = map defChoiceMaxSize  $ modDefs x
         yChcMaxSizes = map defChoiceMaxSize  $ modDefs y
+convergeEnvs _ = Left $ OtherError "should not happen"
 
 computingEnvPass :: Modul -> Either PiccError Modul
 computingEnvPass = convergeEnvs . iterate f . Right
@@ -139,6 +148,7 @@ envProcess proc@PChoice { procBranches = brs } = do
   return proc { procBranches = branches }
 envProcess proc@PCall { procName = name } = do
   updateLexSize name
+  updateChcSize name
   args <- mapM envExpr $ procArgs proc
   return proc { procArgs = args }
 
