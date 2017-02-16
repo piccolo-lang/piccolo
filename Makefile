@@ -1,18 +1,15 @@
 .PHONY: build install doc rtdoc linecount rtlinecount test
 
-CABAL = cabal
+STACK = stack
 MAKE  = make
 
 install:
-	$(CABAL) install
+	$(STACK) install
 
 reinstall: clean install
 
-dist/setup-config:
-	$(CABAL) configure
-
-build: dist/setup-config
-	$(CABAL) build
+build:
+	$(STACK) build
 
 ifdef DEV_DOC
   HADDOCK_OPTS=--title Piccolo --hide Paths_piccolo --ignore-all-exports
@@ -20,9 +17,8 @@ else
   HADDOCK_OPTS=--title Piccolo --hide Paths_piccolo
 endif
 
-doc: dist/setup-config
-
-	$(CABAL) haddock --executables --hyperlink-source --html --hoogle \
+doc:
+	cabal haddock --executables --hyperlink-source --html --hoogle \
 		--haddock-options="$(HADDOCK_OPTS)"
 
 rtdoc:
@@ -35,7 +31,7 @@ rtlinecount:
 	$(MAKE) -C rts linecount
 
 clean:
-	$(CABAL) clean
+	$(STACK) clean
 
 test:
 	$(MAKE) -C test
