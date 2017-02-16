@@ -4,7 +4,6 @@ Description    : A C backend module
 Stability      : experimental
 
 This backend targets C code.
-__TODO__: put the real values of env size and choice size in emitCode
 -}
 module Piccolo.CBackend
   ( emitCode
@@ -18,8 +17,8 @@ import Control.Monad
 import Data.List (delete)
 
 -- | Code emitter function for C backend
-emitCode :: String -> Int -> Instr -> EmitterM ()
-emitCode mainName envSize instr = do
+emitCode :: String -> Int -> Int -> Instr -> EmitterM ()
+emitCode mainName lexSize chcSize instr = do
   emitLn "#include <runtime.h>"
   emitLn ""
   emitDecls instr
@@ -28,7 +27,7 @@ emitCode mainName envSize instr = do
   emitLn ""
   emitLn "int main() {"
   incrIndent
-  emitLn $ "PICC_main(4, " ++ mainName ++ ", 2, 2, 2, " ++ show envSize ++ ", 10);"
+  emitLn $ "PICC_main(4, " ++ mainName ++ ", 2, 2, 2, " ++ show lexSize ++ ", " ++ show chcSize ++ ");"
   decrIndent
   emitLn "}"
 

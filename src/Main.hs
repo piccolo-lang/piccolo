@@ -54,14 +54,19 @@ main = do
   when (optShowEnvSizes opts) $ printEnvSizes withEnv
   seqAst              <- reportResult $ compilePass withEnv
   let code  = runEmitterM $ CBackend.emitCode (mainDef withEnv)
-                                              (mainEnvSize withEnv) seqAst
+                                              (mainLexEnvSize withEnv)
+                                              (mainChcEnvSize withEnv)
+                                              seqAst
   when (isJust (optDumpC opts)) $ writeFile (fromJust (optDumpC opts)) code
   compileCCode code $ optOutput opts
   where
     mainDef m     = delete '/' (modName m) ++ "_Main"
-    mainEnvSize m = case find (\d -> defName d == "Main") (modDefs m) of
-                      Just d  -> defLexicalEnvSize d
-                      Nothing -> error "no Main def"
+    mainLexEnvSize m = case find (\d -> defName d == "Main") (modDefs m) of
+                         Just d  -> defLexicalEnvSize d
+                         Nothing -> error "no Main def"
+    mainChcEnvSize m = case find (\d -> defName d == "Main") (modDefs m) of
+                         Just d  -> defChoiceMaxSize d
+                         Nothing -> error "no Main def"
 
 data Options = Options
   { optOutput       :: String
