@@ -29,3 +29,16 @@ Executable piccolo
                      , parsec
                      , process
   Ghc-options:         -Wall
+  Other-Modules:       Piccolo.AST
+                     , Piccolo.CBackend
+                     , Piccolo.CCompiler
+                     , Piccolo.Codegen
+                     , Piccolo.Compilation
+                     , Piccolo.Environments
+                     , Piccolo.Errors
+                     , Piccolo.Output
+                     , Piccolo.Parser
+                     , Piccolo.Primitives
+                     , Piccolo.SeqAST
+                     , Piccolo.SeqASTUtils
+                     , Piccolo.Typecheck

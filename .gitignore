@@ -5,6 +5,7 @@ runtime/libpiccolortdbg.a
 cabal.sandbox.config
 .cabal-sandbox
 dist
+.stack-work
 doc/**/*.aux
 doc/**/*.log
 doc/**/*.out
