@@ -148,7 +148,6 @@ type Lab = Int
 -- | Sequential instructions
 data Instr
   = Comment String
-  | Debug String
   | Seq Instr Instr
   | LexBloc Instr
   | ComBloc PiAST.Location Instr

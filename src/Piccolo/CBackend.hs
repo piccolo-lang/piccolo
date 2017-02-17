@@ -1,5 +1,5 @@
 {-|
-Module         : Backend.CBackend
+Module         : Piccolo.CBackend
 Description    : A C backend module
 Stability      : experimental
 
@@ -31,35 +31,37 @@ emitCode mainName lexSize chcSize instr = do
   decrIndent
   emitLn "}"
 
+emitVarDecl :: VarName -> Type -> EmitterM ()
+emitVarDecl n t = do
+  emitType t
+  emitStr " "
+  emitVarName n
+
+emitFunParams :: [(VarName, Type)] -> EmitterM ()
+emitFunParams ps = emitStr "(" >> emitParams ps >> emitStr ")"
+  where emitParams :: [(VarName, Type)] -> EmitterM ()
+        emitParams []        = return ()
+        emitParams [(n,t)]   = emitVarDecl n t
+        emitParams ((n,t):l) = emitVarDecl n t >> emitStr ", " >> emitParams l 
+
 emitDecls :: Instr -> EmitterM ()
 emitDecls Nop = return ()
-emitDecls (Seq (DefFunction name ((p1, t1), (p2, t2)) _) i) = do
+emitDecls (Seq (DefFunction name (p1, p2) _) i) = do
   emitStr "void "
   emitDefName name
-  emitStr "("
-  emitType t1
-  emitStr " "
-  emitVarName p1
-  emitStr ", "
-  emitType t2
-  emitStr " "
-  emitVarName p2
-  emitStr ");\n"
+  emitFunParams [p1, p2]
+  emitStr ";\n"
   emitDecls i
-emitDecls (Seq (EvalFunction name (p1, t1) _) i) = do
+emitDecls (Seq (EvalFunction name p1 _) i) = do
   emitStr "PICC_Value "
   emitEvalfuncName name
-  emitStr "("
-  emitType t1
-  emitStr " "
-  emitVarName p1
-  emitStr ");\n"
+  emitFunParams [p1]
+  emitStr ";\n"
   emitDecls i
 emitDecls _ = error "only declarefun should be in seqast toplevel"
 
 emitInstr :: Instr -> EmitterM ()
 emitInstr (Comment str)   = emitLn $ "/* " ++ str ++ " */"
-emitInstr (Debug str)     = emitLn $ "printf(\"%s\", \"" ++ str ++ "\");"
 emitInstr (Seq i1 i2)     = do
   emitInstr i1
   emitInstr i2
@@ -73,20 +75,13 @@ emitInstr (ComBloc loc i) = do
   emitInstr (Comment $ "compilation bloc [" ++ show loc ++ "]")
   emitInstr i
 emitInstr Nop = return ()
-emitInstr (DefFunction name ((p1, t1), (p2, t2)) body) = do
+emitInstr (DefFunction name (p1, p2) body) = do
   emitLn ""
   emitIndent
   emitStr "void "
   emitDefName name
-  emitStr "("
-  emitType t1
-  emitStr " "
-  emitVarName p1
-  emitStr ", "
-  emitType t2
-  emitStr " "
-  emitVarName p2
-  emitStr ") {\n"
+  emitFunParams [p1, p2]
+  emitStr " {\n"
   incrIndent
   emitInstr body
   decrIndent
@@ -97,9 +92,7 @@ emitInstr (EvalFunction name (p1, t1) body) = do
   emitStr "PICC_Value "
   emitEvalfuncName name
   emitStr "("
-  emitType t1
-  emitStr " "
-  emitVarName p1
+  emitVarDecl p1 t1
   emitStr ") {\n"
   incrIndent
   emitInstr body
@@ -107,9 +100,7 @@ emitInstr (EvalFunction name (p1, t1) body) = do
   emitLn "}\n"
 emitInstr (DeclareVar v t)   = do
   emitIndent
-  emitType t
-  emitStr " "
-  emitVarName v
+  emitVarDecl v t
   emitStr ";\n"
 emitInstr (Assign var expr)  = do
   emitIndent
