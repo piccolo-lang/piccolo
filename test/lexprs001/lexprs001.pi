@@ -1,0 +1,8 @@
+// testing built-in or-expr
+module LExpr/Or
+
+def Main() =
+  [true or #core/arith:equals(42, #core/arith:div(5, 0))]
+    #core/io:print_int(42), end
+  [false]
+    #core/io:print_string("shoud not happen"), end

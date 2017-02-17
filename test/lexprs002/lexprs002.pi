@@ -1,0 +1,8 @@
+// testing built-in or-expr
+module LExpr/Or
+
+def Main() =
+  [false or true]
+    #core/io:print_int(42), end
+  [false]
+    #core/io:print_string("shoud not happen"), end
