@@ -37,7 +37,11 @@ Executable piccolo
                      , Piccolo.Environments
                      , Piccolo.Errors
                      , Piccolo.Output
-                     , Piccolo.Parser
+                     , Piccolo.Parsers.DefinitionParser
+                     , Piccolo.Parsers.ExpressionParser
+                     , Piccolo.Parsers.ModuleParser
+                     , Piccolo.Parsers.ProcessParser
+                     , Piccolo.Parsers.Utils
                      , Piccolo.Primitives
                      , Piccolo.SeqAST
                      , Piccolo.SeqASTUtils

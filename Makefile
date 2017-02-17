@@ -3,6 +3,8 @@
 STACK = stack
 MAKE  = make
 
+all: build
+
 install:
 	$(STACK) install
 

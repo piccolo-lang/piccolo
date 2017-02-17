@@ -19,7 +19,7 @@ module Main
 where
 
 import Piccolo.Errors
-import Piccolo.Parser
+import Piccolo.Parsers.ModuleParser
 import Piccolo.AST
 import Piccolo.Output
 import Piccolo.Typecheck
