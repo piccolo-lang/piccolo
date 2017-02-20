@@ -7,6 +7,7 @@ Since types are explicitly written in the code when introducing a new variable (
 or process definition parameters), the typing pass of the piccolo compiler only check types through
 a traversal of the AST and tag each value with its types for compilation pass.
 -}
+
 module Piccolo.Typecheck
   ( typeCheck
   , isAManagedType
@@ -161,11 +162,11 @@ tcAction act@ASpawn { actName = name} = do
 
 tcAction act@APrim { actModule = m, actName = n } = do
   (_, typParams) <- case Map.lookup (m,n) primTypes of
-    Nothing -> throwError $ PrimNotFoundError ("#" ++ m ++ ":" ++ n) (localize act)
+    Nothing -> throwError $ PrimNotFoundError ("#" ++ show m ++ ":" ++ n) (localize act)
     Just t  -> return t
   args <- mapM tcExpr $ actArgs act
   when (length typParams /= length args) $
-    throwError $ ArityError (m ++ "#" ++ n) (localize act) (length typParams) (length args)
+    throwError $ ArityError (show m ++ "#" ++ n) (localize act) (length typParams) (length args)
   forM_ (zip typParams args) (\(p,a) -> when (p /= exprTyp a) $
     throwError $ TypingError (show a) (localize a) p (exprTyp a))
   return act { actArgs = args }
@@ -184,12 +185,12 @@ tcExpr e@EVar { exprVar = v } = do
   return e { exprTyp = typ }
 tcExpr e@EPrim   { exprModule = m, exprName = n } = do
   (typOfRet, typParams) <- case Map.lookup (m,n) primTypes of
-    Nothing -> throwError $ PrimNotFoundError ("#" ++ m ++ ":" ++ n) (localize e)
+    Nothing -> throwError $ PrimNotFoundError ("#" ++ show m ++ ":" ++ n) (localize e)
     Just t  -> return t
   args <- mapM tcExpr $ exprArgs e
   let typOfArgs = map exprTyp args
   when (length typParams /= length typOfArgs) $
-    throwError $ ArityError (m ++ "#" ++ n) (localize e) (length typParams) (length typOfArgs)
+    throwError $ ArityError (show m ++ "/" ++ n) (localize e) (length typParams) (length typOfArgs)
   forM_ (zip typParams typOfArgs) (\(p,a) -> when (p /= a) $
     throwError (OtherError "bad type in prim"))
   return e { exprArgs = args, exprTyp = typOfRet }

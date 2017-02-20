@@ -14,7 +14,7 @@ import Piccolo.Codegen
 import Piccolo.SeqAST
 
 import Control.Monad
-import Data.List (delete)
+import Data.List (delete, intercalate)
 
 -- | Code emitter function for C backend
 emitCode :: String -> Int -> Int -> Instr -> EmitterM ()
@@ -194,7 +194,7 @@ emitRTFun (PrimCall n (valPtr : vs)) = do
   forM_ vs $ \v -> do { emitStr ", " ; emitStr "&" ; emitBExpr v }
   emitStr ")"
 emitRTFun (PrimCall _ []) = emitStr "PRIMCALL ERROR"
-emitRTFun (DefProc (DefName name _)) = emitStr name
+emitRTFun (DefProc (DefName name _)) = emitStr $ intercalate "_" name
 emitRTFun (PiThreadCreate envSize enabledSize) = do
   emitStr "PICC_pithread_alloc("
   emitBExpr envSize
@@ -491,7 +491,7 @@ emitPrimName (PrimName m f) = do
 
 emitDefName :: DefName -> EmitterM ()
 emitDefName (DefName m f) = do
-  emitStr $ delete '/' m
+  emitStr $ intercalate "_" m
   emitStr "_"
   emitStr f
 

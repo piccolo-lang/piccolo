@@ -44,7 +44,7 @@ annotatedProc = do
   
 call :: Parser Process
 call = withLocation $ do
-  m <- option "" modulQual -- TODO: optionMaybe
+  m <- option (ModuleName []) modulQual
   p <- identifier
   args <- parens $ commaSep expr
   return $ PCall m p args

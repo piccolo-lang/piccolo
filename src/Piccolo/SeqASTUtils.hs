@@ -183,7 +183,7 @@ piThreadCreate :: (Int, Int) -> BExpr
 piThreadCreate (envSize, enabledSize) = FunCall $ PiThreadCreate (IntExpr envSize) (IntExpr enabledSize)
 
 -- | Getting the def executed by a process
-setProc :: (BExpr, String, String) -> Instr
+setProc :: (BExpr, [String], String) -> Instr
 setProc (thread, proc1, proc2) = ProcCall $ SetProc thread (FunVal (DefProc (DefName proc1 proc2)))
 
 -- | Getting the program counter of a process

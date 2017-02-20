@@ -17,7 +17,7 @@ import Control.Monad
 
 printEnvSizes :: Modul -> IO ()
 printEnvSizes modul = do
-  putStrLn $ "Env sizes for module " ++ modName modul ++ ":"
+  putStrLn $ "Env sizes for module " ++ show (modName modul) ++ ":"
   forM_ (modDefs modul) $ \def -> do
     putStr $ "  " ++ defName def
     putStr $ replicate (20 - length (defName def)) ' ' ++ " { "

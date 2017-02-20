@@ -111,14 +111,10 @@ withLocation parser = do
   pos' <- getPosition
   return $ x (mkLoc pos pos')
 
-modulId :: Parser String
-modulId = do
-  m <- identifier
-  _ <- reservedOp "/"
-  n <- identifier
-  return $ m ++ "/" ++ n
+modulId :: Parser ModuleName
+modulId = ModuleName <$> sepBy1 identifier (reservedOp "/")
 
-modulQual :: Parser String
+modulQual :: Parser ModuleName
 modulQual = do
   reservedOp "#"
   m <- modulId

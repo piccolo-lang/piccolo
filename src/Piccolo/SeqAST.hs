@@ -23,7 +23,7 @@ where
 import qualified Piccolo.AST as PiAST
 
 -- | Definition corresponding to a compiled process definition
-data DefName = DefName String String
+data DefName = DefName [String] String
 
 -- | Primitives
 data PrimName = PrimName String String

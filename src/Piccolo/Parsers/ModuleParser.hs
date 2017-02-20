@@ -28,9 +28,9 @@ modul = do
   whiteSpace
   m <- withLocation $ do
     reserved "module"
-    modID <- modulId
+    fullName <- modulId
     defs <- many definition
-    return $ Modul modID defs
+    return $ Modul fullName defs
   eof
   return m
 

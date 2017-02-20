@@ -29,7 +29,7 @@ import Data.List (delete, find)
 data CompState
   = CompState
     { labelCount    :: Int
-    , currentModule :: String
+    , currentModule :: ModuleName
     , evalFuncCount :: Int
     , evalFuncs     :: [Instr]
     , modul         :: Modul
@@ -76,7 +76,7 @@ compilePass m =
   let (comp, _) = runState (runExceptT instr) initEnv in
   comp
   where instr    = compileModul m
-        initEnv  = CompState (dEntry + 1) "" 1 [] m
+        initEnv  = CompState (dEntry + 1) (ModuleName []) 1 [] m
 
 
 compileModul :: Modul -> CompilingM Instr
@@ -91,7 +91,7 @@ compileModul m = do
 compileDefinition :: Definition -> CompilingM Instr
 compileDefinition def = do
   resetLabCount
-  CompState { currentModule = m } <- get
+  CompState { currentModule = ModuleName m } <- get
   let name = DefName m (defName def)
   procInstrs <- compileProcess (defBody def)
   return $ DefFunction name((scheduler, SchedulerType), (pt, PiThreadType))
@@ -218,8 +218,8 @@ compileProcess proc@PCall {} = do
                 else Nop
              )
   CompState { currentModule = currentModName } <- get
-  let (name1, name2) | null (procModule proc) = (delete '/' currentModName, procName proc)
-                     | otherwise              = (delete '/' $ procModule proc, procName proc)
+  let ModuleName name1 = procModule proc
+  let name2 = procName proc
   return $ comment proc #
            begin ( forgetAllValues pt #
                    foldr (#) Nop loop1 #
@@ -394,8 +394,8 @@ compileAction act@ALet { actBindIndex = x } = do
 
 compileAction act@ASpawn  {} = do
   CompState { currentModule = currentModName } <- get
-  let (name1, name2) | null (actModule act) = (delete '/' currentModName, actName act)
-                     | otherwise            = (delete '/' $ actModule act, actName act)
+  let ModuleName name1 = actModule act
+  let name2 = actName act
   loop <- forM (zip ([1..]::[Int]) (actArgs act)) $ \(i, arg) -> do
     expr <- compileExpr arg
     return $ expr #

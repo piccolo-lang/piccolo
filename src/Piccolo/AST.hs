@@ -7,11 +7,11 @@ This module defines the datatypes for piccolo-core AST description.
 Each type of the module is marked with a location data,
 to print better error messages and track code locations
 during the whole compilation process.
-
-__TODO__: do not mangle the ModuleName/SubModuleName in the AST.
 -}
+
 module Piccolo.AST
-  ( Location (..), noLoc, isNoLoc
+  ( ModuleName (..)
+  , Location (..), noLoc, isNoLoc
   , AST (..)
   , TypeExpr (..)
   , TypeAtom (..)
@@ -26,6 +26,12 @@ module Piccolo.AST
 where
 
 import Data.List (intercalate)
+
+
+newtype ModuleName = ModuleName [String] deriving (Eq, Ord)
+
+instance Show ModuleName where
+  show (ModuleName l) = intercalate "/" l
 
 
 -- * Locations
@@ -158,7 +164,7 @@ data Expr
   | EPrim
     { exprTyp    :: TypeExpr
     , exprLoc    :: Location
-    , exprModule :: String
+    , exprModule :: ModuleName
     , exprName   :: String
     , exprArgs   :: [Expr]
     }
@@ -182,8 +188,8 @@ instance Show Expr where
   show e@EString {} = exprStr e
   show e@ETuple  {} = "(" ++ intercalate ", " (map show (exprVals e)) ++ ")"
   show e@EVar    {} = exprVar e
-  show e@EPrim   {} = "#" ++ exprModule e ++ "/" ++ exprName e ++
-                      "(" ++ args ++ ")"
+  show e@EPrim   {} = "#" ++ show (exprModule e) ++ ":" ++
+                      exprName e ++ "(" ++ args ++ ")"
     where args = intercalate ", " (map show (exprArgs e))
   show e@EAnd    {} = "(" ++ show (exprLeft e) ++ ") and (" ++
                       show (exprRight e) ++ ")"
@@ -212,7 +218,7 @@ data Process
     , procLoc      :: Location
     } -- ^ guarded choice
   | PCall
-    { procModule :: String
+    { procModule :: ModuleName
     , procName   :: String
     , procArgs   :: [Expr]
     , procLoc    ::  Location
@@ -287,13 +293,13 @@ data Action
     , actLoc       :: Location
     }
   | ASpawn
-    { actModule :: String
+    { actModule :: ModuleName
     , actName   :: String
     , actArgs   :: [Expr]
     , actLoc    :: Location
     }
   | APrim
-    { actModule :: String
+    { actModule :: ModuleName
     , actName   :: String
     , actArgs   :: [Expr]
     , actLoc    :: Location
@@ -334,7 +340,7 @@ instance AST Definition where
 -- will be executed.
 data Modul
   = Modul
-    { modName :: String
+    { modName :: ModuleName
     , modDefs :: [Definition]
     , modLoc  :: Location
     }
@@ -361,8 +367,8 @@ ppProcess n proc@PChoice {} =
   indent n ++ intercalate ("\n" ++ indent (n - 1) ++ "+ ")
                           (map (ppBranch 0) (procBranches proc))
 ppProcess n proc@PCall   {} =
-  indent n ++ procModule proc ++ "/" ++ procName proc ++ "(" ++
-  intercalate ", " (map show (procArgs proc)) ++ ")"
+  indent n ++ show (procModule proc) ++ "/" ++ procName proc ++
+  "(" ++ intercalate ", " (map show (procArgs proc)) ++ ")"
 
 ppBranch :: Int -> Branch -> String
 ppBranch n br@BTau    {} =
@@ -389,10 +395,11 @@ ppAction n act@ALet    {} =
   " = " ++ show (actVal act) ++ ")"
 ppAction n act@ASpawn  {} =
   indent n ++ "spawn {" ++
-  actModule act ++ "/" ++ actName act ++ "(" ++ args ++ ")}"
+  show (actModule act) ++ "/" ++ actName act ++ "(" ++ args ++ ")}"
   where args = intercalate ", " $ map show (actArgs act)
 ppAction n act@APrim   {} =
-  indent n ++ actModule act ++ "/" ++ actName act ++ "(" ++ args ++ ")"
+  indent n ++
+  show (actModule act) ++ "/" ++ actName act ++ "(" ++ args ++ ")"
   where args = intercalate ", " $ map show (actArgs act)
 
 ppDefinition :: Int -> Definition -> String
@@ -406,7 +413,7 @@ ppDefinition n def =
 ppModul :: Int -> Modul -> String
 ppModul n modul =
   indent n ++
-  "module " ++ modName modul ++ "\n\n" ++
+  "module " ++ show (modName modul) ++ "\n\n" ++
   intercalate "\n" (map (ppDefinition n) (modDefs modul)) ++
   "\n"
 
