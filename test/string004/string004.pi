@@ -1,9 +1,0 @@
-// Testing string allocation in a process spawn
-module String/Hello
-
-def Printer(msg: string) =
-  #core/io:print_str(msg), end
-
-def Main() =
-  spawn { Printer("Hello world\n") },
-  end

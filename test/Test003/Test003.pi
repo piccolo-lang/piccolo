@@ -1,0 +1,4 @@
+// testing the let
+module Test003.Test003
+
+def Main() = let(x:int=42), #core.io:print_int(x), end

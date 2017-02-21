@@ -1,7 +1,0 @@
-// Testing the string allocation in a let
-module String/Hello
-
-def Main() =
-  let (msg: string = "Hello world\n"),
-  #core/io:print_str(msg),
-  end

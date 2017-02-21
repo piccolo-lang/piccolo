@@ -1,0 +1,6 @@
+// testing the definition call
+module Test002.Test002
+
+def Printer(x:int) = #core.io:print_int(x), end
+
+def Main() = Printer(42)

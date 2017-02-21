@@ -1,0 +1,7 @@
+// testing string allocation in a call param
+module Test007.Test007
+
+def Hello(msg:string) = 
+  #core.io:print_str(msg), end
+
+def Main() = Hello("Hello world\n")

@@ -1,0 +1,4 @@
+// testing a single primitive
+module Test001.Test001
+
+def Main() = #core.io:print_int(5), end

@@ -1,7 +1,0 @@
-// Testing the string allocation in a call
-module String/Hello
-
-def Hello(msg:string) = 
-  #core/io:print_str(msg), end
-
-def Main() = Hello("Hello world\n")

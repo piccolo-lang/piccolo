@@ -1,0 +1,7 @@
+// testing string allocation in a let
+module Test006.Test006
+
+def Main() =
+  let (msg: string = "Hello world\n"),
+  #core.io:print_str(msg),
+  end
