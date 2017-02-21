@@ -2,7 +2,6 @@
 module Test013.Test013
 
 def Main() =
-  [true or #core.arith:equals(42, #core.arith:div(5, 0))]
-    #core.io:print_int(42), end
-  [false]
-    #core.io:print_string("shoud not happen"), end
+  [false || false] tau, #core.io:print_str("should not happen"), end
++ [false || true]  tau, #core.io:print_int(42), end
++ [false]          tau, #core.io:print_str("should not happen"), end

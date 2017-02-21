@@ -2,7 +2,5 @@
 module Test014.Test014
 
 def Main() =
-  [false or true]
-    #core.io:print_int(42), end
-  [false]
-    #core.io:print_string("shoud not happen"), end
+  [false || true] tau, #core.io:print_int(42), end
++ [false]         tau, #core.io:print_str("should not happen"), end

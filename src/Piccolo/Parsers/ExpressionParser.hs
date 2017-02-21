@@ -14,7 +14,7 @@ module Piccolo.Parsers.ExpressionParser
 where
 
 import Piccolo.AST
-import Piccolo.Parsers.Utils
+import Piccolo.Parsers.Lexer
 
 import Text.Parsec hiding (string)
 import Text.Parsec.String (Parser)
@@ -44,8 +44,21 @@ typedVar = do
   t <- typeExpr
   return (v, t)
 
-expr :: Parser Expr -- TODO: 'and' and 'or' parsers
-expr = try trueExpr
+expr :: Parser Expr
+expr = orExpr
+
+orExpr :: Parser Expr
+orExpr = chainl1 andExpr $ do
+  reservedOp "||"
+  return $ EOr (TUnknown noLoc) noLoc
+
+andExpr :: Parser Expr
+andExpr = chainl1 expr' $ do
+  reservedOp "&&"
+  return $ EAnd (TUnknown noLoc) noLoc
+
+expr' :: Parser Expr
+expr' = try trueExpr
    <|> try falseExpr
    <|> intExpr
    <|> (withLocation $ do

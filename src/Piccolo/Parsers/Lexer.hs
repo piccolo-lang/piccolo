@@ -1,12 +1,12 @@
 {-|
-Module        : Piccolo.Parsers.Utils
+Module        : Piccolo.Parsers.Lexer
 Description   : Utilities for parsing combinators
 Stability     : experimental
 
 Utilities for parsing combinators.
 -}
 
-module Piccolo.Parsers.Utils
+module Piccolo.Parsers.Lexer
   ( -- * Lexing
     lexer
   , identifier
@@ -49,11 +49,11 @@ langDef = Tok.LanguageDef
   , Tok.opStart         = oneOf ""
   , Tok.opLetter        = oneOf ""
   , Tok.reservedNames   = [ "true", "false", "module", "def", "end", "tau"
-                          , "new", "spawn", "let", "and", "or"
+                          , "new", "spawn", "let"
                           , "chan", "int", "bool", "string"
                           , "%safe"
                           ]
-  , Tok.reservedOpNames = [ ",", "?", "!", ".", "=", ":", "#" ]
+  , Tok.reservedOpNames = [ ",", "?", "!", ".", "=", ":", "#", "||", "&&" ]
   , Tok.caseSensitive   = True
   }
 

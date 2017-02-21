@@ -17,7 +17,7 @@ import Piccolo.Errors
 import Piccolo.AST
 import Piccolo.Parsers.ExpressionParser
 import Piccolo.Parsers.ProcessParser
-import Piccolo.Parsers.Utils
+import Piccolo.Parsers.Lexer
 
 import Text.Parsec hiding (string)
 import Text.Parsec.String (Parser)

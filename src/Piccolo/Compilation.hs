@@ -218,14 +218,14 @@ compileProcess proc@PCall {} = do
                 else Nop
              )
   CompState { currentModule = currentModName } <- get
-  let ModuleName modName = currentModName
-  let ModuleName name1 = procModule proc
+  let ModuleName modulName = currentModName
+  --let ModuleName name1 = procModule proc
   let name2 = procName proc
   return $ comment proc #
            begin ( forgetAllValues pt #
                    foldr (#) Nop loop1 #
                    foldr (#) Nop loop2 #
-                   setProc(pt, modName, name2) # -- FIXME: use name1 instead of modName
+                   setProc(pt, modulName, name2) # -- FIXME: use name1 instead of modName
                    setPC(pt, dEntry) #
                    setStatus(pt, statusCall) #
                    Return
@@ -395,7 +395,7 @@ compileAction act@ALet { actBindIndex = x } = do
 
 compileAction act@ASpawn  {} = do
   CompState { currentModule = currentModName } <- get
-  let ModuleName modName = currentModName
+  let ModuleName modulName = currentModName
   let ModuleName name1 = actModule act
   let name2 = actName act
   loop <- forM (zip ([1..]::[Int]) (actArgs act)) $ \(i, arg) -> do
@@ -413,7 +413,7 @@ compileAction act@ASpawn  {} = do
            begin ( var child PiThreadType #
                    child <-- piThreadCreate(lexEnvSize, chcEnvSize) #
                    foldr (#) Nop loop #
-                   setProc(child, modName, name2) # -- FIXME: use name1 instead of modName
+                   setProc(child, modulName, name2) # -- FIXME: use name1 instead of modName
                    setPC(child, dEntry) #
                    setStatus(child, statusRun) #
                    readyPushFront(schedGetReadyQueue scheduler, child)
