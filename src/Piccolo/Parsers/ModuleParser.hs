@@ -11,16 +11,17 @@ module Piccolo.Parsers.ModuleParser
   )
 where
 
-import Piccolo.Errors
 import Piccolo.AST
+import Piccolo.Errors
 import Piccolo.Parsers.DefinitionParser
 import Piccolo.Parsers.Lexer
+import Piccolo.Parsers.Utils
 
+import Control.Arrow
 import Text.Parsec hiding (string)
 import Text.Parsec.String (Parser)
 import Text.Parsec.Language ()
 
-import Control.Arrow
 
 
 modul :: Parser Modul

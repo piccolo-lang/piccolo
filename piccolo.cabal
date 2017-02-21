@@ -42,6 +42,7 @@ Executable piccolo
                      , Piccolo.Parsers.ModuleParser
                      , Piccolo.Parsers.ProcessParser
                      , Piccolo.Parsers.Lexer
+                     , Piccolo.Parsers.Utils
                      , Piccolo.Primitives
                      , Piccolo.SeqAST
                      , Piccolo.SeqASTUtils

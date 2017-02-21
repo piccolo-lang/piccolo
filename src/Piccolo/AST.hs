@@ -38,8 +38,7 @@ instance Show ModuleName where
 
 -- | The 'Location' type is a record of line and column informations
 data Location = Location
-  { locOffset      :: !Int  -- ^ absolute offset of the block in the file
-  , locStartLine   :: !Int  -- ^ line of the beginning of the block
+  { locStartLine   :: !Int  -- ^ line of the beginning of the block
   , locStartColumn :: !Int  -- ^ column of the beginning of the block
   , locEndLine     :: !Int  -- ^ line of the end of the block
   , locEndColumn   :: !Int  -- ^ column of the end of the block
@@ -58,7 +57,7 @@ class Show a => AST a where
 -- | 'noLoc' is a fake location used when there is no code correspondance
 -- for an AST node (for example, an inferred type is not in the initial code).
 noLoc :: Location
-noLoc = Location (-1) (-1) (-1) (-1) (-1)
+noLoc = Location (-1) (-1) (-1) (-1)
 
 -- | The 'isNoLoc' predicate tests if a given location is fake.
 isNoLoc :: Location -> Bool

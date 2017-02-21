@@ -1,13 +1,13 @@
 {-|
 Module        : Piccolo.Parsers.Lexer
-Description   : Utilities for parsing combinators
+Description   : Lexer for piccolo parsing
 Stability     : experimental
 
-Utilities for parsing combinators.
+Some lexing functions.
 -}
 
 module Piccolo.Parsers.Lexer
-  ( -- * Lexing
+  (
     lexer
   , identifier
   , reserved
@@ -21,16 +21,8 @@ module Piccolo.Parsers.Lexer
   , commaSep1
   , integer
   , stringLiteral
-    -- * Source locations
-  , mkLoc
-  , withLocation
-    -- * Modules naming
-  , modulId
-  , modulQual
   )
 where
-
-import Piccolo.AST
 
 import Text.Parsec hiding (string)
 import Text.Parsec.String (Parser)
@@ -95,29 +87,3 @@ integer = Tok.integer lexer
 
 stringLiteral :: Parser String
 stringLiteral = Tok.stringLiteral lexer
-
-mkLoc :: SourcePos -> SourcePos -> Location
-mkLoc posStart posEnd = Location { locOffset      = -1
-                                 , locStartLine   = sourceLine posStart
-                                 , locStartColumn = sourceColumn posStart
-                                 , locEndLine     = sourceLine posEnd
-                                 , locEndColumn   = sourceColumn posStart
-                                 }
-
-withLocation :: Parser (Location -> a) -> Parser a
-withLocation parser = do
-  pos <- getPosition
-  x <- parser
-  pos' <- getPosition
-  return $ x (mkLoc pos pos')
-
-modulId :: Parser ModuleName
-modulId = ModuleName <$> sepBy1 identifier (reservedOp ".")
-
-modulQual :: Parser ModuleName
-modulQual = do
-  reservedOp "#"
-  m <- modulId
-  reservedOp ":"
-  return m
-

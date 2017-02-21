@@ -15,6 +15,7 @@ where
 
 import Piccolo.AST
 import Piccolo.Parsers.Lexer
+import Piccolo.Parsers.Utils
 
 import Text.Parsec hiding (string)
 import Text.Parsec.String (Parser)
