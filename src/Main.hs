@@ -60,7 +60,9 @@ main = do
   when (isJust (optDumpC opts)) $ writeFile (fromJust (optDumpC opts)) code
   compileCCode code $ optOutput opts
   where
-    mainDef m     = delete '/' (modName m) ++ "_Main"
+    mainDef Modul { modName = m } =
+      let (ModuleName mainModName) = m in
+      intercalate "_" mainModName ++ "_Main"
     mainLexEnvSize m = case find (\d -> defName d == "Main") (modDefs m) of
                          Just d  -> defLexicalEnvSize d
                          Nothing -> error "no Main def"

@@ -6,6 +6,7 @@ Stability      : experimental
 This module contains 'Back.SeqAST' utils functions and constructors for
 compilation DSL.
 -}
+
 module Piccolo.SeqASTUtils
   ( -- * Sequential language constructions
     var
@@ -182,7 +183,7 @@ primCall (th, pName, vs) = ProcCall (PrimCall pName (th : map Var vs))
 piThreadCreate :: (Int, Int) -> BExpr
 piThreadCreate (envSize, enabledSize) = FunCall $ PiThreadCreate (IntExpr envSize) (IntExpr enabledSize)
 
--- | Getting the def executed by a process
+-- | Setting the def executed by a process
 setProc :: (BExpr, [String], String) -> Instr
 setProc (thread, proc1, proc2) = ProcCall $ SetProc thread (FunVal (DefProc (DefName proc1 proc2)))
 

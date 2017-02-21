@@ -26,7 +26,7 @@ import qualified Piccolo.AST as PiAST
 data DefName = DefName [String] String
 
 -- | Primitives
-data PrimName = PrimName String String
+data PrimName = PrimName [String] String
 
 -- | Evaluation function for computing output payload
 newtype EvalfuncName = EvalfuncName Int

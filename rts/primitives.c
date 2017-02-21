@@ -3,7 +3,7 @@
 #include "primitives.h"
 #include "value_impl.h"
 
-void corearith_add(PICC_Value *res, PICC_Value *a, PICC_Value *b)
+void core_arith_add(PICC_Value *res, PICC_Value *a, PICC_Value *b)
 {
   assert(IS_INTEGER(a));
   assert(IS_INTEGER(b));
@@ -11,7 +11,7 @@ void corearith_add(PICC_Value *res, PICC_Value *a, PICC_Value *b)
       ((PICC_IntValue *)a)->data + ((PICC_IntValue *)b)->data);
 }
 
-void corearith_sub(PICC_Value *res, PICC_Value *a, PICC_Value *b)
+void core_arith_sub(PICC_Value *res, PICC_Value *a, PICC_Value *b)
 {
   assert(IS_INTEGER(a));
   assert(IS_INTEGER(b));
@@ -19,7 +19,7 @@ void corearith_sub(PICC_Value *res, PICC_Value *a, PICC_Value *b)
       ((PICC_IntValue *)a)->data - ((PICC_IntValue *)b)->data);
 }
 
-void corearith_mul(PICC_Value *res, PICC_Value *a, PICC_Value *b)
+void core_arith_mul(PICC_Value *res, PICC_Value *a, PICC_Value *b)
 {
   assert(IS_INTEGER(a));
   assert(IS_INTEGER(b));
@@ -27,7 +27,7 @@ void corearith_mul(PICC_Value *res, PICC_Value *a, PICC_Value *b)
       ((PICC_IntValue *)a)->data * ((PICC_IntValue *)b)->data);
 }
 
-void corearith_div(PICC_Value *res, PICC_Value *a, PICC_Value *b)
+void core_arith_div(PICC_Value *res, PICC_Value *a, PICC_Value *b)
 {
   assert(IS_INTEGER(a));
   assert(IS_INTEGER(b));
@@ -35,7 +35,7 @@ void corearith_div(PICC_Value *res, PICC_Value *a, PICC_Value *b)
       ((PICC_IntValue *)a)->data / ((PICC_IntValue *)b)->data);
 }
 
-void corearith_mod(PICC_Value *res, PICC_Value *a, PICC_Value *b)
+void core_arith_mod(PICC_Value *res, PICC_Value *a, PICC_Value *b)
 {
   assert(IS_INTEGER(a));
   assert(IS_INTEGER(b));
@@ -43,7 +43,7 @@ void corearith_mod(PICC_Value *res, PICC_Value *a, PICC_Value *b)
       ((PICC_IntValue *)a)->data % ((PICC_IntValue *)b)->data);
 }
 
-void corearith_equals(PICC_Value *res, PICC_Value *a, PICC_Value *b)
+void core_arith_equals(PICC_Value *res, PICC_Value *a, PICC_Value *b)
 {
   assert(IS_INTEGER(a));
   assert(IS_INTEGER(b));
@@ -53,7 +53,7 @@ void corearith_equals(PICC_Value *res, PICC_Value *a, PICC_Value *b)
     PICC_boolvalue_init(res, 0);
 }
 
-void corearith_less_than(PICC_Value *res, PICC_Value *a, PICC_Value *b)
+void core_arith_less_than(PICC_Value *res, PICC_Value *a, PICC_Value *b)
 {
   assert(IS_INTEGER(a));
   assert(IS_INTEGER(b));
@@ -63,7 +63,7 @@ void corearith_less_than(PICC_Value *res, PICC_Value *a, PICC_Value *b)
     PICC_boolvalue_init(res, 0);
 }
 
-void coreio_print_str(PICC_Value *res, PICC_Value *s)
+void core_io_print_str(PICC_Value *res, PICC_Value *s)
 {
   assert(IS_STRING(s));
   PICC_StringHandle *str = ((PICC_StringValue *)s)->data;
@@ -71,7 +71,7 @@ void coreio_print_str(PICC_Value *res, PICC_Value *s)
   PICC_novalue_init(res);
 }
 
-void coreio_print_int(PICC_Value *res, PICC_Value *i)
+void core_io_print_int(PICC_Value *res, PICC_Value *i)
 {
   assert(IS_INTEGER(i));
   printf("%ld", ((PICC_IntValue *)i)->data);

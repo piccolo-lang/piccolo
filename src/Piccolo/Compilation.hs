@@ -24,7 +24,7 @@ import Piccolo.Errors
 
 import Control.Monad.Except
 import Control.Monad.State
-import Data.List (delete, find)
+import Data.List (find)
 
 data CompState
   = CompState
@@ -62,7 +62,7 @@ registerEvalFunc expr = do
   put st { evalFuncCount = n + 1, evalFuncs = fs ++ [f] }
   return fName
 
-getEnvSizes :: String -> String -> CompilingM (Int, Int)
+getEnvSizes :: ModuleName -> String -> CompilingM (Int, Int)
 getEnvSizes _ name = do
   st <- get
   let defs = modDefs (modul st)
@@ -218,13 +218,14 @@ compileProcess proc@PCall {} = do
                 else Nop
              )
   CompState { currentModule = currentModName } <- get
+  let ModuleName modName = currentModName
   let ModuleName name1 = procModule proc
   let name2 = procName proc
   return $ comment proc #
            begin ( forgetAllValues pt #
                    foldr (#) Nop loop1 #
                    foldr (#) Nop loop2 #
-                   setProc(pt, name1, name2) #
+                   setProc(pt, modName, name2) # -- FIXME: use name1 instead of modName
                    setPC(pt, dEntry) #
                    setStatus(pt, statusCall) #
                    Return
@@ -394,6 +395,7 @@ compileAction act@ALet { actBindIndex = x } = do
 
 compileAction act@ASpawn  {} = do
   CompState { currentModule = currentModName } <- get
+  let ModuleName modName = currentModName
   let ModuleName name1 = actModule act
   let name2 = actName act
   loop <- forM (zip ([1..]::[Int]) (actArgs act)) $ \(i, arg) -> do
@@ -406,12 +408,12 @@ compileAction act@ASpawn  {} = do
                 then registerEnvValue(child, i-1)
                 else Nop
              )
-  (lexEnvSize, chcEnvSize) <- getEnvSizes name1 name2
+  (lexEnvSize, chcEnvSize) <- getEnvSizes (ModuleName name1) name2
   return $ comment act #
            begin ( var child PiThreadType #
                    child <-- piThreadCreate(lexEnvSize, chcEnvSize) #
                    foldr (#) Nop loop #
-                   setProc(child, name1, name2) #
+                   setProc(child, modName, name2) # -- FIXME: use name1 instead of modName
                    setPC(child, dEntry) #
                    setStatus(child, statusRun) #
                    readyPushFront(schedGetReadyQueue scheduler, child)
@@ -426,7 +428,8 @@ compileAction act@APrim {} = do
                 vi <-- getRegister pt
            )
   let (vs, loop) = unzip loops
-  let primName   = PrimName (actModule act) (actName act)
+  let (ModuleName primModName) = actModule act
+  let primName   = PrimName primModName (actName act)
   return $ comment act #
            begin ( foldr (#) Nop loop #
                    primCall(registerPointer pt, primName, vs)
@@ -448,7 +451,8 @@ compileExpr e@EPrim   {} = do
                  v i <-- getRegister pt
            )
   let (vs, loop) = unzip loops
-  let primName   = PrimName (exprModule e) (exprName e)
+  let (ModuleName primModName) = exprModule e
+  let primName   = PrimName primModName (exprName e)
   return $ begin $ foldr (#) Nop loop #
                    primCall(registerPointer pt, primName, vs)
 

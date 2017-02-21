@@ -53,7 +53,7 @@ langDef = Tok.LanguageDef
                           , "chan", "int", "bool", "string"
                           , "%safe"
                           ]
-  , Tok.reservedOpNames = [ ",", "?", "!", "/", "=", ":", "#" ]
+  , Tok.reservedOpNames = [ ",", "?", "!", ".", "=", ":", "#" ]
   , Tok.caseSensitive   = True
   }
 
@@ -112,7 +112,7 @@ withLocation parser = do
   return $ x (mkLoc pos pos')
 
 modulId :: Parser ModuleName
-modulId = ModuleName <$> sepBy1 identifier (reservedOp "/")
+modulId = ModuleName <$> sepBy1 identifier (reservedOp ".")
 
 modulQual :: Parser ModuleName
 modulQual = do

@@ -14,7 +14,7 @@ import Piccolo.Codegen
 import Piccolo.SeqAST
 
 import Control.Monad
-import Data.List (delete, intercalate)
+import Data.List (intercalate)
 
 -- | Code emitter function for C backend
 emitCode :: String -> Int -> Int -> Instr -> EmitterM ()
@@ -485,7 +485,7 @@ emitEvalfuncName (EvalfuncName i) = emitStr $ "eval" ++ show i
 
 emitPrimName :: PrimName -> EmitterM ()
 emitPrimName (PrimName m f) = do
-  emitStr $ delete '/' m
+  emitStr $ intercalate "_" m
   emitStr "_"
   emitStr f
 

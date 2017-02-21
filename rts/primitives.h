@@ -3,15 +3,15 @@
 
 #include "value.h"
 
-void corearith_add(PICC_Value *res, PICC_Value *a, PICC_Value *b);
-void corearith_sub(PICC_Value *res, PICC_Value *a, PICC_Value *b);
-void corearith_mul(PICC_Value *res, PICC_Value *a, PICC_Value *b);
-void corearith_div(PICC_Value *res, PICC_Value *a, PICC_Value *b);
-void corearith_mod(PICC_Value *res, PICC_Value *a, PICC_Value *b);
-void corearith_equals(PICC_Value *res, PICC_Value *a, PICC_Value *b);
-void corearith_less_than(PICC_Value *res, PICC_Value *a, PICC_Value *b);
+void core_arith_add(PICC_Value *res, PICC_Value *a, PICC_Value *b);
+void core_arith_sub(PICC_Value *res, PICC_Value *a, PICC_Value *b);
+void core_arith_mul(PICC_Value *res, PICC_Value *a, PICC_Value *b);
+void core_arith_div(PICC_Value *res, PICC_Value *a, PICC_Value *b);
+void core_arith_mod(PICC_Value *res, PICC_Value *a, PICC_Value *b);
+void core_arith_equals(PICC_Value *res, PICC_Value *a, PICC_Value *b);
+void core_arith_less_than(PICC_Value *res, PICC_Value *a, PICC_Value *b);
 
-void coreio_print_str(PICC_Value *res, PICC_Value *s);
-void coreio_print_int(PICC_Value *res, PICC_Value *i);
+void core_io_print_str(PICC_Value *res, PICC_Value *s);
+void core_io_print_int(PICC_Value *res, PICC_Value *i);
 
 #endif /* !__PRIMITIVES_H */
