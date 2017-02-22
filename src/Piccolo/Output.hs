@@ -6,14 +6,22 @@ Stability      : experimental
 Some options of the Piccolo compiler may involve internals printing.
 This module helps printing those data.
 -}
+
 module Piccolo.Output
-  (printEnvSizes
+  ( dumpParsedModule
+  , printEnvSizes
   )
 where
 
 import Piccolo.AST
 
 import Control.Monad
+
+dumpParsedModule :: Modul -> IO ()
+dumpParsedModule m = do
+  putStrLn $ replicate 20 '=' ++ " parsed module " ++ replicate 20 '='
+  putStrLn ""
+  print m
 
 printEnvSizes :: Modul -> IO ()
 printEnvSizes modul = do

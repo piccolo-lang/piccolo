@@ -3,31 +3,24 @@ Module         : Main
 Description    : Entry point of the piccolo compiler
 Stability      : experimental
 
-The piccolo can be invoked with the following options:
-
-  * --version or -v                print version
-
-  * --help or -h                   print the help
-
-  * --out or -o                    specify the output executable filename
-
-It waits for a pi-file name and produces by default binary file a.out.
+Main module of the piccolo compiler.
 -}
+
 module Main
   (main
   )
 where
 
-import Piccolo.Errors
-import Piccolo.Parsers.ModuleParser
 import Piccolo.AST
-import Piccolo.Output
-import Piccolo.Typecheck
-import Piccolo.Environments
-import Piccolo.Compilation
 import Piccolo.Codegen
-import qualified Piccolo.CBackend as CBackend
+import Piccolo.Compilation
+import Piccolo.Environments
+import Piccolo.Errors
+import Piccolo.Output
+import Piccolo.Parsers.ModuleParser
+import Piccolo.Typecheck
 import Piccolo.CCompiler
+import qualified Piccolo.CBackend as CBackend
 
 import System.Environment
 import System.Console.GetOpt
@@ -47,12 +40,23 @@ main = do
   unless (null errors) $ void (showHelp opts)
   when (length nonOpts /= 1) $ void (showHelp opts)
   let [piFile] = nonOpts
-  content             <- readFile piFile
-  ast                 <- reportResult $ parseModule content
+  content <- readFile piFile
+
+  -- parsing
+  ast <- reportResult $ parseModule content
+  when (optDumpParsed opts) $ dumpParsedModule ast
+  
+  -- typing
   typedAst            <- reportResult $ typeCheck ast
+
+  -- computing environment sizes
   withEnv             <- reportResult $ computingEnvPass typedAst
   when (optShowEnvSizes opts) $ printEnvSizes withEnv
+
+  -- compiling
   seqAst              <- reportResult $ compilePass withEnv
+
+  -- emitting C code
   let code  = runEmitterM $ CBackend.emitCode (mainDef withEnv)
                                               (mainLexEnvSize withEnv)
                                               (mainChcEnvSize withEnv)
@@ -72,6 +76,7 @@ main = do
 
 data Options = Options
   { optOutput       :: String
+  , optDumpParsed   :: Bool
   , optDumpC        :: Maybe String
   , optShowEnvSizes :: Bool
   } deriving Show
@@ -79,17 +84,19 @@ data Options = Options
 defaultOptions :: Options
 defaultOptions = Options
   { optOutput       = "a.out"
+  , optDumpParsed   = False
   , optDumpC        = Nothing
   , optShowEnvSizes = False
   }
 
 options :: [OptDescr (Options -> IO Options)]
 options =
-  [ Option "v" ["version"]   (NoArg showVersion)         "show version number"
-  , Option "h" ["help"]      (NoArg showHelp)            "show help"
-  , Option "o" ["out"]       (ReqArg writeOutput "FILE") "output file"
-  , Option ""  ["dump-c"]    (ReqArg writeDumpC "FILE")  "dump c code"
-  , Option ""  ["show-env-sizes"] (NoArg showEnvSizes)   "show environments sizes"
+  [ Option "v" ["version"]     (NoArg showVersion)         "show version number"
+  , Option "h" ["help"]        (NoArg showHelp)            "show help"
+  , Option "o" ["out"]         (ReqArg writeOutput "FILE") "output file"
+  , Option ""  ["dump-parsed"] (NoArg dumpParsed)          "dump parsed piccolo module"
+  , Option ""  ["dump-c"]      (ReqArg writeDumpC "FILE")  "dump c code"
+  , Option ""  ["show-env-sizes"] (NoArg showEnvSizes)     "show environments sizes"
   ]
 
 showVersion :: Options -> IO Options
@@ -99,11 +106,14 @@ showVersion _ = do
 
 showHelp :: Options -> IO Options
 showHelp _ = do
-  putStr $ usageInfo "Usage: piccolo [options] <piccolo_file>" options
+  putStr $ usageInfo "Usage: piccolo [options] <file.pi>" options
   exitSuccess
 
 writeOutput :: String -> Options -> IO Options
 writeOutput arg opt = return $ opt { optOutput = arg }
+
+dumpParsed :: Options -> IO Options
+dumpParsed opt = return $ opt { optDumpParsed = True }
 
 writeDumpC :: String -> Options -> IO Options
 writeDumpC arg opt = return $ opt { optDumpC = Just arg }
