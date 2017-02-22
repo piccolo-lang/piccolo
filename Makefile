@@ -27,7 +27,7 @@ rtdoc:
 	$(MAKE) -C rts doc
 
 linecount:
-	wc -l src/*.hs src/**/*.hs
+	wc -l src/*.hs src/Piccolo/*.hs src/Piccolo/Parsers/*.hs
 
 rtlinecount:
 	$(MAKE) -C rts linecount
