@@ -1,9 +1,9 @@
 {-|
-Module        : Core.Parser
-Description   : Piccolo-core parser
+Module        : Piccolo.Parsers.ModuleParser
+Description   : Piccolo module parser
 Stability     : experimental
 
-These are the parser combinators for parsing piccolo-core modules.
+These are the parser combinators for parsing piccolo modules.
 -}
 
 module Piccolo.Parsers.ModuleParser
@@ -23,18 +23,17 @@ import Text.Parsec.String (Parser)
 import Text.Parsec.Language ()
 
 
-
 modul :: Parser Modul
 modul = do
   whiteSpace
   m <- withLocation $ do
     reserved "module"
     fullName <- modulId
-    defs <- many definition
+    defs     <- many definition
     return $ Modul fullName defs
   eof
   return m
 
 -- | Module parser
 parseModule :: String -> Either PiccError Modul
-parseModule s = left (ParsingError . show) $ parse modul "Module Parser" s
+parseModule s = left (ParsingError . show) $ parse modul "<stdin>" s

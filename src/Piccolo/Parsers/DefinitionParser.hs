@@ -1,9 +1,9 @@
 {-|
-Module        : Core.Parser
-Description   : Piccolo-core parser
+Module        : Piccolo.Parsers.DefinitionParser
+Description   : Piccolo definition parser
 Stability     : experimental
 
-These are the parser combinators for parsing piccolo-core modules.
+These are the parser combinators for parsing piccolo definitions.
 -}
 
 module Piccolo.Parsers.DefinitionParser
@@ -16,15 +16,14 @@ where
 import Piccolo.AST
 import Piccolo.Errors
 import Piccolo.Parsers.ExpressionParser
-import Piccolo.Parsers.ProcessParser
 import Piccolo.Parsers.Lexer
+import Piccolo.Parsers.ProcessParser
 import Piccolo.Parsers.Utils
 
+import Control.Arrow
 import Text.Parsec hiding (string)
 import Text.Parsec.String (Parser)
 import Text.Parsec.Language ()
-
-import Control.Arrow
 
 
 definition :: Parser Definition
@@ -43,5 +42,6 @@ param = withLocation $ do
   t <- typeExpr
   return $ \p -> (x, t, p)
 
+-- | Definition parser
 parseDefinition :: String -> Either PiccError Definition
-parseDefinition s = left (ParsingError . show) $ parse definition "Definition Parser" s
+parseDefinition s = left (ParsingError . show) $ parse definition "<stdin>" s

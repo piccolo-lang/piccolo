@@ -3,12 +3,11 @@ Module        : Piccolo.Parsers.Lexer
 Description   : Lexer for piccolo parsing
 Stability     : experimental
 
-Some lexing functions.
+Lexing functions.
 -}
 
 module Piccolo.Parsers.Lexer
-  (
-    lexer
+  ( lexer
   , identifier
   , reserved
   , reservedOp

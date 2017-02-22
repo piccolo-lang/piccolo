@@ -1,19 +1,16 @@
 {-|
-Module         : Core.AST
+Module         : Piccolo.AST
 Description    : Piccolo AST datatypes
 Stability      : experimental
 
 This module defines the datatypes for piccolo-core AST description.
-Each type of the module is marked with a location data,
-to print better error messages and track code locations
-during the whole compilation process.
 -}
 
 module Piccolo.AST
   ( ModuleName (..)
   , Location (..), noLoc, isNoLoc
   , AST (..)
-  , TypeExpr (..)
+  , TypeExpr (..), noTyp
   , TypeAtom (..)
   , Expr (..)
   , Process (..)
@@ -31,7 +28,7 @@ import Data.List (intercalate)
 newtype ModuleName = ModuleName [String] deriving (Eq, Ord)
 
 instance Show ModuleName where
-  show (ModuleName l) = intercalate "/" l
+  show (ModuleName l) = intercalate "." l
 
 
 -- * Locations
@@ -99,6 +96,10 @@ instance Show TypeExpr where
 
 instance AST TypeExpr where
   localize = typLoc
+
+-- | Util function for constructing an unknown type
+noTyp :: TypeExpr
+noTyp = TUnknown noLoc
 
 -- | Atomic types
 data TypeAtom
