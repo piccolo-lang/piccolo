@@ -2,7 +2,7 @@
 module Test015.Test015
 
 def Main() =
-  [false && false] tau, #core.io:print_str("should not happen"), end
-+ [false && true]  tau, #core.io:print_str("should not happen"), end
-+ [true && false]  tau, #core.io:print_str("should not happen"), end
-+ [true && true]   tau, #core.io:print_int(42), end
+  [false and false] tau, #core.io:print_str("should not happen"), end
++ [false and true]  tau, #core.io:print_str("should not happen"), end
++ [true and false]  tau, #core.io:print_str("should not happen"), end
++ [true and true]   tau, #core.io:print_int(42), end

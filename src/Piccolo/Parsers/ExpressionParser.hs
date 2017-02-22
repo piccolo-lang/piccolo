@@ -78,16 +78,22 @@ table = [ [ binaryPrim "*"  arith "mul" AssocLeft
           , binaryPrim "%"  arith "mod" AssocLeft ]
         , [ binaryPrim "+"  arith "add" AssocLeft
           , binaryPrim "-"  arith "sub" AssocLeft ]
+        , [ binaryPrim "<<" bits  "shift_left" AssocLeft
+          , binaryPrim ">>" bits  "shift_right" AssocRight ]
         , [ binaryPrim "<=" arith "less_or_eq_than" AssocLeft
           , binaryPrim "<"  arith "less_than" AssocLeft
           , binaryPrim ">=" arith "greater_or_eq_than" AssocLeft
           , binaryPrim ">"  arith "greater_than" AssocLeft ]
         , [ binaryPrim "==" arith "equals" AssocLeft
           , binaryPrim "!=" arith "not_equals" AssocLeft ]
-        , [ binary "&&" (EAnd noTyp) AssocLeft ]
-        , [ binary "||" (EOr noTyp)  AssocLeft ]
+        , [ binaryPrim "&"  bits  "and" AssocLeft ]
+        , [ binaryPrim "^"  bits  "xor" AssocLeft ]
+        , [ binaryPrim "|"  bits  "or"  AssocLeft ]
+        , [ binary "and" (EAnd noTyp) AssocLeft ]
+        , [ binary "or" (EOr noTyp)  AssocLeft ]
         ]
   where arith = ModuleName ["core", "arith"]
+        bits  = ModuleName ["core", "bits"]
 
 expr :: Parser Expr
 expr = buildExpressionParser table expr'

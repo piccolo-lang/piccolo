@@ -1,0 +1,4 @@
+// testing shift-left operator
+module Test021.Test021
+
+def Main() = #core.io:print_int(21 << 1), end

@@ -1,0 +1,4 @@
+// testing bitwise xor
+module Test020.Test020
+
+def Main() = #core.io:print_int(100 ^ 78), end

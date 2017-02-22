@@ -2,6 +2,6 @@
 module Test013.Test013
 
 def Main() =
-  [false || false] tau, #core.io:print_str("should not happen"), end
-+ [false || true]  tau, #core.io:print_int(42), end
+  [false or false] tau, #core.io:print_str("should not happen"), end
++ [false or true]  tau, #core.io:print_int(42), end
 + [false]          tau, #core.io:print_str("should not happen"), end

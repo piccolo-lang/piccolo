@@ -29,6 +29,11 @@ primTypes = Map.fromList
   , ((ModuleName ["core", "arith"], "less_or_eq_than"),    (tBool, [tInt, tInt]))
   , ((ModuleName ["core", "arith"], "greater_than"),       (tBool, [tInt, tInt]))
   , ((ModuleName ["core", "arith"], "greater_or_eq_than"), (tBool, [tInt, tInt]))
+  , ((ModuleName ["core", "bits" ], "shift_left"),         (tInt, [tInt, tInt]))
+  , ((ModuleName ["core", "bits" ], "shift_right"),        (tInt, [tInt, tInt]))
+  , ((ModuleName ["core", "bits" ], "and"),                (tInt, [tInt, tInt]))
+  , ((ModuleName ["core", "bits" ], "xor"),                (tInt, [tInt, tInt]))
+  , ((ModuleName ["core", "bits" ], "or"),                 (tInt, [tInt, tInt]))
   , ((ModuleName ["core", "io"   ], "print_str"),          (tString, [tString]))
   , ((ModuleName ["core", "io"   ], "print_int"),          (tString, [tInt]))
   ]
