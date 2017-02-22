@@ -44,7 +44,10 @@ langDef = Tok.LanguageDef
                           , "chan", "int", "bool", "string"
                           , "%safe"
                           ]
-  , Tok.reservedOpNames = [ ",", "?", "!", ".", "=", ":", "#", "||", "&&" ]
+  , Tok.reservedOpNames = [ ",", "?", "!", ".", "=", ":", "#", "||", "&&"
+                          , "+", "-", "*", "/", "%"
+                          , "<", "<=", ">", ">=", "==", "!="
+                          ]
   , Tok.caseSensitive   = True
   }
 

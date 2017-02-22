@@ -20,9 +20,11 @@ import Piccolo.Parsers.Lexer
 import Piccolo.Parsers.Utils
 
 import Control.Arrow
+import Data.Functor.Identity
 import Text.Parsec hiding (string)
 import Text.Parsec.String (Parser)
 import Text.Parsec.Language ()
+import Text.Parsec.Expr
 
 
 typeExpr :: Parser TypeExpr
@@ -55,15 +57,40 @@ typedVar = do
   t <- typeExpr
   return (v,t)
 
-expr :: Parser Expr
-expr = chainl1 andExpr $ do
-  reservedOp "||"
-  return $ EOr noTyp noLoc
+binary :: String ->
+          (Location -> Expr -> Expr -> Expr) ->
+          Assoc ->
+          Operator String () Identity Expr
+binary s f = Infix (withLocation $ reservedOp s >> return f)
 
-andExpr :: Parser Expr
-andExpr = chainl1 expr' $ do
-  reservedOp "&&"
-  return $ EAnd noTyp noLoc
+binaryPrim :: String ->
+              ModuleName ->
+              String ->
+              Assoc ->
+              Operator String () Identity Expr
+binaryPrim s m p = Infix (withLocation $ do
+  reservedOp s
+  return $ \l x y -> EPrim noTyp l m p [x,y])
+
+table :: OperatorTable String () Identity Expr
+table = [ [ binaryPrim "*"  arith "mul" AssocLeft
+          , binaryPrim "/"  arith "div" AssocLeft
+          , binaryPrim "%"  arith "mod" AssocLeft ]
+        , [ binaryPrim "+"  arith "add" AssocLeft
+          , binaryPrim "-"  arith "sub" AssocLeft ]
+        , [ binaryPrim "<=" arith "less_or_eq_than" AssocLeft
+          , binaryPrim "<"  arith "less_than" AssocLeft
+          , binaryPrim ">=" arith "greater_or_eq_than" AssocLeft
+          , binaryPrim ">"  arith "greater_than" AssocLeft ]
+        , [ binaryPrim "==" arith "equals" AssocLeft
+          , binaryPrim "!=" arith "not_equals" AssocLeft ]
+        , [ binary "&&" (EAnd noTyp) AssocLeft ]
+        , [ binary "||" (EOr noTyp)  AssocLeft ]
+        ]
+  where arith = ModuleName ["core", "arith"]
+
+expr :: Parser Expr
+expr = buildExpressionParser table expr'
 
 expr' :: Parser Expr
 expr' = try trueExpr

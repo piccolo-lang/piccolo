@@ -1,0 +1,8 @@
+// testing infix operators in choice guard and process arg
+module Test018.Test018
+
+def P(n: int) =
+  [n >= 42] tau, #core.io:print_int(n), end
++ [true]    tau, P(n+1)
+
+def Main() = P(0)

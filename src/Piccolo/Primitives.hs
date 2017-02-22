@@ -18,16 +18,19 @@ import qualified Data.Map as Map
 -- | 'primTypes' is a map from a primitive name to its type.
 primTypes :: Map.Map (ModuleName,String) (TypeExpr, [TypeExpr])
 primTypes = Map.fromList
-  [ ((ModuleName ["core", "arith"], "add"),        (tInt, [tInt, tInt]))
-  , ((ModuleName ["core", "arith"], "sub"),        (tInt, [tInt, tInt]))
-  , ((ModuleName ["core", "arith"], "mul"),        (tInt, [tInt, tInt]))
-  , ((ModuleName ["core", "arith"], "div"),        (tInt, [tInt, tInt]))
-  , ((ModuleName ["core", "arith"], "mod"),        (tInt, [tInt, tInt]))
-  , ((ModuleName ["core", "arith"], "equals"),     (tBool, [tInt, tInt]))
-  , ((ModuleName ["core", "arith"], "less_than"),  (tBool, [tInt, tInt]))
-  , ((ModuleName ["core", "io"   ], "print_info"), (tString, [tString]))
-  , ((ModuleName ["core", "io"   ], "print_str"),  (tString, [tString]))
-  , ((ModuleName ["core", "io"   ], "print_int"),  (tString, [tInt]))
+  [ ((ModuleName ["core", "arith"], "add"),                (tInt, [tInt, tInt]))
+  , ((ModuleName ["core", "arith"], "sub"),                (tInt, [tInt, tInt]))
+  , ((ModuleName ["core", "arith"], "mul"),                (tInt, [tInt, tInt]))
+  , ((ModuleName ["core", "arith"], "div"),                (tInt, [tInt, tInt]))
+  , ((ModuleName ["core", "arith"], "mod"),                (tInt, [tInt, tInt]))
+  , ((ModuleName ["core", "arith"], "equals"),             (tBool, [tInt, tInt]))
+  , ((ModuleName ["core", "arith"], "not_equals"),         (tBool, [tInt, tInt]))
+  , ((ModuleName ["core", "arith"], "less_than"),          (tBool, [tInt, tInt]))
+  , ((ModuleName ["core", "arith"], "less_or_eq_than"),    (tBool, [tInt, tInt]))
+  , ((ModuleName ["core", "arith"], "greater_than"),       (tBool, [tInt, tInt]))
+  , ((ModuleName ["core", "arith"], "greater_or_eq_than"), (tBool, [tInt, tInt]))
+  , ((ModuleName ["core", "io"   ], "print_str"),          (tString, [tString]))
+  , ((ModuleName ["core", "io"   ], "print_int"),          (tString, [tInt]))
   ]
 
 tBool, tInt, tString :: TypeExpr

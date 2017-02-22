@@ -1,0 +1,4 @@
+// testing infix operators
+module Test017.Test017
+
+def Main() = #core.io:print_int(44 - 2), end

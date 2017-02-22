@@ -53,11 +53,51 @@ void core_arith_equals(PICC_Value *res, PICC_Value *a, PICC_Value *b)
     PICC_boolvalue_init(res, 0);
 }
 
+void core_arith_not_equals(PICC_Value *res, PICC_Value *a, PICC_Value *b)
+{
+  assert(IS_INTEGER(a));
+  assert(IS_INTEGER(b));
+  if (((PICC_IntValue *)a)->data != ((PICC_IntValue *)b)->data)
+    PICC_boolvalue_init(res, 1);
+  else
+    PICC_boolvalue_init(res, 0);
+}
+
 void core_arith_less_than(PICC_Value *res, PICC_Value *a, PICC_Value *b)
 {
   assert(IS_INTEGER(a));
   assert(IS_INTEGER(b));
   if (((PICC_IntValue *)a)->data < ((PICC_IntValue *)b)->data)
+    PICC_boolvalue_init(res, 1);
+  else
+    PICC_boolvalue_init(res, 0);
+}
+
+void core_arith_less_or_eq_than(PICC_Value *res, PICC_Value *a, PICC_Value *b)
+{
+  assert(IS_INTEGER(a));
+  assert(IS_INTEGER(b));
+  if (((PICC_IntValue *)a)->data <= ((PICC_IntValue *)b)->data)
+    PICC_boolvalue_init(res, 1);
+  else
+    PICC_boolvalue_init(res, 0);
+}
+
+void core_arith_greater_than(PICC_Value *res, PICC_Value *a, PICC_Value *b)
+{
+  assert(IS_INTEGER(a));
+  assert(IS_INTEGER(b));
+  if (((PICC_IntValue *)a)->data > ((PICC_IntValue *)b)->data)
+    PICC_boolvalue_init(res, 1);
+  else
+    PICC_boolvalue_init(res, 0);
+}
+
+void core_arith_greater_or_eq_than(PICC_Value *res, PICC_Value *a, PICC_Value *b)
+{
+  assert(IS_INTEGER(a));
+  assert(IS_INTEGER(b));
+  if (((PICC_IntValue *)a)->data >= ((PICC_IntValue *)b)->data)
     PICC_boolvalue_init(res, 1);
   else
     PICC_boolvalue_init(res, 0);

@@ -26,7 +26,6 @@ import System.Environment
 import System.Console.GetOpt
 import System.Exit
 import Data.List
-import Data.Maybe
 import Control.Monad
 
 
@@ -47,21 +46,23 @@ main = do
   when (optDumpParsed opts) $ dumpParsedModule ast
   
   -- typing
-  typedAst            <- reportResult $ typeCheck ast
+  typedAst <- reportResult $ typeCheck ast
+  when (optDumpTyped opts) $ dumpTypedModule ast
 
   -- computing environment sizes
-  withEnv             <- reportResult $ computingEnvPass typedAst
-  when (optShowEnvSizes opts) $ printEnvSizes withEnv
+  withEnv <- reportResult $ computingEnvPass typedAst
+  when (optDumpSig opts) $ dumpSigModule withEnv
 
   -- compiling
-  seqAst              <- reportResult $ compilePass withEnv
+  seqAst <- reportResult $ compilePass withEnv
 
   -- emitting C code
   let code  = runEmitterM $ CBackend.emitCode (mainDef withEnv)
                                               (mainLexEnvSize withEnv)
                                               (mainChcEnvSize withEnv)
                                               seqAst
-  when (isJust (optDumpC opts)) $ writeFile (fromJust (optDumpC opts)) code
+  when (optDumpC opts) $ dumpCCode code
+
   compileCCode code $ optOutput opts
   where
     mainDef Modul { modName = m } =
@@ -77,26 +78,30 @@ main = do
 data Options = Options
   { optOutput       :: String
   , optDumpParsed   :: Bool
-  , optDumpC        :: Maybe String
-  , optShowEnvSizes :: Bool
+  , optDumpTyped    :: Bool
+  , optDumpSig      :: Bool
+  , optDumpC        :: Bool
   } deriving Show
 
 defaultOptions :: Options
 defaultOptions = Options
   { optOutput       = "a.out"
   , optDumpParsed   = False
-  , optDumpC        = Nothing
-  , optShowEnvSizes = False
+  , optDumpTyped    = False
+  , optDumpSig      = False
+  , optDumpC        = False
   }
 
 options :: [OptDescr (Options -> IO Options)]
 options =
-  [ Option "v" ["version"]     (NoArg showVersion)         "show version number"
+  [ Option ""  ["version"]     (NoArg showVersion)         "show version number"
   , Option "h" ["help"]        (NoArg showHelp)            "show help"
   , Option "o" ["out"]         (ReqArg writeOutput "FILE") "output file"
+  , Option "v" ["dump-all"]    (NoArg dumpAll)             "dump all intermediate results"
   , Option ""  ["dump-parsed"] (NoArg dumpParsed)          "dump parsed piccolo module"
-  , Option ""  ["dump-c"]      (ReqArg writeDumpC "FILE")  "dump c code"
-  , Option ""  ["show-env-sizes"] (NoArg showEnvSizes)     "show environments sizes"
+  , Option ""  ["dump-typed"]  (NoArg dumpTyped)           "dump typed piccolo module"
+  , Option ""  ["dump-sig"]    (NoArg dumpSig)             "dump module signature"
+  , Option ""  ["dump-c"]      (NoArg dumpC)               "dump c code"
   ]
 
 showVersion :: Options -> IO Options
@@ -112,11 +117,21 @@ showHelp _ = do
 writeOutput :: String -> Options -> IO Options
 writeOutput arg opt = return $ opt { optOutput = arg }
 
+dumpAll :: Options -> IO Options
+dumpAll opt = return $ opt { optDumpParsed = True
+                           , optDumpSig    = True
+                           , optDumpC      = True
+                           }
+
 dumpParsed :: Options -> IO Options
 dumpParsed opt = return $ opt { optDumpParsed = True }
 
-writeDumpC :: String -> Options -> IO Options
-writeDumpC arg opt = return $ opt { optDumpC = Just arg }
+dumpTyped :: Options -> IO Options
+dumpTyped opt = return $ opt { optDumpTyped = True }
 
-showEnvSizes :: Options -> IO Options
-showEnvSizes opt = return $ opt { optShowEnvSizes = True }
+dumpSig :: Options -> IO Options
+dumpSig opt = return $ opt { optDumpSig = True }
+
+dumpC :: Options -> IO Options
+dumpC opt = return $ opt { optDumpC = True }
+

@@ -34,6 +34,7 @@ rtlinecount:
 
 clean:
 	$(STACK) clean
+	$(MAKE) -C rts clean
 
 test:
 	$(MAKE) -C test

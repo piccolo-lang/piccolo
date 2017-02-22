@@ -9,7 +9,9 @@ This module helps printing those data.
 
 module Piccolo.Output
   ( dumpParsedModule
-  , printEnvSizes
+  , dumpTypedModule
+  , dumpSigModule
+  , dumpCCode
   )
 where
 
@@ -23,8 +25,16 @@ dumpParsedModule m = do
   putStrLn ""
   print m
 
-printEnvSizes :: Modul -> IO ()
-printEnvSizes modul = do
+dumpTypedModule :: Modul -> IO ()
+dumpTypedModule m = do
+  putStrLn $ replicate 20 '=' ++ " typed module " ++ replicate 20 '='
+  putStrLn ""
+  print m
+
+dumpSigModule :: Modul -> IO ()
+dumpSigModule modul = do
+  putStrLn $ replicate 20 '=' ++ " module signature " ++ replicate 20 '='
+  putStrLn ""
   putStrLn $ "Env sizes for module " ++ show (modName modul) ++ ":"
   forM_ (modDefs modul) $ \def -> do
     putStr $ "  " ++ defName def
@@ -32,3 +42,9 @@ printEnvSizes modul = do
     putStr $ "lexical_env_size: " ++ show (defLexicalEnvSize def) ++ ", "
     putStr $ "choice_max_size: " ++ show (defChoiceMaxSize def)
     putStrLn " }"
+
+dumpCCode :: String -> IO ()
+dumpCCode code = do
+  putStrLn $ replicate 20 '=' ++ " generated C code " ++ replicate 20 '='
+  putStrLn ""
+  putStrLn code

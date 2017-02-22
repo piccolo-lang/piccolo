@@ -1,0 +1,4 @@
+// testing infix operators
+module Test018.Test018
+
+def Main() = #core.io:print_int(40 + 8 / 4), end
