@@ -1,11 +1,12 @@
 {-|
-Module         : Core.Typecheck
-Description    : Typing module for the piccolo language
+Module         : Piccolo.Typecheck
+Description    : Type checking for the piccolo language
 Stability      : experimental
 
-Since types are explicitly written in the code when introducing a new variable (via a "let", a "new",
-or process definition parameters), the typing pass of the piccolo compiler only check types through
-a traversal of the AST and tag each value with its types for compilation pass.
+Type checking pass. Since types are explicitly written in the code when
+introducing a new variable (via "let", "new", or process definition parameters),
+the typing pass only check types through a traversal of the AST and tag each
+value with its types for further treatments.
 -}
 
 module Piccolo.Typecheck
@@ -201,15 +202,21 @@ tcExpr e@EAnd    {} = do
     throwError $ OtherError "bad type in and (left)"
   unless (isBool (exprTyp tRight)) $
     throwError $ OtherError "bad type in and (right)"
-  return $ e { exprLeft = tLeft, exprRight = tRight }
+  return $ e { exprTyp = TAtom TBool noLoc, exprLeft = tLeft, exprRight = tRight }
 tcExpr e@EOr     {} = do
   tLeft  <- tcExpr (exprLeft e)
   tRight <- tcExpr (exprRight e)
   unless (isBool (exprTyp tLeft)) $
-    throwError $ OtherError "bad type in or(left)"
+    throwError $ TypingError (show tLeft)
+                             (localize tLeft)
+                             (TAtom TBool noLoc)
+                             (exprTyp tLeft)
   unless (isBool (exprTyp tRight)) $
-    throwError $ OtherError "bad type in or (right)"
-  return $ e { exprLeft = tLeft, exprRight = tRight }
+    throwError $ TypingError (show tRight)
+                             (localize tRight)
+                             (TAtom TBool noLoc)
+                             (exprTyp tRight)
+  return $ e { exprTyp = TAtom TBool noLoc, exprLeft = tLeft, exprRight = tRight }
 
 
 -- | Function that determines if a type should be managed by

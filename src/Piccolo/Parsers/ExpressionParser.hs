@@ -67,13 +67,13 @@ andExpr = chainl1 expr' $ do
 
 expr' :: Parser Expr
 expr' = try trueExpr
-   <|> try falseExpr
-   <|> intExpr
-   <|> stringExpr
-   <|> tupleExpr
-   <|> varExpr
-   <|> primExpr
-   <?> "expression"
+    <|> try falseExpr
+    <|> intExpr
+    <|> stringExpr
+    <|> tupleExpr
+    <|> varExpr
+    <|> primExpr
+    <?> "expression"
 
 staticExpr :: Parser Expr
 staticExpr = try trueExpr
