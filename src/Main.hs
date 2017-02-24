@@ -63,7 +63,10 @@ main = do
                                               seqAst
   when (optDumpC opts) $ dumpCCode code
 
-  compileCCode code $ optOutput opts
+  if optProfilMode opts
+    then compileCCodeWithProfiling code $ optOutput opts
+    else compileCCode code $ optOutput opts
+
   where
     mainDef Modul { modName = m } =
       let (ModuleName mainModName) = m in
@@ -77,6 +80,7 @@ main = do
 
 data Options = Options
   { optOutput       :: String
+  , optProfilMode   :: Bool
   , optDumpParsed   :: Bool
   , optDumpTyped    :: Bool
   , optDumpSig      :: Bool
@@ -86,6 +90,7 @@ data Options = Options
 defaultOptions :: Options
 defaultOptions = Options
   { optOutput       = "a.out"
+  , optProfilMode   = False
   , optDumpParsed   = False
   , optDumpTyped    = False
   , optDumpSig      = False
@@ -97,6 +102,7 @@ options =
   [ Option ""  ["version"]     (NoArg showVersion)         "show version number"
   , Option "h" ["help"]        (NoArg showHelp)            "show help"
   , Option "o" ["out"]         (ReqArg writeOutput "FILE") "output file"
+  , Option ""  ["prof"]        (NoArg setProfilMode)       "enable profiling"
   , Option "v" ["dump-all"]    (NoArg dumpAll)             "dump all intermediate results"
   , Option ""  ["dump-parsed"] (NoArg dumpParsed)          "dump parsed piccolo module"
   , Option ""  ["dump-typed"]  (NoArg dumpTyped)           "dump typed piccolo module"
@@ -116,6 +122,9 @@ showHelp _ = do
 
 writeOutput :: String -> Options -> IO Options
 writeOutput arg opt = return $ opt { optOutput = arg }
+
+setProfilMode :: Options -> IO Options
+setProfilMode opt = return $ opt { optProfilMode = True }
 
 dumpAll :: Options -> IO Options
 dumpAll opt = return $ opt { optDumpParsed = True

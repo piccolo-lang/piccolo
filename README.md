@@ -21,8 +21,8 @@ make install
 
 This will install the ``piccolo`` binary into your ``~/.local/bin`` dir (which is
 likely to appear in your path if you use stack),
-and install runtime (some header files and a
-static library) somewhere into the ``.stack-work`` dir.
+and install runtime (some header files and static libraries)
+somewhere into the ``.stack-work`` dir.
 
 ### Using the piccolo compiler:
 
