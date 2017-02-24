@@ -1,11 +1,9 @@
-module Examples/RecCounter
+module Examples.RecCounter
 
 def Count(n:int) =
-  [#core/arith:less_than(0,n)] tau,
-    #core/io:print_int(n), #core/io:print_str("..."),
-    let (m:int = #core/arith:sub(n, 1)),
-    Count(m)
-+ [true] tau, #core/io:print_str("END\n"), end
+  [n > 0] tau,
+          #core.io:print_int(n), #core.io:print_str("..."),
+          Count(n - 1)
++ [true] tau, #core.io:print_str("END\n"), end
 
-def Main() =
-  Count(10)
+def Main() = Count(10)

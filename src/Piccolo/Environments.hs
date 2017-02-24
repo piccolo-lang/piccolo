@@ -1,5 +1,5 @@
 {-|
-Module         : Core.Environments
+Module         : Piccolo.Environments
 Description    : Indexes of variables computation pass
 Stability      : experimental
 
@@ -11,6 +11,7 @@ runtime and is computed at the same time.
 Due to nested process calls, those two computations are done by iteratively
 computing the max size and looking for a fixpoint of this function.
 -}
+
 module Piccolo.Environments
   ( computingEnvPass
   )
@@ -165,7 +166,7 @@ envBranch br@BOutput {} = do
       dat  <- envExpr $ brData br
       cont <- envProcess $ brCont br
       return br { brGuard = gard, brChanIndex = i, brData = dat, brCont = cont}
-    Nothing -> throwError $ OtherError "var not in scope"
+    Nothing -> throwError $ VarNotFoundError (brChan br) (localize br)
 envBranch br@BInput {} = do
   gard    <- envExpr $ brGuard br
   chanInd <- lookupLexVar $ brChan br
@@ -174,7 +175,7 @@ envBranch br@BInput {} = do
       j    <- addLexVar $ brBind br
       cont <- envProcess $ brCont br
       return br { brGuard = gard, brChanIndex = i, brBindIndex = j, brCont = cont }
-    Nothing -> throwError $ OtherError "var not in scope"
+    Nothing -> throwError $ VarNotFoundError (brChan br) (localize br)
 
 envAction :: Action -> EnvM Action
 envAction act@AOutput {} = do
@@ -183,14 +184,14 @@ envAction act@AOutput {} = do
     Just i  -> do
       dat <- envExpr $ actData act
       return act { actData = dat, actChanIndex = i }
-    Nothing -> throwError $ OtherError "var not in scope"
+    Nothing -> throwError $ VarNotFoundError (actChan act) (localize act)
 envAction act@AInput  {} = do
   chanInd <- lookupLexVar $ actChan act
   case chanInd of
     Just i -> do
       j <- addLexVar $ actBind act
       return act { actChanIndex = i, actBindIndex = j }
-    Nothing -> throwError $ OtherError "var not in scope"
+    Nothing -> throwError $ VarNotFoundError (actChan act) (localize act)
 envAction act@ANew    {} = do
   i <- addLexVar $ actBind act
   return act { actBindIndex = i }
@@ -212,7 +213,7 @@ envExpr e@EVar   {} = do
   ind <- lookupLexVar $ exprVar e
   case ind of
     Just index -> return e { exprIndex = index }
-    Nothing    -> throwError $ OtherError "var not in scope"
+    Nothing    -> throwError $ VarNotFoundError (exprVar e) (localize e)
 envExpr e@EPrim  {} = do
   args <- mapM envExpr $ exprArgs e
   return e { exprArgs = args }

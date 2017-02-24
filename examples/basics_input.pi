@@ -1,7 +1,7 @@
-module Basics/Prim
+module Basics.Prim
 
 def Main() =
-  #core/io:print_str("_"),
+  #core.io:print_str("_"),
   new(c:chan<int>),
   c?(x),
   end

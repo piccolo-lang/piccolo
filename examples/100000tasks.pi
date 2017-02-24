@@ -1,29 +1,17 @@
-module Test/T100000
+module Todo
 
-def Gen(n:int, right:chan<int>, g:chan<chan<int>>) =
-  [#core/arith:equals(n,0)] tau,
-    #core/io:print_str("pipe generation done\n"),
-    g!right,
-    end
-+ [true] tau,
-    #core/io:print_int(n),
-    #core/io:print_str("\n"),
-    new(left:chan<int>),
-    spawn{F(left, right)},
-    Gen(#core/arith:sub(n, 1), left, g)
-
-def F(left:chan<int>, right:chan<int>) =
-  right?(x), left!x, end
+def Gen(n: int, right: chan<int>, g: chan<chan<int>>) =
+  [n == 0] tau,
+           #core.io:print_str("pipeline generation done\n"),
+           end
++ [true  ] tau,
+           #core.io:print_int(n),
+           #core.io:print_str("\n"),
+           new (left: chan<int>),
+           Gen(n - 1, left, g)
 
 def Main() =
-  new(g:chan<chan<int>>),
-  new(right:chan<int>),
-  spawn{Gen(1, right, g)},
-  #core/io:print_str("waiting for left chan\n"),
-  g?(left),
-  #core/io:print_str("received left chan\n"),
-  right!0,
-  #core/io:print_str("waiting for value on left chan\n"),
-  left?(x),
-  #core/io:print_int(x),
+  new (g: chan<chan<int>>),
+  new (right: chan<int>),
+  spawn { Gen(10, right, g) },
   end
