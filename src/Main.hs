@@ -38,34 +38,36 @@ main = do
   opts <- foldl (>>=) (return defaultOptions) actions
   unless (null errors) $ void (showHelp opts)
   when (length nonOpts /= 1) $ void (showHelp opts)
-  let [piFile] = nonOpts
-  content <- readFile piFile
 
-  -- parsing
-  ast <- reportResult $ parseModule content
-  when (optDumpParsed opts) $ dumpParsedModule ast
-  
-  -- typing
-  typedAst <- reportResult $ typeCheck ast
-  when (optDumpTyped opts) $ dumpTypedModule ast
+  let files = nonOpts
+  forM_ files $ \file -> do
+    content <- readFile file
 
-  -- computing environment sizes
-  withEnv <- reportResult $ computingEnvPass typedAst
-  when (optDumpSig opts) $ dumpSigModule withEnv
+    -- parsing
+    ast <- reportResult $ parseModule content
+    when (optDumpParsed opts) $ dumpParsedModule ast
+    
+    -- typing
+    typedAst <- reportResult $ typeCheck ast
+    when (optDumpTyped opts) $ dumpTypedModule ast
 
-  -- compiling
-  seqAst <- reportResult $ compilePass withEnv
+    -- computing environment sizes
+    withEnv <- reportResult $ computingEnvPass typedAst
+    when (optDumpSig opts) $ dumpSigModule withEnv
 
-  -- emitting C code
-  let code  = runEmitterM $ CBackend.emitCode (mainDef withEnv)
-                                              (mainLexEnvSize withEnv)
-                                              (mainChcEnvSize withEnv)
-                                              seqAst
-  when (optDumpC opts) $ dumpCCode code
+    -- compiling
+    seqAst <- reportResult $ compilePass withEnv
 
-  if optProfilMode opts
-    then compileCCodeWithProfiling code $ optOutput opts
-    else compileCCode code $ optOutput opts
+    -- emitting C code
+    let code  = runEmitterM $ CBackend.emitCode (mainDef withEnv)
+                                                (mainLexEnvSize withEnv)
+                                                (mainChcEnvSize withEnv)
+                                                seqAst
+    when (optDumpC opts) $ dumpCCode code
+
+    if optProfilMode opts
+      then compileCCodeWithProfiling code $ optOutput opts
+      else compileCCode code $ optOutput opts
 
   where
     mainDef Modul { modName = m } =
